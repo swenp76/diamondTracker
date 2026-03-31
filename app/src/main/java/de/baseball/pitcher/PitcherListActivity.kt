@@ -73,19 +73,40 @@ class PitcherListActivity : AppCompatActivity() {
     }
 
     private fun showAddPitcherDialog() {
-        val et = EditText(this).apply {
-            hint = "Name des Pitchers"
-            setPadding(48, 24, 48, 24)
+        val teamId = db.getGame(gameId)?.teamId ?: 0L
+        val players = if (teamId > 0) db.getPlayersForTeam(teamId) else emptyList()
+
+        if (players.isEmpty()) {
+            // Kein Team oder keine Spieler → Freitexteingabe
+            val et = EditText(this).apply {
+                hint = "Name des Pitchers"
+                setPadding(48, 24, 48, 24)
+            }
+            AlertDialog.Builder(this)
+                .setTitle("Neuer Pitcher")
+                .setView(et)
+                .setPositiveButton("Hinzufügen") { _, _ ->
+                    val name = et.text.toString().trim()
+                    if (name.isNotEmpty()) {
+                        db.insertPitcher(gameId, name)
+                        loadPitchers()
+                    }
+                }
+                .setNegativeButton("Abbrechen", null)
+                .show()
+            return
         }
+
+        val labels = players.map { if (it.isPitcher) "${it.name}  P" else it.name }.toTypedArray()
+        var selectedIndex = 0
+
         AlertDialog.Builder(this)
             .setTitle("Neuer Pitcher")
-            .setView(et)
+            .setSingleChoiceItems(labels, 0) { _, which -> selectedIndex = which }
             .setPositiveButton("Hinzufügen") { _, _ ->
-                val name = et.text.toString().trim()
-                if (name.isNotEmpty()) {
-                    db.insertPitcher(gameId, name)
-                    loadPitchers()
-                }
+                val selected = players[selectedIndex]
+                db.insertPitcher(gameId, selected.name, selected.id)
+                loadPitchers()
             }
             .setNegativeButton("Abbrechen", null)
             .show()

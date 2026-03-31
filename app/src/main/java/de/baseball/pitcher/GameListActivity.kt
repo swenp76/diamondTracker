@@ -11,6 +11,7 @@ import android.view.*
 import java.text.SimpleDateFormat
 import java.util.*
 
+
 class GameListActivity : AppCompatActivity() {
 
     private lateinit var db: DatabaseHelper
@@ -60,28 +61,65 @@ class GameListActivity : AppCompatActivity() {
         recycler.adapter = adapter
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menu.add(0, 1, 0, "Einstellungen")
+            .setIcon(android.R.drawable.ic_menu_manage)
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == 1) {
+            startActivity(Intent(this, SettingsActivity::class.java))
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     private fun showAddGameDialog() {
+        val teams = db.getAllTeams()
+        if (teams.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("Kein Team vorhanden")
+                .setMessage("Bitte zuerst ein eigenes Team unter Einstellungen → Teams anlegen.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+
         val view = layoutInflater.inflate(R.layout.dialog_add_game, null)
+        val spinnerTeam = view.findViewById<Spinner>(R.id.spinnerTeam)
         val etDate = view.findViewById<EditText>(R.id.etDate)
         val etOpponent = view.findViewById<EditText>(R.id.etOpponent)
 
-        // Pre-fill today's date
+        spinnerTeam.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, teams.map { it.name })
+
         val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
         etDate.setText(sdf.format(Date()))
 
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle("Neues Spiel")
             .setView(view)
-            .setPositiveButton("Erstellen") { _, _ ->
+            .setPositiveButton("Erstellen", null)
+            .setNegativeButton("Abbrechen", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val date = etDate.text.toString().trim()
                 val opp = etOpponent.text.toString().trim()
+                val selectedTeam = teams[spinnerTeam.selectedItemPosition]
                 if (date.isNotEmpty() && opp.isNotEmpty()) {
-                    db.insertGame(date, opp)
+                    db.insertGame(date, opp, selectedTeam.id)
                     loadGames()
+                    dialog.dismiss()
+                } else {
+                    if (date.isEmpty()) etDate.error = "Pflichtfeld"
+                    if (opp.isEmpty()) etOpponent.error = "Pflichtfeld"
                 }
             }
-            .setNegativeButton("Abbrechen", null)
-            .show()
+        }
+        dialog.show()
     }
 }
 

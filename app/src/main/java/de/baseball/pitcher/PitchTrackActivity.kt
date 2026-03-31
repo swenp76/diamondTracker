@@ -45,6 +45,16 @@ class PitchTrackActivity : AppCompatActivity() {
             db.insertPitch(pitcherId, "S")
             refresh()
         }
+        findViewById<Button>(R.id.btnHbp).setOnClickListener {
+            db.insertPitch(pitcherId, "HBP")
+            db.insertPitch(pitcherId, "BF")
+            refresh()
+        }
+        findViewById<Button>(R.id.btnWalk).setOnClickListener {
+            db.insertPitch(pitcherId, "W")
+            db.insertPitch(pitcherId, "BF")
+            refresh()
+        }
         findViewById<Button>(R.id.btnBatterFaced).setOnClickListener {
             db.insertPitch(pitcherId, "BF")
             refresh()
@@ -84,6 +94,24 @@ class PitchTrackActivity : AppCompatActivity() {
                         text = "── Batter ──────────────────────"
                         setTextColor(Color.parseColor("#888888"))
                         textSize = 11f
+                    }
+                    row.addView(tv)
+                }
+                "HBP" -> {
+                    val tv = TextView(this).apply {
+                        text = "── Hit by Pitch ─────────────────"
+                        setTextColor(Color.parseColor("#8e44ad"))
+                        textSize = 11f
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    }
+                    row.addView(tv)
+                }
+                "W" -> {
+                    val tv = TextView(this).apply {
+                        text = "── Walk ─────────────────────────"
+                        setTextColor(Color.parseColor("#d35400"))
+                        textSize = 11f
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
                     }
                     row.addView(tv)
                 }
