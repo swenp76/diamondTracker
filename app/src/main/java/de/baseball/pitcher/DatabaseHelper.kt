@@ -279,7 +279,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
             bf = pitches.count { it.type == "BF" },
             balls = pitches.count { it.type == "B" },
             strikes = pitches.count { it.type == "S" },
-            totalPitches = pitches.count { it.type == "B" || it.type == "S" },
+            totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "F" },
             pitches = pitches
         )
     }

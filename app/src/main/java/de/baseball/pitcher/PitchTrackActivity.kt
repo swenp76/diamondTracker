@@ -39,10 +39,33 @@ class PitchTrackActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnBall).setOnClickListener {
             db.insertPitch(pitcherId, "B")
+            val (balls, _) = currentAtBatCount()
+            if (balls >= 4) {
+                db.insertPitch(pitcherId, "W")
+                db.insertPitch(pitcherId, "BF")
+            }
             refresh()
         }
         findViewById<Button>(R.id.btnStrike).setOnClickListener {
             db.insertPitch(pitcherId, "S")
+            val (_, strikes) = currentAtBatCount()
+            if (strikes >= 3) {
+                db.insertPitch(pitcherId, "SO")
+                db.insertPitch(pitcherId, "BF")
+            }
+            refresh()
+        }
+        findViewById<Button>(R.id.btnFoulBall).setOnClickListener {
+            val (_, strikesBefore) = currentAtBatCount()
+            db.insertPitch(pitcherId, "F")
+            // Foul bei 2 Strikes zählt nicht als Strike – kein Auto-Out möglich
+            if (strikesBefore < 2) {
+                val (_, strikesAfter) = currentAtBatCount()
+                if (strikesAfter >= 3) {
+                    db.insertPitch(pitcherId, "SO")
+                    db.insertPitch(pitcherId, "BF")
+                }
+            }
             refresh()
         }
         findViewById<Button>(R.id.btnHbp).setOnClickListener {
@@ -52,6 +75,11 @@ class PitchTrackActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.btnWalk).setOnClickListener {
             db.insertPitch(pitcherId, "W")
+            db.insertPitch(pitcherId, "BF")
+            refresh()
+        }
+        findViewById<Button>(R.id.btnStrikeOut).setOnClickListener {
+            db.insertPitch(pitcherId, "SO")
             db.insertPitch(pitcherId, "BF")
             refresh()
         }
@@ -70,6 +98,22 @@ class PitchTrackActivity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean {
         finish()
         return true
+    }
+
+    /** Balls und Strikes des aktuellen Batters (seit letztem BF-Marker). */
+    private fun currentAtBatCount(): Pair<Int, Int> {
+        val pitches = db.getStatsForPitcher(pitcherId).pitches
+        val lastBf = pitches.indexOfLast { it.type == "BF" }
+        val current = if (lastBf == -1) pitches else pitches.drop(lastBf + 1)
+        var balls = 0; var strikes = 0
+        for (p in current) {
+            when (p.type) {
+                "B" -> balls++
+                "S" -> strikes++
+                "F" -> if (strikes < 2) strikes++
+            }
+        }
+        return Pair(balls, strikes)
     }
 
     private fun refresh() {
@@ -115,7 +159,16 @@ class PitchTrackActivity : AppCompatActivity() {
                     }
                     row.addView(tv)
                 }
-                "B", "S" -> {
+                "SO" -> {
+                    val tv = TextView(this).apply {
+                        text = "── Strike-Out (K) ───────────────"
+                        setTextColor(Color.parseColor("#27ae60"))
+                        textSize = 11f
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    }
+                    row.addView(tv)
+                }
+                "B", "S", "F" -> {
                     pitchNumber++
                     val numTv = TextView(this).apply {
                         text = "$pitchNumber."
@@ -124,13 +177,13 @@ class PitchTrackActivity : AppCompatActivity() {
                         width = 80
                     }
                     val badge = TextView(this).apply {
-                        text = if (pitch.type == "B") "Ball" else "Strike"
+                        text = when (pitch.type) { "B" -> "Ball"; "F" -> "Foul"; else -> "Strike" }
                         textSize = 14f
                         setPadding(24, 8, 24, 8)
                         setTextColor(Color.WHITE)
                         background = ContextCompat.getDrawable(
                             context,
-                            if (pitch.type == "B") R.drawable.badge_ball else R.drawable.badge_strike
+                            when (pitch.type) { "B" -> R.drawable.badge_ball; "F" -> R.drawable.badge_foul; else -> R.drawable.badge_strike }
                         )
                     }
                     row.addView(numTv)
