@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvPitcherName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnTrack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pitchen"
+            android:backgroundTint="#1a5fa8"
+            android:textColor="@android:color/white"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/btnStats"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Stats"
+            android:backgroundTint="#3B6D11"
+            android:textColor="@android:color/white"
+            android:layout_marginEnd="8dp" />
+
+        <ImageButton
+            android:id="@+id/btnDeletePitcher"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@android:drawable/ic_menu_delete"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="#c0392b" />
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
