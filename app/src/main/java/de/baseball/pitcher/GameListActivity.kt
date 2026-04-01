@@ -42,7 +42,7 @@ class GameListActivity : AppCompatActivity() {
         val games = db.getAllGames()
         adapter = GameAdapter(games,
             onClick = { game ->
-                val intent = Intent(this, PitcherListActivity::class.java)
+                val intent = Intent(this, GameHubActivity::class.java)
                 intent.putExtra("gameId", game.id)
                 intent.putExtra("gameOpponent", game.opponent)
                 intent.putExtra("gameDate", game.date)
@@ -122,10 +122,9 @@ class GameListActivity : AppCompatActivity() {
                 val opp = etOpponent.text.toString().trim()
                 val selectedTeam = teams[spinnerTeam.selectedItemPosition]
                 if (date.isNotEmpty() && opp.isNotEmpty()) {
-                    val gameId = db.insertGame(date, opp, selectedTeam.id)
+                    db.insertGame(date, opp, selectedTeam.id)
                     loadGames()
                     dialog.dismiss()
-                    showAvailabilityDialog(gameId, selectedTeam.id)
                 } else {
                     if (date.isEmpty()) etDate.error = "Pflichtfeld"
                     if (opp.isEmpty()) etOpponent.error = "Pflichtfeld"
@@ -206,25 +205,6 @@ class GameListActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun showAvailabilityDialog(gameId: Long, teamId: Long) {
-        val players = db.getPlayersForTeam(teamId)
-        if (players.isEmpty()) return
-
-        val labels = players.map { "#${it.number} ${it.name}" }.toTypedArray()
-        val checked = BooleanArray(players.size) { true }
-
-        AlertDialog.Builder(this)
-            .setTitle("Anwesenheit")
-            .setMultiChoiceItems(labels, checked) { _, which, isChecked ->
-                checked[which] = isChecked
-            }
-            .setPositiveButton("Speichern") { _, _ ->
-                val availableIds = players.filterIndexed { i, _ -> checked[i] }.map { it.id }.toSet()
-                db.saveAvailability(gameId, availableIds)
-            }
-            .setNegativeButton("Überspringen", null)
-            .show()
-    }
 }
 
 class GameAdapter(

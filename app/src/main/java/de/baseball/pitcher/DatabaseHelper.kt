@@ -74,7 +74,7 @@ data class PitcherStats(
     val pitches: List<Pitch>
 )
 
-class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db", null, 9) {
+class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db", null, 11) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
@@ -163,10 +163,11 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
             )
         """)
         db.execSQL("""
-            CREATE TABLE game_availability (
+            CREATE TABLE own_lineup (
                 game_id INTEGER NOT NULL,
+                slot INTEGER NOT NULL,
                 player_id INTEGER NOT NULL,
-                PRIMARY KEY(game_id, player_id),
+                PRIMARY KEY(game_id, slot),
                 FOREIGN KEY(game_id) REFERENCES games(id),
                 FOREIGN KEY(player_id) REFERENCES players(id)
             )
@@ -196,6 +197,21 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
                     UNIQUE(player_id, game_id),
                     FOREIGN KEY(player_id) REFERENCES players(id),
                     FOREIGN KEY(game_id) REFERENCES games(id)
+                )
+            """)
+        }
+        if (oldVersion < 11) {
+            db.execSQL("DROP TABLE IF EXISTS game_availability")
+        }
+        if (oldVersion < 10) {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS own_lineup (
+                    game_id INTEGER NOT NULL,
+                    slot INTEGER NOT NULL,
+                    player_id INTEGER NOT NULL,
+                    PRIMARY KEY(game_id, slot),
+                    FOREIGN KEY(game_id) REFERENCES games(id),
+                    FOREIGN KEY(player_id) REFERENCES players(id)
                 )
             """)
         }
@@ -279,7 +295,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
         db.delete("pitchers", "game_id=?", arrayOf(gameId.toString()))
         db.delete("opponent_lineup", "game_id=?", arrayOf(gameId.toString()))
         db.delete("opponent_bench", "game_id=?", arrayOf(gameId.toString()))
-        db.delete("game_availability", "game_id=?", arrayOf(gameId.toString()))
+        db.delete("own_lineup", "game_id=?", arrayOf(gameId.toString()))
         db.delete("games", "id=?", arrayOf(gameId.toString()))
     }
 
@@ -592,38 +608,10 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
         upsertLineupEntry(gameId, battingOrder, newJerseyNumber)
     }
 
-    // --- Game Availability ---
-
-    fun setPlayerAvailability(gameId: Long, playerId: Long, available: Boolean) {
-        if (available) {
-            val cv = ContentValues().apply {
-                put("game_id", gameId)
-                put("player_id", playerId)
-            }
-            writableDatabase.insertWithOnConflict("game_availability", null, cv, SQLiteDatabase.CONFLICT_IGNORE)
-        } else {
-            writableDatabase.delete("game_availability",
-                "game_id=? AND player_id=?",
-                arrayOf(gameId.toString(), playerId.toString()))
-        }
-    }
-
-    fun getAvailablePlayerIds(gameId: Long): Set<Long> {
-        val set = mutableSetOf<Long>()
-        val c = readableDatabase.rawQuery(
-            "SELECT player_id FROM game_availability WHERE game_id=?", arrayOf(gameId.toString())
-        )
-        while (c.moveToNext()) set.add(c.getLong(0))
-        c.close()
-        return set
-    }
-
-    // Gibt anwesende Spieler zurück. Wenn noch keine Anwesenheit gesetzt wurde, alle Spieler des Teams.
-    fun getAvailablePlayers(gameId: Long): List<Player> {
-        val game = getGame(gameId) ?: return emptyList()
-        val allPlayers = getPlayersForTeam(game.teamId)
-        val availableIds = getAvailablePlayerIds(gameId)
-        return if (availableIds.isEmpty()) allPlayers else allPlayers.filter { it.id in availableIds }
+    // Spieler in Lineup-Slots 1–9 (Starter), sortiert nach Slot
+    fun getOwnLineupStarters(gameId: Long): List<Player> {
+        return getOwnLineup(gameId).filter { it.key in 1..9 }
+            .toSortedMap().values.toList()
     }
 
     // Gesamtzahl BF über alle Pitcher eines Spiels
@@ -657,10 +645,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
 
     fun copyGame(sourceGameId: Long, newOpponent: String): Long {
         val source = getGame(sourceGameId) ?: return -1
-        val newGameId = insertGame(source.date, newOpponent, source.teamId)
-        val availableIds = getAvailablePlayerIds(sourceGameId)
-        saveAvailability(newGameId, availableIds)
-        return newGameId
+        return insertGame(source.date, newOpponent, source.teamId)
     }
 
     // BF eines Spielers (per player_id) über alle Spiele an einem bestimmten Datum
@@ -676,15 +661,39 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
         return total
     }
 
-    fun saveAvailability(gameId: Long, availablePlayerIds: Set<Long>) {
-        val db = writableDatabase
-        db.delete("game_availability", "game_id=?", arrayOf(gameId.toString()))
-        availablePlayerIds.forEach { playerId ->
-            val cv = ContentValues().apply {
-                put("game_id", gameId)
-                put("player_id", playerId)
-            }
-            db.insert("game_availability", null, cv)
+    // --- Own Lineup ---
+
+    fun setOwnLineupPlayer(gameId: Long, slot: Int, playerId: Long) {
+        val cv = ContentValues().apply {
+            put("game_id", gameId)
+            put("slot", slot)
+            put("player_id", playerId)
         }
+        writableDatabase.insertWithOnConflict("own_lineup", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    fun clearOwnLineupSlot(gameId: Long, slot: Int) {
+        writableDatabase.delete("own_lineup", "game_id=? AND slot=?",
+            arrayOf(gameId.toString(), slot.toString()))
+    }
+
+    // Gibt Map<slot, Player> zurück
+    fun getOwnLineup(gameId: Long): Map<Int, Player> {
+        val result = mutableMapOf<Int, Player>()
+        val c = readableDatabase.rawQuery("""
+            SELECT ol.slot, pl.id, pl.team_id, pl.name, pl.number,
+                   pl.primary_position, pl.secondary_position, pl.is_pitcher, pl.birth_year
+            FROM own_lineup ol
+            JOIN players pl ON pl.id = ol.player_id
+            WHERE ol.game_id = ?
+            ORDER BY ol.slot ASC
+        """.trimIndent(), arrayOf(gameId.toString()))
+        while (c.moveToNext()) {
+            val slot = c.getInt(0)
+            result[slot] = Player(c.getLong(1), c.getLong(2), c.getString(3), c.getString(4),
+                c.getInt(5), c.getInt(6), c.getInt(7) == 1, c.getInt(8))
+        }
+        c.close()
+        return result
     }
 }
