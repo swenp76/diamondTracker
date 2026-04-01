@@ -52,13 +52,13 @@ class GameListActivity : AppCompatActivity() {
             onEdit = { game -> showEditGameDialog(game) },
             onDelete = { game ->
                 AlertDialog.Builder(this)
-                    .setTitle("Spiel löschen")
-                    .setMessage("${game.date} vs ${game.opponent} wirklich löschen?")
-                    .setPositiveButton("Löschen") { _, _ ->
+                    .setTitle(getString(R.string.dialog_delete_game_title))
+                    .setMessage(getString(R.string.dialog_delete_game_message, game.date, game.opponent))
+                    .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
                         db.deleteGame(game.id)
                         loadGames()
                     }
-                    .setNegativeButton("Abbrechen", null)
+                    .setNegativeButton(getString(R.string.btn_cancel), null)
                     .show()
             }
         )
@@ -66,7 +66,7 @@ class GameListActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, 1, 0, "Einstellungen")
+        menu.add(0, 1, 0, getString(R.string.menu_settings))
             .setIcon(android.R.drawable.ic_menu_manage)
             .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
         return true
@@ -84,8 +84,8 @@ class GameListActivity : AppCompatActivity() {
         val teams = db.getAllTeams()
         if (teams.isEmpty()) {
             AlertDialog.Builder(this)
-                .setTitle("Kein Team vorhanden")
-                .setMessage("Bitte zuerst ein eigenes Team unter Einstellungen → Teams anlegen.")
+                .setTitle(getString(R.string.dialog_no_team_title))
+                .setMessage(getString(R.string.dialog_no_team_message))
                 .setPositiveButton("OK", null)
                 .show()
             return
@@ -110,10 +110,10 @@ class GameListActivity : AppCompatActivity() {
         }
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Neues Spiel")
+            .setTitle(getString(R.string.dialog_add_game_title))
             .setView(view)
-            .setPositiveButton("Erstellen", null)
-            .setNegativeButton("Abbrechen", null)
+            .setPositiveButton(getString(R.string.btn_create), null)
+            .setNegativeButton(getString(R.string.btn_cancel), null)
             .create()
 
         dialog.setOnShowListener {
@@ -126,8 +126,8 @@ class GameListActivity : AppCompatActivity() {
                     loadGames()
                     dialog.dismiss()
                 } else {
-                    if (date.isEmpty()) etDate.error = "Pflichtfeld"
-                    if (opp.isEmpty()) etOpponent.error = "Pflichtfeld"
+                    if (date.isEmpty()) etDate.error = getString(R.string.error_required_field)
+                    if (opp.isEmpty()) etOpponent.error = getString(R.string.error_required_field)
                 }
             }
         }
@@ -137,15 +137,15 @@ class GameListActivity : AppCompatActivity() {
     private fun showCopyGameDialog(game: Game) {
         val et = EditText(this).apply {
             setText(game.opponent)
-            hint = "Mannschaft"
+            hint = getString(R.string.hint_opponent)
             inputType = android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
             setPadding(48, 24, 48, 24)
         }
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Spiel kopieren (${game.date})")
+            .setTitle(getString(R.string.dialog_copy_game_title, game.date))
             .setView(et)
-            .setPositiveButton("Kopieren", null)
-            .setNegativeButton("Abbrechen", null)
+            .setPositiveButton(getString(R.string.btn_copy), null)
+            .setNegativeButton(getString(R.string.btn_cancel), null)
             .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
@@ -155,7 +155,7 @@ class GameListActivity : AppCompatActivity() {
                     loadGames()
                     dialog.dismiss()
                 } else {
-                    et.error = "Pflichtfeld"
+                    et.error = getString(R.string.error_required_field)
                 }
             }
         }
@@ -182,10 +182,10 @@ class GameListActivity : AppCompatActivity() {
         }
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Spiel bearbeiten")
+            .setTitle(getString(R.string.dialog_edit_game_title))
             .setView(view)
-            .setPositiveButton("Speichern", null)
-            .setNegativeButton("Abbrechen", null)
+            .setPositiveButton(getString(R.string.btn_save), null)
+            .setNegativeButton(getString(R.string.btn_cancel), null)
             .create()
 
         dialog.setOnShowListener {
@@ -197,8 +197,8 @@ class GameListActivity : AppCompatActivity() {
                     loadGames()
                     dialog.dismiss()
                 } else {
-                    if (date.isEmpty()) etDate.error = "Pflichtfeld"
-                    if (opp.isEmpty()) etOpponent.error = "Pflichtfeld"
+                    if (date.isEmpty()) etDate.error = getString(R.string.error_required_field)
+                    if (opp.isEmpty()) etOpponent.error = getString(R.string.error_required_field)
                 }
             }
         }

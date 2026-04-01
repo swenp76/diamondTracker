@@ -27,7 +27,7 @@
             android:id="@+id/btnTrack"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pitchen"
+            android:text="@string/btn_pitch"
             android:backgroundTint="#1a5fa8"
             android:textColor="@android:color/white"
             android:layout_marginEnd="8dp" />
@@ -36,7 +36,7 @@
             android:id="@+id/btnStats"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Stats"
+            android:text="@string/btn_stats"
             android:backgroundTint="#3B6D11"
             android:textColor="@android:color/white"
             android:layout_marginEnd="8dp" />

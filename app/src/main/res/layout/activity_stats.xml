@@ -25,7 +25,7 @@
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="vertical" android:padding="12dp" android:gravity="center">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="BF" android:textSize="11sp" android:textColor="#888888"/>
+                        android:text="@string/stat_bf" android:textSize="11sp" android:textColor="#888888"/>
                     <TextView android:id="@+id/statBF" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="0"
                         android:textSize="26sp" android:textStyle="bold"/>
@@ -40,7 +40,7 @@
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="vertical" android:padding="12dp" android:gravity="center">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Balls" android:textSize="11sp" android:textColor="#1a5fa8"/>
+                        android:text="@string/stat_balls" android:textSize="11sp" android:textColor="#1a5fa8"/>
                     <TextView android:id="@+id/statBalls" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="0"
                         android:textSize="26sp" android:textStyle="bold" android:textColor="#1a5fa8"/>
@@ -55,7 +55,7 @@
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="vertical" android:padding="12dp" android:gravity="center">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Strikes" android:textSize="11sp" android:textColor="#c0392b"/>
+                        android:text="@string/stat_strikes" android:textSize="11sp" android:textColor="#c0392b"/>
                     <TextView android:id="@+id/statStrikes" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="0"
                         android:textSize="26sp" android:textStyle="bold" android:textColor="#c0392b"/>
@@ -77,7 +77,7 @@
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="vertical" android:padding="12dp" android:gravity="center">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Total Pitches" android:textSize="11sp" android:textColor="#888888"/>
+                        android:text="@string/stat_total_pitches" android:textSize="11sp" android:textColor="#888888"/>
                     <TextView android:id="@+id/statTotal" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="0"
                         android:textSize="26sp" android:textStyle="bold"/>
@@ -92,7 +92,7 @@
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="vertical" android:padding="12dp" android:gravity="center">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Strike%" android:textSize="11sp" android:textColor="#3B6D11"/>
+                        android:text="@string/stat_strike_percent" android:textSize="11sp" android:textColor="#3B6D11"/>
                     <TextView android:id="@+id/statStrikePercent" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="0%"
                         android:textSize="26sp" android:textStyle="bold" android:textColor="#3B6D11"/>
@@ -102,7 +102,7 @@
 
         <!-- Pitch grid -->
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Pitch-Verlauf" android:textSize="14sp" android:textStyle="bold"
+            android:text="@string/stat_pitch_log" android:textSize="14sp" android:textStyle="bold"
             android:layout_marginBottom="8dp" android:textColor="#333333"/>
 
         <LinearLayout

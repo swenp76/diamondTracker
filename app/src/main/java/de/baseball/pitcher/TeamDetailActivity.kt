@@ -28,9 +28,9 @@ class TeamDetailActivity : AppCompatActivity() {
             contentResolver.openOutputStream(uri)?.use { out ->
                 out.write(buildTeamJson(teamId).toByteArray(Charsets.UTF_8))
             }
-            Toast.makeText(this, "Team exportiert", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_team_exported), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Export fehlgeschlagen: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.toast_export_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,7 +38,7 @@ class TeamDetailActivity : AppCompatActivity() {
         setContentView(R.layout.activity_team_detail)
         db = DatabaseHelper(this)
         teamId = intent.getLongExtra("teamId", -1)
-        supportActionBar?.title = "Team bearbeiten"
+        supportActionBar?.title = getString(R.string.team_detail_title)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         etTeamName = findViewById(R.id.etTeamName)
@@ -56,7 +56,7 @@ class TeamDetailActivity : AppCompatActivity() {
             if (name.isNotEmpty()) {
                 db.updateTeamName(teamId, name)
                 supportActionBar?.title = name
-                Toast.makeText(this, "Gespeichert", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_saved), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -67,8 +67,8 @@ class TeamDetailActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, 1, 0, "Aktive Positionen").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
-        menu.add(0, 2, 0, "Team exportieren").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+        menu.add(0, 1, 0, getString(R.string.menu_active_positions)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+        menu.add(0, 2, 0, getString(R.string.menu_export_team)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
         return true
     }
 
@@ -116,9 +116,9 @@ class TeamDetailActivity : AppCompatActivity() {
         }
 
         AlertDialog.Builder(this)
-            .setTitle("Aktive Positionen")
+            .setTitle(getString(R.string.dialog_active_positions_title))
             .setView(container)
-            .setPositiveButton("Fertig", null)
+            .setPositiveButton(getString(R.string.btn_done), null)
             .show()
     }
 
@@ -129,13 +129,13 @@ class TeamDetailActivity : AppCompatActivity() {
             onEdit = { player -> showEditPlayerDialog(player) },
             onDelete = { player ->
                 AlertDialog.Builder(this)
-                    .setTitle("Spieler löschen")
-                    .setMessage("${player.name} wirklich löschen?")
-                    .setPositiveButton("Löschen") { _, _ ->
+                    .setTitle(getString(R.string.dialog_delete_player_title))
+                    .setMessage(getString(R.string.dialog_delete_player_message, player.name))
+                    .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
                         db.deletePlayer(player.id)
                         loadPlayers()
                     }
-                    .setNegativeButton("Abbrechen", null)
+                    .setNegativeButton(getString(R.string.btn_cancel), null)
                     .show()
             }
         )
@@ -159,7 +159,7 @@ class TeamDetailActivity : AppCompatActivity() {
         val etBirthYear = view.findViewById<EditText>(R.id.etBirthYear)
 
         val enabledPositions = db.getEnabledPositions(teamId).sorted()
-        val positionItems = listOf(0 to "– Keine –") +
+        val positionItems = listOf(0 to getString(R.string.spinner_no_position)) +
                 BaseballPositions.ALL.filter { it.first in enabledPositions }
         val spinnerLabels = positionItems.map { it.second }
 
@@ -193,9 +193,9 @@ class TeamDetailActivity : AppCompatActivity() {
         }
 
         AlertDialog.Builder(this)
-            .setTitle(if (existing == null) "Neuer Spieler" else "Spieler bearbeiten")
+            .setTitle(if (existing == null) getString(R.string.dialog_add_player_title) else getString(R.string.dialog_edit_player_title))
             .setView(view)
-            .setPositiveButton(if (existing == null) "Hinzufügen" else "Speichern") { _, _ ->
+            .setPositiveButton(if (existing == null) getString(R.string.btn_add) else getString(R.string.btn_save)) { _, _ ->
                 val name = etName.text.toString().trim()
                 val number = etNumber.text.toString().trim()
                 val selectedPos = positionItems[spinnerPos.selectedItemPosition].first
@@ -211,7 +211,7 @@ class TeamDetailActivity : AppCompatActivity() {
                     loadPlayers()
                 }
             }
-            .setNegativeButton("Abbrechen", null)
+            .setNegativeButton(getString(R.string.btn_cancel), null)
             .show()
     }
 

@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Name"
+        android:text="@string/label_name"
         android:textSize="12sp"
         android:textColor="#888888" />
 
@@ -16,14 +16,14 @@
         android:id="@+id/etPlayerName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Vor- und Nachname"
+        android:hint="@string/hint_full_name"
         android:inputType="textPersonName|textCapWords"
         android:layout_marginBottom="16dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Trikotnummer"
+        android:text="@string/label_jersey_number"
         android:textSize="12sp"
         android:textColor="#888888" />
 
@@ -31,14 +31,14 @@
         android:id="@+id/etPlayerNumber"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="z.B. 7"
+        android:hint="@string/hint_jersey_number"
         android:inputType="number"
         android:layout_marginBottom="16dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hauptposition"
+        android:text="@string/label_primary_position"
         android:textSize="12sp"
         android:textColor="#888888"
         android:layout_marginBottom="4dp" />
@@ -52,7 +52,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Zweite Position"
+        android:text="@string/label_secondary_position"
         android:textSize="12sp"
         android:textColor="#888888"
         android:layout_marginBottom="4dp" />
@@ -67,14 +67,14 @@
         android:id="@+id/cbIsPitcher"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Pitcher"
+        android:text="@string/label_is_pitcher"
         android:textSize="15sp"
         android:layout_marginBottom="16dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Geburtsjahr"
+        android:text="@string/label_birth_year"
         android:textSize="12sp"
         android:textColor="#888888" />
 
@@ -82,7 +82,7 @@
         android:id="@+id/etBirthYear"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="z.B. 2009"
+        android:hint="@string/hint_birth_year"
         android:inputType="number"
         android:maxLength="4" />
 

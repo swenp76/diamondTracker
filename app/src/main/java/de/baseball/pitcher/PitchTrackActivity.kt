@@ -29,7 +29,7 @@ class PitchTrackActivity : AppCompatActivity() {
 
         pitcherId = intent.getLongExtra("pitcherId", -1)
         gameId = intent.getLongExtra("gameId", -1)
-        val pitcherName = intent.getStringExtra("pitcherName") ?: "Pitcher"
+        val pitcherName = intent.getStringExtra("pitcherName") ?: getString(R.string.pitcher_default_name)
         supportActionBar?.title = pitcherName
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
@@ -170,9 +170,9 @@ class PitchTrackActivity : AppCompatActivity() {
         val currentBattingOrder = (gameBF % 9) + 1
         val jerseyDisplay = getBatterJersey(currentBattingOrder)
         tvCurrentBatter.text = if (jerseyDisplay.isNotEmpty())
-            "$jerseyDisplay  (Slot $currentBattingOrder)"
+            getString(R.string.label_batter_slot_with_jersey, jerseyDisplay, currentBattingOrder)
         else
-            "Slot $currentBattingOrder"
+            getString(R.string.label_batter_slot, currentBattingOrder)
 
         // Rebuild pitch log
         pitchLogLayout.removeAllViews()
@@ -192,9 +192,9 @@ class PitchTrackActivity : AppCompatActivity() {
                     val nextBattingOrder = (bfCount % 9) + 1
                     val nextJersey = getBatterJersey(nextBattingOrder)
                     val batterLabel = if (nextJersey.isNotEmpty())
-                        "── $nextJersey (Slot $nextBattingOrder) ─────────"
+                        getString(R.string.pitch_label_slot_with_jersey, nextJersey, nextBattingOrder)
                     else
-                        "── Slot $nextBattingOrder ──────────────────────"
+                        getString(R.string.pitch_label_slot, nextBattingOrder)
                     val tv = TextView(this).apply {
                         text = batterLabel
                         setTextColor(Color.parseColor("#888888"))
@@ -204,7 +204,7 @@ class PitchTrackActivity : AppCompatActivity() {
                 }
                 "HBP" -> {
                     val tv = TextView(this).apply {
-                        text = "── Hit by Pitch ─────────────────"
+                        text = getString(R.string.pitch_label_hbp)
                         setTextColor(Color.parseColor("#8e44ad"))
                         textSize = 11f
                         typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -213,7 +213,7 @@ class PitchTrackActivity : AppCompatActivity() {
                 }
                 "W" -> {
                     val tv = TextView(this).apply {
-                        text = "── Walk ─────────────────────────"
+                        text = getString(R.string.pitch_label_walk)
                         setTextColor(Color.parseColor("#d35400"))
                         textSize = 11f
                         typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -222,7 +222,7 @@ class PitchTrackActivity : AppCompatActivity() {
                 }
                 "SO" -> {
                     val tv = TextView(this).apply {
-                        text = "── Strike-Out (K) ───────────────"
+                        text = getString(R.string.pitch_label_strikeout)
                         setTextColor(Color.parseColor("#27ae60"))
                         textSize = 11f
                         typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -238,7 +238,7 @@ class PitchTrackActivity : AppCompatActivity() {
                         width = 80
                     }
                     val badge = TextView(this).apply {
-                        text = when (pitch.type) { "B" -> "Ball"; "F" -> "Foul"; else -> "Strike" }
+                        text = when (pitch.type) { "B" -> getString(R.string.pitch_label_ball); "F" -> getString(R.string.pitch_label_foul); else -> getString(R.string.pitch_label_strike) }
                         textSize = 14f
                         setPadding(24, 8, 24, 8)
                         setTextColor(Color.WHITE)

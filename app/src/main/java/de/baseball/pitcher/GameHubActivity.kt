@@ -21,7 +21,7 @@ class GameHubActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         findViewById<Button>(R.id.btnOffense).setOnClickListener {
-            Toast.makeText(this, "Offense – coming soon", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_offense_coming_soon), Toast.LENGTH_SHORT).show()
         }
 
         findViewById<Button>(R.id.btnDefense).setOnClickListener {

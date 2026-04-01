@@ -27,7 +27,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:text="Gegner" />
+                android:text="@string/label_opponent" />
 
             <TextView
                 android:id="@+id/tvDate"
@@ -35,7 +35,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="14sp"
                 android:textColor="#888888"
-                android:text="Datum" />
+                android:text="@string/label_date" />
         </LinearLayout>
 
         <ImageButton

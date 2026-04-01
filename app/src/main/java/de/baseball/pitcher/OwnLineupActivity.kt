@@ -92,12 +92,12 @@ class OwnLineupActivity : AppCompatActivity() {
         val lineup = db.getOwnLineup(gameId)
         val (slotStates, subStatuses) = computeState()
 
-        addSectionHeader("Starter (1 – 10)")
+        addSectionHeader(getString(R.string.lineup_section_starters))
         for (state in slotStates) {
             addStarterRow(state, lineup)
         }
 
-        addSectionHeader("Substitutes (11 – 20)")
+        addSectionHeader(getString(R.string.lineup_section_substitutes))
         for (slot in 11..20) {
             val player = lineup[slot]
             addSubstituteRow(slot, player, if (player != null) subStatuses[player.id] ?: SubStatus.AVAILABLE else null)
@@ -105,7 +105,6 @@ class OwnLineupActivity : AppCompatActivity() {
 
         addWechselSection(lineup, slotStates, subStatuses)
     }
-
     private fun addSectionHeader(title: String) {
         val tv = TextView(this).apply {
             text = title
@@ -141,7 +140,7 @@ class OwnLineupActivity : AppCompatActivity() {
                         if (isSubstituted) "  ↩" else ""
                 setTextColor(if (isSubstituted) Color.parseColor("#c0392b") else Color.parseColor("#222222"))
             } else {
-                text = "— leer —"
+                text = getString(R.string.lineup_slot_empty)
                 setTextColor(Color.parseColor("#bbbbbb"))
             }
         }
@@ -204,7 +203,7 @@ class OwnLineupActivity : AppCompatActivity() {
                 text = "#${player.number}  ${player.name}  (${BaseballPositions.shortLabel(player.primaryPosition)})"
                 setTextColor(if (status == SubStatus.DONE) Color.parseColor("#999999") else Color.parseColor("#222222"))
             } else {
-                text = "— leer —"
+                text = getString(R.string.lineup_slot_empty)
                 setTextColor(Color.parseColor("#bbbbbb"))
             }
         }
@@ -261,7 +260,7 @@ class OwnLineupActivity : AppCompatActivity() {
         val subs = db.getSubstitutionsForGame(gameId)
         if (subs.isEmpty()) return
 
-        addSectionHeader("Wechsel-Übersicht")
+        addSectionHeader(getString(R.string.lineup_section_changes))
 
         // Divider
         val divider = View(this).apply {
@@ -286,10 +285,10 @@ class OwnLineupActivity : AppCompatActivity() {
                 val timesOut = subs.count { it.playerOutId == playerOut.id }
                 val isStarter = (1..10).any { lineup[it]?.id == playerOut.id }
                 val label = when {
-                    isStarter && timesIn == 0 -> "Draußen – kann zurückkehren"
-                    isStarter && timesIn >= 1 -> "Zurückgekehrt"
-                    !isStarter && timesOut >= 1 -> "Fertig (nicht mehr verfügbar)"
-                    else -> "Draußen"
+                    isStarter && timesIn == 0 -> getString(R.string.status_out_can_return)
+                    isStarter && timesIn >= 1 -> getString(R.string.status_returned)
+                    !isStarter && timesOut >= 1 -> getString(R.string.status_done)
+                    else -> getString(R.string.status_out)
                 }
                 val color = when {
                     isStarter && timesIn == 0 -> "#e67e22"
@@ -305,9 +304,9 @@ class OwnLineupActivity : AppCompatActivity() {
                 val timesOut = subs.count { it.playerOutId == playerIn.id }
                 val isOnField = slotStates.any { it.currentPlayer?.id == playerIn.id }
                 val label = when {
-                    isOnField && timesOut == 0 -> "Im Spiel"
-                    !isOnField && timesOut >= 1 -> "Fertig (nicht mehr verfügbar)"
-                    else -> "Im Spiel"
+                    isOnField && timesOut == 0 -> getString(R.string.status_in_game)
+                    !isOnField && timesOut >= 1 -> getString(R.string.status_done)
+                    else -> getString(R.string.status_in_game)
                 }
                 val color = when {
                     isOnField -> "#27ae60"
@@ -363,23 +362,23 @@ class OwnLineupActivity : AppCompatActivity() {
         when (state.swapType) {
             SwapType.SUB_IN -> {
                 AlertDialog.Builder(this)
-                    .setTitle("Einwechslung – Slot ${state.slot}")
-                    .setItems(arrayOf("Normal", "Verletzung")) { _, which ->
+                    .setTitle(getString(R.string.dialog_sub_title, state.slot))
+                    .setItems(arrayOf(getString(R.string.dialog_sub_normal), getString(R.string.dialog_sub_injury))) { _, which ->
                         if (which == 0) showNormalSubDialog(state)
                         else showInjurySubDialog(state)
                     }
-                    .setNegativeButton("Abbrechen", null).show()
+                    .setNegativeButton(getString(R.string.btn_cancel), null).show()
             }
             SwapType.RETURN_STARTER -> {
                 val original = state.originalPlayer ?: return
                 AlertDialog.Builder(this)
-                    .setTitle("Rückwechslung – Slot ${state.slot}")
-                    .setMessage("#${original.number} ${original.name} zurück ins Spiel?")
+                    .setTitle(getString(R.string.dialog_return_title, state.slot))
+                    .setMessage(getString(R.string.dialog_return_message, "#${original.number} ${original.name}"))
                     .setPositiveButton("Zurück") { _, _ ->
                         db.addSubstitution(gameId, state.slot, state.currentPlayer!!.id, original.id)
                         buildLineup()
                     }
-                    .setNegativeButton("Abbrechen", null).show()
+                    .setNegativeButton(getString(R.string.btn_cancel), null).show()
             }
             SwapType.INJURY_ONLY -> showInjurySubDialog(state)
             SwapType.NONE -> {}
@@ -411,38 +410,38 @@ class OwnLineupActivity : AppCompatActivity() {
         val candidates = availableSubstitutes()
         if (candidates.isEmpty()) {
             AlertDialog.Builder(this)
-                .setTitle("Keine Substitutes verfügbar")
-                .setMessage("Alle Substitutes wurden bereits eingesetzt.")
+                .setTitle(getString(R.string.dialog_no_subs_title))
+                .setMessage(getString(R.string.dialog_no_subs_message))
                 .setPositiveButton("OK", null).show()
             return
         }
         val labels = candidates.map { "#${it.number}  ${it.name}" }.toTypedArray()
         AlertDialog.Builder(this)
-            .setTitle("Einwechslung – Slot ${state.slot}")
+            .setTitle(getString(R.string.dialog_sub_title, state.slot))
             .setItems(labels) { _, which ->
                 db.addSubstitution(gameId, state.slot, state.currentPlayer!!.id, candidates[which].id)
                 buildLineup()
             }
-            .setNegativeButton("Abbrechen", null).show()
+            .setNegativeButton(getString(R.string.btn_cancel), null).show()
     }
 
     private fun showInjurySubDialog(state: SlotState) {
         val candidates = (availableSubstitutes() + outStarters()).distinctBy { it.id }
         if (candidates.isEmpty()) {
             AlertDialog.Builder(this)
-                .setTitle("Keine Spieler verfügbar")
-                .setMessage("Keine verfügbaren Substitutes oder ausgewechselten Starter.")
+                .setTitle(getString(R.string.dialog_no_players_title))
+                .setMessage(getString(R.string.dialog_no_players_own_message))
                 .setPositiveButton("OK", null).show()
             return
         }
         val labels = candidates.map { "#${it.number}  ${it.name}" }.toTypedArray()
         AlertDialog.Builder(this)
-            .setTitle("Verletzung – Slot ${state.slot}")
+            .setTitle(getString(R.string.dialog_injury_title, state.slot))
             .setItems(labels) { _, which ->
                 db.addSubstitution(gameId, state.slot, state.currentPlayer!!.id, candidates[which].id)
                 buildLineup()
             }
-            .setNegativeButton("Abbrechen", null).show()
+            .setNegativeButton(getString(R.string.btn_cancel), null).show()
     }
 
     // ── Player picker (lineup editing) ─────────────────────────────────────────
@@ -456,19 +455,19 @@ class OwnLineupActivity : AppCompatActivity() {
 
         if (unassigned.isEmpty()) {
             AlertDialog.Builder(this)
-                .setTitle("Slot $slot")
-                .setMessage("Keine weiteren Spieler verfügbar.")
+                .setTitle(getString(R.string.dialog_pick_player_title, slot))
+                .setMessage(getString(R.string.dialog_no_more_players))
                 .setPositiveButton("OK", null).show()
             return
         }
 
         val labels = unassigned.map { "#${it.number}  ${it.name}  (${BaseballPositions.shortLabel(it.primaryPosition)})" }.toTypedArray()
         AlertDialog.Builder(this)
-            .setTitle("Slot $slot – Spieler wählen")
+            .setTitle(getString(R.string.dialog_pick_player_title, slot))
             .setItems(labels) { _, which ->
                 db.setOwnLineupPlayer(gameId, slot, unassigned[which].id)
                 buildLineup()
             }
-            .setNegativeButton("Abbrechen", null).show()
+            .setNegativeButton(getString(R.string.btn_cancel), null).show()
     }
 }

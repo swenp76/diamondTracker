@@ -26,7 +26,7 @@ class TeamListActivity : AppCompatActivity() {
             } ?: return@registerForActivityResult
             showImportConfirmDialog(json)
         } catch (e: Exception) {
-            Toast.makeText(this, "Datei konnte nicht gelesen werden", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.toast_file_read_error), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -34,7 +34,7 @@ class TeamListActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_team_list)
         db = DatabaseHelper(this)
-        supportActionBar?.title = "Teams"
+        supportActionBar?.title = getString(R.string.teams_title)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         recycler = findViewById(R.id.recyclerTeams)
@@ -52,7 +52,7 @@ class TeamListActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, 1, 0, "Team importieren").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+        menu.add(0, 1, 0, getString(R.string.menu_import_team)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
         return true
     }
 
@@ -79,13 +79,13 @@ class TeamListActivity : AppCompatActivity() {
             },
             onDelete = { team ->
                 AlertDialog.Builder(this)
-                    .setTitle("Team löschen")
-                    .setMessage("\"${team.name}\" und alle Spieler wirklich löschen?")
-                    .setPositiveButton("Löschen") { _, _ ->
+                    .setTitle(getString(R.string.dialog_delete_team_title))
+                    .setMessage(getString(R.string.dialog_delete_team_message, team.name))
+                    .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
                         db.deleteTeam(team.id)
                         loadTeams()
                     }
-                    .setNegativeButton("Abbrechen", null)
+                    .setNegativeButton(getString(R.string.btn_cancel), null)
                     .show()
             }
         )
@@ -93,39 +93,39 @@ class TeamListActivity : AppCompatActivity() {
 
     private fun showAddTeamDialog() {
         val et = EditText(this).apply {
-            hint = "Teamname"
+            hint = getString(R.string.hint_team_name)
             setPadding(48, 24, 48, 24)
         }
         AlertDialog.Builder(this)
-            .setTitle("Neues Team")
+            .setTitle(getString(R.string.dialog_add_team_title))
             .setView(et)
-            .setPositiveButton("Erstellen") { _, _ ->
+            .setPositiveButton(getString(R.string.btn_create)) { _, _ ->
                 val name = et.text.toString().trim()
                 if (name.isNotEmpty()) {
                     db.insertTeam(name)
                     loadTeams()
                 }
             }
-            .setNegativeButton("Abbrechen", null)
+            .setNegativeButton(getString(R.string.btn_cancel), null)
             .show()
     }
 
     private fun showImportConfirmDialog(json: String) {
         val root = try { JSONObject(json) } catch (e: Exception) {
-            Toast.makeText(this, "Ungültiges Format – keine gültige JSON-Datei", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.toast_invalid_json), Toast.LENGTH_LONG).show()
             return
         }
         if (!root.has("name")) {
-            Toast.makeText(this, "Ungültiges Format – kein Team gefunden", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.toast_invalid_team_format), Toast.LENGTH_LONG).show()
             return
         }
 
         val teamName = root.getString("name")
         AlertDialog.Builder(this)
-            .setTitle("Team importieren")
-            .setMessage("\"$teamName\" importieren und als neues Team hinzufügen?")
-            .setPositiveButton("Importieren") { _, _ -> importTeam(root) }
-            .setNegativeButton("Abbrechen", null)
+            .setTitle(getString(R.string.dialog_import_team_title))
+            .setMessage(getString(R.string.dialog_import_team_message, teamName))
+            .setPositiveButton(getString(R.string.btn_import)) { _, _ -> importTeam(root) }
+            .setNegativeButton(getString(R.string.btn_cancel), null)
             .show()
     }
 
@@ -159,9 +159,9 @@ class TeamListActivity : AppCompatActivity() {
             }
 
             loadTeams()
-            Toast.makeText(this, "\"${root.getString("name")}\" importiert", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_team_imported, root.getString("name")), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Import fehlgeschlagen: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.toast_import_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
 }
@@ -184,7 +184,7 @@ class TeamAdapter(
     override fun onBindViewHolder(holder: VH, position: Int) {
         val team = teams[position]
         holder.tvName.text = team.name
-        holder.tvSub.text = "Tippen zum Bearbeiten"
+        holder.tvSub.text = holder.itemView.context.getString(R.string.team_tap_to_edit)
         holder.itemView.setOnClickListener { onClick(team) }
         holder.btnDelete.setOnClickListener { onDelete(team) }
     }

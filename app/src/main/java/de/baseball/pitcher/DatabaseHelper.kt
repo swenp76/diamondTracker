@@ -1,38 +1,103 @@
 package de.baseball.pitcher
 
-import android.content.ContentValues
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import androidx.room.*
+import de.baseball.pitcher.db.*
 
-data class Substitution(val id: Long = 0, val gameId: Long, val slot: Int, val playerOutId: Long, val playerInId: Long)
-data class OppSubstitution(val id: Long = 0, val gameId: Long, val slot: Int, val jerseyOut: String, val jerseyIn: String)
+// ── Entities ──────────────────────────────────────────────────────────────────
 
-data class Game(val id: Long = 0, val date: String, val opponent: String, val teamId: Long = 0)
-data class Pitcher(val id: Long = 0, val gameId: Long, val name: String, val playerId: Long = 0)
-data class Pitch(val id: Long = 0, val pitcherId: Long, val type: String, val sequenceNr: Int)
+@Entity(tableName = "games")
+data class Game(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val date: String,
+    val opponent: String,
+    @ColumnInfo(name = "team_id") val teamId: Long = 0
+)
+
+@Entity(tableName = "pitchers")
+data class Pitcher(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "game_id") val gameId: Long,
+    val name: String,
+    @ColumnInfo(name = "player_id") val playerId: Long = 0
+)
+
+@Entity(tableName = "pitches")
+data class Pitch(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "pitcher_id") val pitcherId: Long,
+    val type: String,
+    @ColumnInfo(name = "sequence_nr") val sequenceNr: Int
+)
 // type: "B" = Ball, "S" = Strike, "BF" = Batter Faced
 
-data class Team(val id: Long = 0, val name: String)
+@Entity(tableName = "teams")
+data class Team(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String
+)
 
+@Entity(tableName = "players")
 data class Player(
-    val id: Long = 0,
-    val teamId: Long,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "team_id") val teamId: Long,
     val name: String,
     val number: String,
-    val primaryPosition: Int,
-    val secondaryPosition: Int = 0,
-    val isPitcher: Boolean = false,
-    val birthYear: Int = 0
+    @ColumnInfo(name = "primary_position") val primaryPosition: Int,
+    @ColumnInfo(name = "secondary_position") val secondaryPosition: Int = 0,
+    @ColumnInfo(name = "is_pitcher") val isPitcher: Boolean = false,
+    @ColumnInfo(name = "birth_year") val birthYear: Int = 0
 )
 
-data class PitcherAppearance(
-    val id: Long = 0,
-    val playerId: Long,
-    val gameId: Long,
-    val date: String,       // Format: YYYY-MM-DD
-    val battersFaced: Int
+@Entity(
+    tableName = "pitcher_appearances",
+    indices = [Index(value = ["player_id", "game_id"], unique = true)]
 )
+data class PitcherAppearance(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "game_id") val gameId: Long,
+    val date: String,
+    @ColumnInfo(name = "batters_faced") val battersFaced: Int
+)
+
+@Entity(
+    tableName = "opponent_lineup",
+    indices = [Index(value = ["game_id", "batting_order"], unique = true)]
+)
+data class LineupEntry(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "game_id") val gameId: Long,
+    @ColumnInfo(name = "batting_order") val battingOrder: Int,
+    @ColumnInfo(name = "jersey_number") val jerseyNumber: String
+)
+
+@Entity(tableName = "opponent_bench")
+data class BenchPlayer(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "game_id") val gameId: Long,
+    @ColumnInfo(name = "jersey_number") val jerseyNumber: String
+)
+
+@Entity(tableName = "substitutions")
+data class Substitution(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "game_id") val gameId: Long,
+    val slot: Int,
+    @ColumnInfo(name = "player_out_id") val playerOutId: Long,
+    @ColumnInfo(name = "player_in_id") val playerInId: Long
+)
+
+@Entity(tableName = "opponent_substitutions")
+data class OppSubstitution(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "game_id") val gameId: Long,
+    val slot: Int,
+    @ColumnInfo(name = "jersey_out") val jerseyOut: String,
+    @ColumnInfo(name = "jersey_in") val jerseyIn: String
+)
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
 
 object BaseballPositions {
     val ALL = listOf(
@@ -48,25 +113,12 @@ object BaseballPositions {
         10 to "DH – Designated Hitter"
     )
     fun label(pos: Int) = ALL.firstOrNull { it.first == pos }?.second ?: "?"
-    fun shortLabel(pos: Int) = when(pos) {
+    fun shortLabel(pos: Int) = when (pos) {
         1 -> "P"; 2 -> "C"; 3 -> "1B"; 4 -> "2B"; 5 -> "3B"
         6 -> "SS"; 7 -> "LF"; 8 -> "CF"; 9 -> "RF"; 10 -> "DH"
         else -> "?"
     }
 }
-
-data class LineupEntry(
-    val id: Long = 0,
-    val gameId: Long,
-    val battingOrder: Int,   // 1-9
-    val jerseyNumber: String
-)
-
-data class BenchPlayer(
-    val id: Long = 0,
-    val gameId: Long,
-    val jerseyNumber: String
-)
 
 data class PitcherStats(
     val pitcher: Pitcher,
@@ -77,349 +129,60 @@ data class PitcherStats(
     val pitches: List<Pitch>
 )
 
-class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db", null, 13) {
+// ── DatabaseHelper – Room-Wrapper mit identischer API ─────────────────────────
 
-    override fun onCreate(db: SQLiteDatabase) {
-        db.execSQL("""
-            CREATE TABLE games (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT NOT NULL,
-                opponent TEXT NOT NULL,
-                team_id INTEGER NOT NULL DEFAULT 0,
-                FOREIGN KEY(team_id) REFERENCES teams(id)
-            )
-        """)
-        db.execSQL("""
-            CREATE TABLE pitchers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                game_id INTEGER NOT NULL,
-                name TEXT NOT NULL,
-                player_id INTEGER NOT NULL DEFAULT 0,
-                FOREIGN KEY(game_id) REFERENCES games(id),
-                FOREIGN KEY(player_id) REFERENCES players(id)
-            )
-        """)
-        db.execSQL("""
-            CREATE TABLE pitches (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                pitcher_id INTEGER NOT NULL,
-                type TEXT NOT NULL,
-                sequence_nr INTEGER NOT NULL,
-                FOREIGN KEY(pitcher_id) REFERENCES pitchers(id)
-            )
-        """)
-        db.execSQL("""
-            CREATE TABLE teams (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL
-            )
-        """)
-        db.execSQL("""
-            CREATE TABLE team_positions (
-                team_id INTEGER NOT NULL,
-                position INTEGER NOT NULL,
-                PRIMARY KEY(team_id, position),
-                FOREIGN KEY(team_id) REFERENCES teams(id)
-            )
-        """)
-        db.execSQL("""
-            CREATE TABLE players (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                team_id INTEGER NOT NULL,
-                name TEXT NOT NULL,
-                number TEXT NOT NULL DEFAULT '',
-                primary_position INTEGER NOT NULL DEFAULT 0,
-                secondary_position INTEGER NOT NULL DEFAULT 0,
-                is_pitcher INTEGER NOT NULL DEFAULT 0,
-                birth_year INTEGER NOT NULL DEFAULT 0,
-                FOREIGN KEY(team_id) REFERENCES teams(id)
-            )
-        """)
-        db.execSQL("""
-            CREATE TABLE pitcher_appearances (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                player_id INTEGER NOT NULL,
-                game_id INTEGER NOT NULL,
-                date TEXT NOT NULL,
-                batters_faced INTEGER NOT NULL DEFAULT 0,
-                UNIQUE(player_id, game_id),
-                FOREIGN KEY(player_id) REFERENCES players(id),
-                FOREIGN KEY(game_id) REFERENCES games(id)
-            )
-        """)
-        db.execSQL("""
-            CREATE TABLE opponent_lineup (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                game_id INTEGER NOT NULL,
-                batting_order INTEGER NOT NULL,
-                jersey_number TEXT NOT NULL DEFAULT '',
-                UNIQUE(game_id, batting_order),
-                FOREIGN KEY(game_id) REFERENCES games(id)
-            )
-        """)
-        db.execSQL("""
-            CREATE TABLE opponent_bench (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                game_id INTEGER NOT NULL,
-                jersey_number TEXT NOT NULL DEFAULT '',
-                FOREIGN KEY(game_id) REFERENCES games(id)
-            )
-        """)
-        db.execSQL("""
-            CREATE TABLE own_lineup (
-                game_id INTEGER NOT NULL,
-                slot INTEGER NOT NULL,
-                player_id INTEGER NOT NULL,
-                PRIMARY KEY(game_id, slot),
-                FOREIGN KEY(game_id) REFERENCES games(id),
-                FOREIGN KEY(player_id) REFERENCES players(id)
-            )
-        """)
-        db.execSQL("""
-            CREATE TABLE substitutions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                game_id INTEGER NOT NULL,
-                slot INTEGER NOT NULL,
-                player_out_id INTEGER NOT NULL,
-                player_in_id INTEGER NOT NULL,
-                FOREIGN KEY(game_id) REFERENCES games(id)
-            )
-        """)
-        db.execSQL("""
-            CREATE TABLE opponent_substitutions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                game_id INTEGER NOT NULL,
-                slot INTEGER NOT NULL,
-                jersey_out TEXT NOT NULL,
-                jersey_in TEXT NOT NULL,
-                FOREIGN KEY(game_id) REFERENCES games(id)
-            )
-        """)
+class DatabaseHelper(context: Context) {
+
+    private val db = AppDatabase.getDatabase(context)
+    private val gameDao = db.gameDao()
+    private val pitcherDao = db.pitcherDao()
+    private val teamDao = db.teamDao()
+    private val playerDao = db.playerDao()
+    private val lineupDao = db.lineupDao()
+
+    // ── Games ──────────────────────────────────────────────────────────────────
+
+    fun insertGame(date: String, opponent: String, teamId: Long): Long =
+        gameDao.insertGame(Game(date = date, opponent = opponent, teamId = teamId))
+
+    fun getAllGames(): List<Game> = gameDao.getAllGames()
+
+    fun getGame(gameId: Long): Game? = gameDao.getGame(gameId)
+
+    fun updateGame(gameId: Long, date: String, opponent: String) =
+        gameDao.updateGame(gameId, date, opponent)
+
+    fun deleteGame(gameId: Long) = gameDao.deleteGameWithCascade(gameId)
+
+    fun copyGame(sourceGameId: Long, newOpponent: String): Long {
+        val source = getGame(sourceGameId) ?: return -1
+        return insertGame(source.date, newOpponent, source.teamId)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        if (oldVersion < 4) {
-            db.execSQL("ALTER TABLE players ADD COLUMN secondary_position INTEGER NOT NULL DEFAULT 0")
-            db.execSQL("ALTER TABLE players ADD COLUMN is_pitcher INTEGER NOT NULL DEFAULT 0")
-        }
-        if (oldVersion < 7) {
-            db.execSQL("ALTER TABLE pitchers ADD COLUMN player_id INTEGER NOT NULL DEFAULT 0")
-        }
-        if (oldVersion < 6) {
-            db.execSQL("ALTER TABLE games ADD COLUMN team_id INTEGER NOT NULL DEFAULT 0")
-        }
-        if (oldVersion < 5) {
-            db.execSQL("ALTER TABLE players ADD COLUMN birth_year INTEGER NOT NULL DEFAULT 0")
-            db.execSQL("""
-                CREATE TABLE pitcher_appearances (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    player_id INTEGER NOT NULL,
-                    game_id INTEGER NOT NULL,
-                    date TEXT NOT NULL,
-                    batters_faced INTEGER NOT NULL DEFAULT 0,
-                    UNIQUE(player_id, game_id),
-                    FOREIGN KEY(player_id) REFERENCES players(id),
-                    FOREIGN KEY(game_id) REFERENCES games(id)
-                )
-            """)
-        }
-        if (oldVersion < 13) {
-            db.execSQL("""
-                CREATE TABLE IF NOT EXISTS opponent_substitutions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    game_id INTEGER NOT NULL,
-                    slot INTEGER NOT NULL,
-                    jersey_out TEXT NOT NULL,
-                    jersey_in TEXT NOT NULL,
-                    FOREIGN KEY(game_id) REFERENCES games(id)
-                )
-            """)
-        }
-        if (oldVersion < 12) {
-            db.execSQL("""
-                CREATE TABLE IF NOT EXISTS substitutions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    game_id INTEGER NOT NULL,
-                    slot INTEGER NOT NULL,
-                    player_out_id INTEGER NOT NULL,
-                    player_in_id INTEGER NOT NULL,
-                    FOREIGN KEY(game_id) REFERENCES games(id)
-                )
-            """)
-        }
-        if (oldVersion < 11) {
-            db.execSQL("DROP TABLE IF EXISTS game_availability")
-        }
-        if (oldVersion < 10) {
-            db.execSQL("""
-                CREATE TABLE IF NOT EXISTS own_lineup (
-                    game_id INTEGER NOT NULL,
-                    slot INTEGER NOT NULL,
-                    player_id INTEGER NOT NULL,
-                    PRIMARY KEY(game_id, slot),
-                    FOREIGN KEY(game_id) REFERENCES games(id),
-                    FOREIGN KEY(player_id) REFERENCES players(id)
-                )
-            """)
-        }
-        if (oldVersion < 9) {
-            db.execSQL("""
-                CREATE TABLE IF NOT EXISTS game_availability (
-                    game_id INTEGER NOT NULL,
-                    player_id INTEGER NOT NULL,
-                    PRIMARY KEY(game_id, player_id),
-                    FOREIGN KEY(game_id) REFERENCES games(id),
-                    FOREIGN KEY(player_id) REFERENCES players(id)
-                )
-            """)
-        }
-        if (oldVersion < 8) {
-            db.execSQL("""
-                CREATE TABLE IF NOT EXISTS opponent_lineup (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    game_id INTEGER NOT NULL,
-                    batting_order INTEGER NOT NULL,
-                    jersey_number TEXT NOT NULL DEFAULT '',
-                    UNIQUE(game_id, batting_order),
-                    FOREIGN KEY(game_id) REFERENCES games(id)
-                )
-            """)
-            db.execSQL("""
-                CREATE TABLE IF NOT EXISTS opponent_bench (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    game_id INTEGER NOT NULL,
-                    jersey_number TEXT NOT NULL DEFAULT '',
-                    FOREIGN KEY(game_id) REFERENCES games(id)
-                )
-            """)
-        }
-    }
+    // ── Pitchers ───────────────────────────────────────────────────────────────
 
-    // --- Games ---
-    fun insertGame(date: String, opponent: String, teamId: Long): Long {
-        val cv = ContentValues().apply {
-            put("date", date)
-            put("opponent", opponent)
-            put("team_id", teamId)
-        }
-        return writableDatabase.insert("games", null, cv)
-    }
+    fun insertPitcher(gameId: Long, name: String, playerId: Long = 0): Long =
+        pitcherDao.insertPitcher(Pitcher(gameId = gameId, name = name, playerId = playerId))
 
-    fun getAllGames(): List<Game> {
-        val list = mutableListOf<Game>()
-        val cursor = readableDatabase.rawQuery("SELECT id, date, opponent, team_id FROM games ORDER BY id DESC", null)
-        while (cursor.moveToNext()) {
-            list.add(Game(cursor.getLong(0), cursor.getString(1), cursor.getString(2), cursor.getLong(3)))
-        }
-        cursor.close()
-        return list
-    }
+    fun getPitchersForGame(gameId: Long): List<Pitcher> =
+        pitcherDao.getPitchersForGame(gameId)
 
-    fun getGame(gameId: Long): Game? {
-        val c = readableDatabase.rawQuery(
-            "SELECT id, date, opponent, team_id FROM games WHERE id=?", arrayOf(gameId.toString())
-        )
-        val game = if (c.moveToFirst()) Game(c.getLong(0), c.getString(1), c.getString(2), c.getLong(3)) else null
-        c.close()
-        return game
-    }
+    fun deletePitcher(pitcherId: Long) = pitcherDao.deletePitcher(pitcherId)
 
-    fun updateGame(gameId: Long, date: String, opponent: String) {
-        val cv = ContentValues().apply {
-            put("date", date)
-            put("opponent", opponent)
-        }
-        writableDatabase.update("games", cv, "id=?", arrayOf(gameId.toString()))
-    }
+    // ── Pitches ────────────────────────────────────────────────────────────────
 
-    fun deleteGame(gameId: Long) {
-        val db = writableDatabase
-        val pitcherIds = mutableListOf<Long>()
-        val c = db.rawQuery("SELECT id FROM pitchers WHERE game_id=?", arrayOf(gameId.toString()))
-        while (c.moveToNext()) pitcherIds.add(c.getLong(0))
-        c.close()
-        pitcherIds.forEach { db.delete("pitches", "pitcher_id=?", arrayOf(it.toString())) }
-        db.delete("pitchers", "game_id=?", arrayOf(gameId.toString()))
-        db.delete("opponent_lineup", "game_id=?", arrayOf(gameId.toString()))
-        db.delete("opponent_bench", "game_id=?", arrayOf(gameId.toString()))
-        db.delete("own_lineup", "game_id=?", arrayOf(gameId.toString()))
-        db.delete("substitutions", "game_id=?", arrayOf(gameId.toString()))
-        db.delete("opponent_substitutions", "game_id=?", arrayOf(gameId.toString()))
-        db.delete("games", "id=?", arrayOf(gameId.toString()))
-    }
-
-    // --- Pitchers ---
-    fun insertPitcher(gameId: Long, name: String, playerId: Long = 0): Long {
-        val cv = ContentValues().apply {
-            put("game_id", gameId)
-            put("name", name)
-            put("player_id", playerId)
-        }
-        return writableDatabase.insert("pitchers", null, cv)
-    }
-
-    fun getPitchersForGame(gameId: Long): List<Pitcher> {
-        val list = mutableListOf<Pitcher>()
-        // Wenn player_id gesetzt: aktuellen Namen aus players holen (Name-Änderungen werden übernommen)
-        val cursor = readableDatabase.rawQuery("""
-            SELECT p.id, p.game_id,
-                   CASE WHEN p.player_id > 0 THEN pl.name ELSE p.name END AS display_name,
-                   p.player_id
-            FROM pitchers p
-            LEFT JOIN players pl ON pl.id = p.player_id
-            WHERE p.game_id = ?
-            ORDER BY p.id ASC
-        """.trimIndent(), arrayOf(gameId.toString()))
-        while (cursor.moveToNext()) {
-            list.add(Pitcher(cursor.getLong(0), cursor.getLong(1), cursor.getString(2), cursor.getLong(3)))
-        }
-        cursor.close()
-        return list
-    }
-
-    fun deletePitcher(pitcherId: Long) {
-        writableDatabase.delete("pitches", "pitcher_id=?", arrayOf(pitcherId.toString()))
-        writableDatabase.delete("pitchers", "id=?", arrayOf(pitcherId.toString()))
-    }
-
-    // --- Pitches ---
     fun insertPitch(pitcherId: Long, type: String): Long {
-        val next = getNextSequenceNr(pitcherId)
-        val cv = ContentValues().apply {
-            put("pitcher_id", pitcherId)
-            put("type", type)
-            put("sequence_nr", next)
-        }
-        return writableDatabase.insert("pitches", null, cv)
+        val next = pitcherDao.getNextSequenceNr(pitcherId)
+        return pitcherDao.insertPitch(Pitch(pitcherId = pitcherId, type = type, sequenceNr = next))
     }
 
-    fun undoLastPitch(pitcherId: Long) {
-        val cursor = readableDatabase.rawQuery(
-            "SELECT id FROM pitches WHERE pitcher_id=? ORDER BY sequence_nr DESC LIMIT 1",
-            arrayOf(pitcherId.toString())
-        )
-        if (cursor.moveToFirst()) {
-            val id = cursor.getLong(0)
-            writableDatabase.delete("pitches", "id=?", arrayOf(id.toString()))
-        }
-        cursor.close()
-    }
+    fun undoLastPitch(pitcherId: Long) = pitcherDao.undoLastPitch(pitcherId)
 
-    fun getPitchesForPitcher(pitcherId: Long): List<Pitch> {
-        val list = mutableListOf<Pitch>()
-        val cursor = readableDatabase.rawQuery(
-            "SELECT * FROM pitches WHERE pitcher_id=? ORDER BY sequence_nr ASC",
-            arrayOf(pitcherId.toString())
-        )
-        while (cursor.moveToNext()) {
-            list.add(Pitch(cursor.getLong(0), cursor.getLong(1), cursor.getString(2), cursor.getInt(3)))
-        }
-        cursor.close()
-        return list
-    }
+    fun getPitchesForPitcher(pitcherId: Long): List<Pitch> =
+        pitcherDao.getPitchesForPitcher(pitcherId)
 
     fun getStatsForPitcher(pitcherId: Long): PitcherStats {
-        val pitcher = getPitcherById(pitcherId)
+        val pitcher = pitcherDao.getPitcherById(pitcherId)
         val pitches = getPitchesForPitcher(pitcherId)
         return PitcherStats(
             pitcher = pitcher,
@@ -431,378 +194,143 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
         )
     }
 
-    private fun getPitcherById(pitcherId: Long): Pitcher {
-        val cursor = readableDatabase.rawQuery(
-            "SELECT id, game_id, name, player_id FROM pitchers WHERE id=?", arrayOf(pitcherId.toString())
-        )
-        cursor.moveToFirst()
-        val p = Pitcher(cursor.getLong(0), cursor.getLong(1), cursor.getString(2), cursor.getLong(3))
-        cursor.close()
-        return p
-    }
+    fun getTotalBFForGame(gameId: Long): Int = pitcherDao.getTotalBFForGame(gameId)
 
-    private fun getNextSequenceNr(pitcherId: Long): Int {
-        val cursor = readableDatabase.rawQuery(
-            "SELECT MAX(sequence_nr) FROM pitches WHERE pitcher_id=?",
-            arrayOf(pitcherId.toString())
-        )
-        val max = if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getInt(0) else 0
-        cursor.close()
-        return max + 1
-    }
+    fun getTotalBFForPlayerOnDate(playerId: Long, date: String): Int =
+        pitcherDao.getTotalBFForPlayerOnDate(playerId, date)
 
-    // --- Teams ---
-    fun insertTeam(name: String): Long {
-        val cv = ContentValues().apply { put("name", name) }
-        val id = writableDatabase.insert("teams", null, cv)
-        (1..9).forEach { pos -> setPositionEnabled(id, pos, true) }
-        return id
-    }
-
-    fun getAllTeams(): List<Team> {
-        val list = mutableListOf<Team>()
-        val c = readableDatabase.rawQuery("SELECT id, name FROM teams ORDER BY name ASC", null)
-        while (c.moveToNext()) list.add(Team(c.getLong(0), c.getString(1)))
-        c.close()
-        return list
-    }
-
-    fun updateTeamName(teamId: Long, name: String) {
-        val cv = ContentValues().apply { put("name", name) }
-        writableDatabase.update("teams", cv, "id=?", arrayOf(teamId.toString()))
-    }
-
-    fun deleteTeam(teamId: Long) {
-        val db = writableDatabase
-        db.delete("players", "team_id=?", arrayOf(teamId.toString()))
-        db.delete("team_positions", "team_id=?", arrayOf(teamId.toString()))
-        db.delete("teams", "id=?", arrayOf(teamId.toString()))
-    }
-
-    // --- Positions ---
-    fun getEnabledPositions(teamId: Long): Set<Int> {
-        val set = mutableSetOf<Int>()
-        val c = readableDatabase.rawQuery(
-            "SELECT position FROM team_positions WHERE team_id=?", arrayOf(teamId.toString())
-        )
-        while (c.moveToNext()) set.add(c.getInt(0))
-        c.close()
-        return set
-    }
-
-    fun setPositionEnabled(teamId: Long, position: Int, enabled: Boolean) {
-        if (enabled) {
-            val cv = ContentValues().apply {
-                put("team_id", teamId)
-                put("position", position)
-            }
-            writableDatabase.insertWithOnConflict("team_positions", null, cv, SQLiteDatabase.CONFLICT_IGNORE)
-        } else {
-            writableDatabase.delete("team_positions",
-                "team_id=? AND position=?",
-                arrayOf(teamId.toString(), position.toString()))
-        }
-    }
-
-    // --- Players ---
-    fun insertPlayer(teamId: Long, name: String, number: String, primaryPosition: Int, secondaryPosition: Int = 0, isPitcher: Boolean = false, birthYear: Int = 0): Long {
-        val cv = ContentValues().apply {
-            put("team_id", teamId)
-            put("name", name)
-            put("number", number)
-            put("primary_position", primaryPosition)
-            put("secondary_position", secondaryPosition)
-            put("is_pitcher", if (isPitcher) 1 else 0)
-            put("birth_year", birthYear)
-        }
-        return writableDatabase.insert("players", null, cv)
-    }
-
-    fun getPlayersForTeam(teamId: Long): List<Player> {
-        val list = mutableListOf<Player>()
-        val c = readableDatabase.rawQuery(
-            "SELECT id, team_id, name, number, primary_position, secondary_position, is_pitcher, birth_year FROM players WHERE team_id=? ORDER BY number ASC, name ASC",
-            arrayOf(teamId.toString())
-        )
-        while (c.moveToNext()) {
-            list.add(Player(c.getLong(0), c.getLong(1), c.getString(2), c.getString(3), c.getInt(4), c.getInt(5), c.getInt(6) == 1, c.getInt(7)))
-        }
-        c.close()
-        return list
-    }
-
-    fun updatePlayer(player: Player) {
-        val cv = ContentValues().apply {
-            put("name", player.name)
-            put("number", player.number)
-            put("primary_position", player.primaryPosition)
-            put("secondary_position", player.secondaryPosition)
-            put("is_pitcher", if (player.isPitcher) 1 else 0)
-            put("birth_year", player.birthYear)
-        }
-        writableDatabase.update("players", cv, "id=?", arrayOf(player.id.toString()))
-    }
-
-    fun deletePlayer(playerId: Long) {
-        writableDatabase.delete("players", "id=?", arrayOf(playerId.toString()))
-    }
-
-    // --- Pitcher Appearances ---
-
-    // Speichert oder aktualisiert einen Pitcheinsatz (ein Spieler kann pro Spiel nur einmal pitchen)
-    fun savePitcherAppearance(playerId: Long, gameId: Long, date: String, bf: Int): Long {
-        val cv = ContentValues().apply {
-            put("player_id", playerId)
-            put("game_id", gameId)
-            put("date", date)
-            put("batters_faced", bf)
-        }
-        return writableDatabase.insertWithOnConflict(
-            "pitcher_appearances", null, cv, SQLiteDatabase.CONFLICT_REPLACE
-        )
-    }
-
-    fun getPitcherAppearances(playerId: Long): List<PitcherAppearance> {
-        val list = mutableListOf<PitcherAppearance>()
-        val c = readableDatabase.rawQuery(
-            "SELECT id, player_id, game_id, date, batters_faced FROM pitcher_appearances WHERE player_id=? ORDER BY date ASC",
-            arrayOf(playerId.toString())
-        )
-        while (c.moveToNext()) {
-            list.add(PitcherAppearance(c.getLong(0), c.getLong(1), c.getLong(2), c.getString(3), c.getInt(4)))
-        }
-        c.close()
-        return list
-    }
-
-    // BF eines Spielers an einem bestimmten Datum – summiert über alle Spiele des Tages
-    fun getTotalBFForDate(playerId: Long, date: String): Int {
-        val c = readableDatabase.rawQuery(
-            "SELECT SUM(batters_faced) FROM pitcher_appearances WHERE player_id=? AND date=?",
-            arrayOf(playerId.toString(), date)
-        )
-        val total = if (c.moveToFirst() && !c.isNull(0)) c.getInt(0) else 0
-        c.close()
-        return total
-    }
-
-    // --- Opponent Lineup ---
-
-    fun upsertLineupEntry(gameId: Long, battingOrder: Int, jerseyNumber: String) {
-        val cv = ContentValues().apply {
-            put("game_id", gameId)
-            put("batting_order", battingOrder)
-            put("jersey_number", jerseyNumber)
-        }
-        writableDatabase.insertWithOnConflict("opponent_lineup", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
-    }
-
-    fun getLineup(gameId: Long): List<LineupEntry> {
-        val list = mutableListOf<LineupEntry>()
-        val c = readableDatabase.rawQuery(
-            "SELECT id, game_id, batting_order, jersey_number FROM opponent_lineup WHERE game_id=? ORDER BY batting_order ASC",
-            arrayOf(gameId.toString())
-        )
-        while (c.moveToNext()) {
-            list.add(LineupEntry(c.getLong(0), c.getLong(1), c.getInt(2), c.getString(3)))
-        }
-        c.close()
-        return list
-    }
-
-    fun getJerseyAtBattingOrder(gameId: Long, battingOrder: Int): String {
-        val c = readableDatabase.rawQuery(
-            "SELECT jersey_number FROM opponent_lineup WHERE game_id=? AND batting_order=?",
-            arrayOf(gameId.toString(), battingOrder.toString())
-        )
-        val number = if (c.moveToFirst()) c.getString(0) else ""
-        c.close()
-        return number
-    }
-
-    fun deleteLineupEntry(gameId: Long, battingOrder: Int) {
-        writableDatabase.delete("opponent_lineup",
-            "game_id=? AND batting_order=?",
-            arrayOf(gameId.toString(), battingOrder.toString()))
-    }
-
-    // --- Opponent Bench ---
-
-    fun insertBenchPlayer(gameId: Long, jerseyNumber: String): Long {
-        val cv = ContentValues().apply {
-            put("game_id", gameId)
-            put("jersey_number", jerseyNumber)
-        }
-        return writableDatabase.insert("opponent_bench", null, cv)
-    }
-
-    fun getBenchPlayers(gameId: Long): List<BenchPlayer> {
-        val list = mutableListOf<BenchPlayer>()
-        val c = readableDatabase.rawQuery(
-            "SELECT id, game_id, jersey_number FROM opponent_bench WHERE game_id=? ORDER BY id ASC",
-            arrayOf(gameId.toString())
-        )
-        while (c.moveToNext()) {
-            list.add(BenchPlayer(c.getLong(0), c.getLong(1), c.getString(2)))
-        }
-        c.close()
-        return list
-    }
-
-    fun deleteBenchPlayer(id: Long) {
-        writableDatabase.delete("opponent_bench", "id=?", arrayOf(id.toString()))
-    }
-
-    fun substitutePlayer(gameId: Long, battingOrder: Int, newJerseyNumber: String) {
-        upsertLineupEntry(gameId, battingOrder, newJerseyNumber)
-    }
-
-    // --- Opponent Substitutions ---
-
-    fun addOpponentSubstitution(gameId: Long, slot: Int, jerseyOut: String, jerseyIn: String): Long {
-        val cv = ContentValues().apply {
-            put("game_id", gameId)
-            put("slot", slot)
-            put("jersey_out", jerseyOut)
-            put("jersey_in", jerseyIn)
-        }
-        return writableDatabase.insert("opponent_substitutions", null, cv)
-    }
-
-    fun getOpponentSubstitutionsForGame(gameId: Long): List<OppSubstitution> {
-        val list = mutableListOf<OppSubstitution>()
-        val c = readableDatabase.rawQuery(
-            "SELECT id, game_id, slot, jersey_out, jersey_in FROM opponent_substitutions WHERE game_id=? ORDER BY id ASC",
-            arrayOf(gameId.toString())
-        )
-        while (c.moveToNext()) {
-            list.add(OppSubstitution(c.getLong(0), c.getLong(1), c.getInt(2), c.getString(3), c.getString(4)))
-        }
-        c.close()
-        return list
-    }
-
-    // --- Substitutions ---
-
-    fun addSubstitution(gameId: Long, slot: Int, playerOutId: Long, playerInId: Long): Long {
-        val cv = ContentValues().apply {
-            put("game_id", gameId)
-            put("slot", slot)
-            put("player_out_id", playerOutId)
-            put("player_in_id", playerInId)
-        }
-        return writableDatabase.insert("substitutions", null, cv)
-    }
-
-    fun getSubstitutionsForGame(gameId: Long): List<Substitution> {
-        val list = mutableListOf<Substitution>()
-        val c = readableDatabase.rawQuery(
-            "SELECT id, game_id, slot, player_out_id, player_in_id FROM substitutions WHERE game_id=? ORDER BY id ASC",
-            arrayOf(gameId.toString())
-        )
-        while (c.moveToNext()) {
-            list.add(Substitution(c.getLong(0), c.getLong(1), c.getInt(2), c.getLong(3), c.getLong(4)))
-        }
-        c.close()
-        return list
-    }
-
-    // Spieler in Lineup-Slots 1–9 (Starter), sortiert nach Slot
-    fun getOwnLineupStarters(gameId: Long): List<Player> {
-        return getOwnLineup(gameId).filter { it.key in 1..9 }
-            .toSortedMap().values.toList()
-    }
-
-    // Gesamtzahl BF über alle Pitcher eines Spiels
-    fun getTotalBFForGame(gameId: Long): Int {
-        val c = readableDatabase.rawQuery("""
-            SELECT COUNT(*) FROM pitches pi
-            JOIN pitchers p ON p.id = pi.pitcher_id
-            WHERE p.game_id = ? AND pi.type = 'BF'
-        """.trimIndent(), arrayOf(gameId.toString()))
-        val total = if (c.moveToFirst()) c.getInt(0) else 0
-        c.close()
-        return total
-    }
-
-    // Pitches (B/S/F) nach dem letzten BF des letzten anderen Pitchers im Spiel
-    // → wird beim Pitcherwechsel übernommen, damit der Count nicht verloren geht
     fun getIncompleteAtBatBeforePitcher(gameId: Long, currentPitcherId: Long): List<String> {
-        val c = readableDatabase.rawQuery("""
-            SELECT pi.type FROM pitches pi
-            JOIN pitchers p ON p.id = pi.pitcher_id
-            WHERE p.game_id = ? AND p.id != ?
-            ORDER BY p.id ASC, pi.sequence_nr ASC
-        """.trimIndent(), arrayOf(gameId.toString(), currentPitcherId.toString()))
-        val all = mutableListOf<String>()
-        while (c.moveToNext()) all.add(c.getString(0))
-        c.close()
+        val all = pitcherDao.getAllPitchTypesBeforePitcher(gameId, currentPitcherId)
         val lastBf = all.indexOfLast { it == "BF" }
         val tail = if (lastBf == -1) all else all.drop(lastBf + 1)
         return tail.filter { it == "B" || it == "S" || it == "F" }
     }
 
-    fun copyGame(sourceGameId: Long, newOpponent: String): Long {
-        val source = getGame(sourceGameId) ?: return -1
-        return insertGame(source.date, newOpponent, source.teamId)
+    // ── Teams ──────────────────────────────────────────────────────────────────
+
+    fun insertTeam(name: String): Long {
+        val id = teamDao.insertTeam(Team(name = name))
+        (1..9).forEach { pos -> teamDao.insertTeamPosition(TeamPosition(teamId = id, position = pos)) }
+        return id
     }
 
-    // BF eines Spielers (per player_id) über alle Spiele an einem bestimmten Datum
-    fun getTotalBFForPlayerOnDate(playerId: Long, date: String): Int {
-        val c = readableDatabase.rawQuery("""
-            SELECT COUNT(*) FROM pitches pi
-            JOIN pitchers p ON p.id = pi.pitcher_id
-            JOIN games g ON g.id = p.game_id
-            WHERE p.player_id = ? AND g.date = ? AND pi.type = 'BF'
-        """.trimIndent(), arrayOf(playerId.toString(), date))
-        val total = if (c.moveToFirst()) c.getInt(0) else 0
-        c.close()
-        return total
+    fun getAllTeams(): List<Team> = teamDao.getAllTeams()
+
+    fun updateTeamName(teamId: Long, name: String) = teamDao.updateTeamName(teamId, name)
+
+    fun deleteTeam(teamId: Long) = teamDao.deleteTeam(teamId)
+
+    // ── Positions ──────────────────────────────────────────────────────────────
+
+    fun getEnabledPositions(teamId: Long): Set<Int> = teamDao.getEnabledPositions(teamId)
+
+    fun setPositionEnabled(teamId: Long, position: Int, enabled: Boolean) {
+        if (enabled) teamDao.insertTeamPosition(TeamPosition(teamId = teamId, position = position))
+        else teamDao.deleteTeamPosition(teamId, position)
     }
 
-    // --- Own Lineup ---
+    // ── Players ────────────────────────────────────────────────────────────────
 
-    fun setOwnLineupPlayer(gameId: Long, slot: Int, playerId: Long) {
-        val cv = ContentValues().apply {
-            put("game_id", gameId)
-            put("slot", slot)
-            put("player_id", playerId)
-        }
-        writableDatabase.insertWithOnConflict("own_lineup", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
-    }
-
-    fun clearOwnLineupSlot(gameId: Long, slot: Int) {
-        writableDatabase.delete("own_lineup", "game_id=? AND slot=?",
-            arrayOf(gameId.toString(), slot.toString()))
-    }
-
-    fun getPlayerById(playerId: Long): Player? {
-        val c = readableDatabase.rawQuery(
-            "SELECT id, team_id, name, number, primary_position, secondary_position, is_pitcher, birth_year FROM players WHERE id=?",
-            arrayOf(playerId.toString())
+    fun insertPlayer(
+        teamId: Long, name: String, number: String,
+        primaryPosition: Int, secondaryPosition: Int = 0,
+        isPitcher: Boolean = false, birthYear: Int = 0
+    ): Long = playerDao.insertPlayer(
+        Player(
+            teamId = teamId, name = name, number = number,
+            primaryPosition = primaryPosition, secondaryPosition = secondaryPosition,
+            isPitcher = isPitcher, birthYear = birthYear
         )
-        val p = if (c.moveToFirst()) Player(c.getLong(0), c.getLong(1), c.getString(2), c.getString(3), c.getInt(4), c.getInt(5), c.getInt(6) == 1, c.getInt(7)) else null
-        c.close()
-        return p
-    }
+    )
 
-    // Gibt Map<slot, Player> zurück
-    fun getOwnLineup(gameId: Long): Map<Int, Player> {
-        val result = mutableMapOf<Int, Player>()
-        val c = readableDatabase.rawQuery("""
-            SELECT ol.slot, pl.id, pl.team_id, pl.name, pl.number,
-                   pl.primary_position, pl.secondary_position, pl.is_pitcher, pl.birth_year
-            FROM own_lineup ol
-            JOIN players pl ON pl.id = ol.player_id
-            WHERE ol.game_id = ?
-            ORDER BY ol.slot ASC
-        """.trimIndent(), arrayOf(gameId.toString()))
-        while (c.moveToNext()) {
-            val slot = c.getInt(0)
-            result[slot] = Player(c.getLong(1), c.getLong(2), c.getString(3), c.getString(4),
-                c.getInt(5), c.getInt(6), c.getInt(7) == 1, c.getInt(8))
+    fun getPlayersForTeam(teamId: Long): List<Player> = playerDao.getPlayersForTeam(teamId)
+
+    fun updatePlayer(player: Player) = playerDao.updatePlayer(player)
+
+    fun deletePlayer(playerId: Long) = playerDao.deletePlayer(playerId)
+
+    fun getPlayerById(playerId: Long): Player? = playerDao.getPlayerById(playerId)
+
+    // ── Pitcher Appearances ────────────────────────────────────────────────────
+
+    fun savePitcherAppearance(playerId: Long, gameId: Long, date: String, bf: Int): Long =
+        lineupDao.savePitcherAppearance(
+            PitcherAppearance(playerId = playerId, gameId = gameId, date = date, battersFaced = bf)
+        )
+
+    fun getPitcherAppearances(playerId: Long): List<PitcherAppearance> =
+        lineupDao.getPitcherAppearances(playerId)
+
+    fun getTotalBFForDate(playerId: Long, date: String): Int =
+        lineupDao.getTotalBFForDate(playerId, date) ?: 0
+
+    // ── Opponent Lineup ────────────────────────────────────────────────────────
+
+    fun upsertLineupEntry(gameId: Long, battingOrder: Int, jerseyNumber: String) =
+        lineupDao.upsertLineupEntry(LineupEntry(gameId = gameId, battingOrder = battingOrder, jerseyNumber = jerseyNumber))
+
+    fun getLineup(gameId: Long): List<LineupEntry> = lineupDao.getLineup(gameId)
+
+    fun getJerseyAtBattingOrder(gameId: Long, battingOrder: Int): String =
+        lineupDao.getJerseyAtBattingOrder(gameId, battingOrder) ?: ""
+
+    fun deleteLineupEntry(gameId: Long, battingOrder: Int) =
+        lineupDao.deleteLineupEntry(gameId, battingOrder)
+
+    // ── Opponent Bench ─────────────────────────────────────────────────────────
+
+    fun insertBenchPlayer(gameId: Long, jerseyNumber: String): Long =
+        lineupDao.insertBenchPlayer(BenchPlayer(gameId = gameId, jerseyNumber = jerseyNumber))
+
+    fun getBenchPlayers(gameId: Long): List<BenchPlayer> = lineupDao.getBenchPlayers(gameId)
+
+    fun deleteBenchPlayer(id: Long) = lineupDao.deleteBenchPlayer(id)
+
+    fun substitutePlayer(gameId: Long, battingOrder: Int, newJerseyNumber: String) =
+        upsertLineupEntry(gameId, battingOrder, newJerseyNumber)
+
+    // ── Opponent Substitutions ─────────────────────────────────────────────────
+
+    fun addOpponentSubstitution(gameId: Long, slot: Int, jerseyOut: String, jerseyIn: String): Long =
+        lineupDao.insertOppSubstitution(
+            OppSubstitution(gameId = gameId, slot = slot, jerseyOut = jerseyOut, jerseyIn = jerseyIn)
+        )
+
+    fun getOpponentSubstitutionsForGame(gameId: Long): List<OppSubstitution> =
+        lineupDao.getOpponentSubstitutionsForGame(gameId)
+
+    // ── Own Lineup ─────────────────────────────────────────────────────────────
+
+    fun setOwnLineupPlayer(gameId: Long, slot: Int, playerId: Long) =
+        lineupDao.setOwnLineupPlayer(OwnLineupSlot(gameId = gameId, slot = slot, playerId = playerId))
+
+    fun clearOwnLineupSlot(gameId: Long, slot: Int) =
+        lineupDao.clearOwnLineupSlot(gameId, slot)
+
+    fun getOwnLineup(gameId: Long): Map<Int, Player> =
+        lineupDao.getOwnLineupRaw(gameId).associate { row ->
+            row.slot to Player(
+                id = row.playerId,
+                teamId = row.teamId,
+                name = row.name,
+                number = row.number,
+                primaryPosition = row.primaryPosition,
+                secondaryPosition = row.secondaryPosition,
+                isPitcher = row.isPitcher,
+                birthYear = row.birthYear
+            )
         }
-        c.close()
-        return result
-    }
+
+    fun getOwnLineupStarters(gameId: Long): List<Player> =
+        getOwnLineup(gameId).filter { it.key in 1..9 }.toSortedMap().values.toList()
+
+    // ── Own Substitutions ──────────────────────────────────────────────────────
+
+    fun addSubstitution(gameId: Long, slot: Int, playerOutId: Long, playerInId: Long): Long =
+        lineupDao.insertSubstitution(
+            Substitution(gameId = gameId, slot = slot, playerOutId = playerOutId, playerInId = playerInId)
+        )
+
+    fun getSubstitutionsForGame(gameId: Long): List<Substitution> =
+        lineupDao.getSubstitutionsForGame(gameId)
 }

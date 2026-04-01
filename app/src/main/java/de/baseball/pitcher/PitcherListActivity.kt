@@ -63,13 +63,13 @@ class PitcherListActivity : AppCompatActivity() {
             },
             onDelete = { pitcher ->
                 AlertDialog.Builder(this)
-                    .setTitle("Pitcher löschen")
-                    .setMessage("${pitcher.name} wirklich löschen?")
-                    .setPositiveButton("Löschen") { _, _ ->
+                    .setTitle(getString(R.string.dialog_delete_pitcher_title))
+                    .setMessage(getString(R.string.dialog_delete_pitcher_message, pitcher.name))
+                    .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
                         db.deletePitcher(pitcher.id)
                         loadPitchers()
                     }
-                    .setNegativeButton("Abbrechen", null)
+                    .setNegativeButton(getString(R.string.btn_cancel), null)
                     .show()
             }
         )
@@ -85,20 +85,20 @@ class PitcherListActivity : AppCompatActivity() {
 
         if (players.isEmpty()) {
             val et = EditText(this).apply {
-                hint = "Name des Pitchers"
+                hint = getString(R.string.hint_pitcher_name)
                 setPadding(48, 24, 48, 24)
             }
             AlertDialog.Builder(this)
-                .setTitle("Neuer Pitcher")
+                .setTitle(getString(R.string.dialog_add_pitcher_title))
                 .setView(et)
-                .setPositiveButton("Hinzufügen") { _, _ ->
+                .setPositiveButton(getString(R.string.btn_add)) { _, _ ->
                     val name = et.text.toString().trim()
                     if (name.isNotEmpty()) {
                         db.insertPitcher(gameId, name)
                         loadPitchers()
                     }
                 }
-                .setNegativeButton("Abbrechen", null)
+                .setNegativeButton(getString(R.string.btn_cancel), null)
                 .show()
             return
         }
@@ -107,14 +107,14 @@ class PitcherListActivity : AppCompatActivity() {
         var selectedIndex = 0
 
         AlertDialog.Builder(this)
-            .setTitle("Neuer Pitcher")
+            .setTitle(getString(R.string.dialog_add_pitcher_title))
             .setSingleChoiceItems(labels, 0) { _, which -> selectedIndex = which }
-            .setPositiveButton("Hinzufügen") { _, _ ->
+            .setPositiveButton(getString(R.string.btn_add)) { _, _ ->
                 val selected = players[selectedIndex]
                 db.insertPitcher(gameId, selected.name, selected.id)
                 loadPitchers()
             }
-            .setNegativeButton("Abbrechen", null)
+            .setNegativeButton(getString(R.string.btn_cancel), null)
             .show()
     }
 }
