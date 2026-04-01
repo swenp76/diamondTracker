@@ -1,6 +1,7 @@
 package de.baseball.pitcher
 
 import android.app.AlertDialog
+import android.app.DatePickerDialog
 import android.content.Intent
 import android.os.Bundle
 import android.widget.*
@@ -46,6 +47,7 @@ class GameListActivity : AppCompatActivity() {
                 intent.putExtra("gameTitle", "${game.date} – ${game.opponent}")
                 startActivity(intent)
             },
+            onEdit = { game -> showEditGameDialog(game) },
             onDelete = { game ->
                 AlertDialog.Builder(this)
                     .setTitle("Spiel löschen")
@@ -95,7 +97,15 @@ class GameListActivity : AppCompatActivity() {
         spinnerTeam.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, teams.map { it.name })
 
         val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
-        etDate.setText(sdf.format(Date()))
+        val cal = Calendar.getInstance()
+        etDate.setText(sdf.format(cal.time))
+        etDate.isFocusable = false
+        etDate.setOnClickListener {
+            DatePickerDialog(this, { _, year, month, day ->
+                cal.set(year, month, day)
+                etDate.setText(sdf.format(cal.time))
+            }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
+        }
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("Neues Spiel")
@@ -114,6 +124,49 @@ class GameListActivity : AppCompatActivity() {
                     loadGames()
                     dialog.dismiss()
                     showAvailabilityDialog(gameId, selectedTeam.id)
+                } else {
+                    if (date.isEmpty()) etDate.error = "Pflichtfeld"
+                    if (opp.isEmpty()) etOpponent.error = "Pflichtfeld"
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun showEditGameDialog(game: Game) {
+        val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+        val cal = Calendar.getInstance()
+        try { cal.time = sdf.parse(game.date)!! } catch (_: Exception) {}
+
+        val view = layoutInflater.inflate(R.layout.dialog_edit_game, null)
+        val etDate = view.findViewById<EditText>(R.id.etEditDate)
+        val etOpponent = view.findViewById<EditText>(R.id.etEditOpponent)
+
+        etDate.setText(game.date)
+        etOpponent.setText(game.opponent)
+        etDate.isFocusable = false
+        etDate.setOnClickListener {
+            DatePickerDialog(this, { _, year, month, day ->
+                cal.set(year, month, day)
+                etDate.setText(sdf.format(cal.time))
+            }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Spiel bearbeiten")
+            .setView(view)
+            .setPositiveButton("Speichern", null)
+            .setNegativeButton("Abbrechen", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val date = etDate.text.toString().trim()
+                val opp = etOpponent.text.toString().trim()
+                if (date.isNotEmpty() && opp.isNotEmpty()) {
+                    db.updateGame(game.id, date, opp)
+                    loadGames()
+                    dialog.dismiss()
                 } else {
                     if (date.isEmpty()) etDate.error = "Pflichtfeld"
                     if (opp.isEmpty()) etOpponent.error = "Pflichtfeld"
@@ -147,12 +200,14 @@ class GameListActivity : AppCompatActivity() {
 class GameAdapter(
     private val games: List<Game>,
     private val onClick: (Game) -> Unit,
+    private val onEdit: (Game) -> Unit,
     private val onDelete: (Game) -> Unit
 ) : RecyclerView.Adapter<GameAdapter.VH>() {
 
     inner class VH(view: View) : RecyclerView.ViewHolder(view) {
         val tvDate: TextView = view.findViewById(R.id.tvDate)
         val tvOpponent: TextView = view.findViewById(R.id.tvOpponent)
+        val btnEdit: ImageButton = view.findViewById(R.id.btnEdit)
         val btnDelete: ImageButton = view.findViewById(R.id.btnDelete)
     }
 
@@ -166,6 +221,7 @@ class GameAdapter(
         holder.tvDate.text = game.date
         holder.tvOpponent.text = game.opponent
         holder.itemView.setOnClickListener { onClick(game) }
+        holder.btnEdit.setOnClickListener { onEdit(game) }
         holder.btnDelete.setOnClickListener { onDelete(game) }
     }
 

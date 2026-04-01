@@ -261,6 +261,14 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
         return game
     }
 
+    fun updateGame(gameId: Long, date: String, opponent: String) {
+        val cv = ContentValues().apply {
+            put("date", date)
+            put("opponent", opponent)
+        }
+        writableDatabase.update("games", cv, "id=?", arrayOf(gameId.toString()))
+    }
+
     fun deleteGame(gameId: Long) {
         val db = writableDatabase
         val pitcherIds = mutableListOf<Long>()
