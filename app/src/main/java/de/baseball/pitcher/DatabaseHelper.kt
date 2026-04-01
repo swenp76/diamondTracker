@@ -52,6 +52,19 @@ object BaseballPositions {
     }
 }
 
+data class LineupEntry(
+    val id: Long = 0,
+    val gameId: Long,
+    val battingOrder: Int,   // 1-9
+    val jerseyNumber: String
+)
+
+data class BenchPlayer(
+    val id: Long = 0,
+    val gameId: Long,
+    val jerseyNumber: String
+)
+
 data class PitcherStats(
     val pitcher: Pitcher,
     val bf: Int,
@@ -61,7 +74,7 @@ data class PitcherStats(
     val pitches: List<Pitch>
 )
 
-class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db", null, 7) {
+class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db", null, 8) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
@@ -131,6 +144,24 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
                 FOREIGN KEY(game_id) REFERENCES games(id)
             )
         """)
+        db.execSQL("""
+            CREATE TABLE opponent_lineup (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id INTEGER NOT NULL,
+                batting_order INTEGER NOT NULL,
+                jersey_number TEXT NOT NULL DEFAULT '',
+                UNIQUE(game_id, batting_order),
+                FOREIGN KEY(game_id) REFERENCES games(id)
+            )
+        """)
+        db.execSQL("""
+            CREATE TABLE opponent_bench (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id INTEGER NOT NULL,
+                jersey_number TEXT NOT NULL DEFAULT '',
+                FOREIGN KEY(game_id) REFERENCES games(id)
+            )
+        """)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -155,6 +186,26 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
                     batters_faced INTEGER NOT NULL DEFAULT 0,
                     UNIQUE(player_id, game_id),
                     FOREIGN KEY(player_id) REFERENCES players(id),
+                    FOREIGN KEY(game_id) REFERENCES games(id)
+                )
+            """)
+        }
+        if (oldVersion < 8) {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS opponent_lineup (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    game_id INTEGER NOT NULL,
+                    batting_order INTEGER NOT NULL,
+                    jersey_number TEXT NOT NULL DEFAULT '',
+                    UNIQUE(game_id, batting_order),
+                    FOREIGN KEY(game_id) REFERENCES games(id)
+                )
+            """)
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS opponent_bench (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    game_id INTEGER NOT NULL,
+                    jersey_number TEXT NOT NULL DEFAULT '',
                     FOREIGN KEY(game_id) REFERENCES games(id)
                 )
             """)
@@ -198,6 +249,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
         c.close()
         pitcherIds.forEach { db.delete("pitches", "pitcher_id=?", arrayOf(it.toString())) }
         db.delete("pitchers", "game_id=?", arrayOf(gameId.toString()))
+        db.delete("opponent_lineup", "game_id=?", arrayOf(gameId.toString()))
+        db.delete("opponent_bench", "game_id=?", arrayOf(gameId.toString()))
         db.delete("games", "id=?", arrayOf(gameId.toString()))
     }
 
@@ -437,5 +490,76 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
         val total = if (c.moveToFirst() && !c.isNull(0)) c.getInt(0) else 0
         c.close()
         return total
+    }
+
+    // --- Opponent Lineup ---
+
+    fun upsertLineupEntry(gameId: Long, battingOrder: Int, jerseyNumber: String) {
+        val cv = ContentValues().apply {
+            put("game_id", gameId)
+            put("batting_order", battingOrder)
+            put("jersey_number", jerseyNumber)
+        }
+        writableDatabase.insertWithOnConflict("opponent_lineup", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    fun getLineup(gameId: Long): List<LineupEntry> {
+        val list = mutableListOf<LineupEntry>()
+        val c = readableDatabase.rawQuery(
+            "SELECT id, game_id, batting_order, jersey_number FROM opponent_lineup WHERE game_id=? ORDER BY batting_order ASC",
+            arrayOf(gameId.toString())
+        )
+        while (c.moveToNext()) {
+            list.add(LineupEntry(c.getLong(0), c.getLong(1), c.getInt(2), c.getString(3)))
+        }
+        c.close()
+        return list
+    }
+
+    fun getJerseyAtBattingOrder(gameId: Long, battingOrder: Int): String {
+        val c = readableDatabase.rawQuery(
+            "SELECT jersey_number FROM opponent_lineup WHERE game_id=? AND batting_order=?",
+            arrayOf(gameId.toString(), battingOrder.toString())
+        )
+        val number = if (c.moveToFirst()) c.getString(0) else ""
+        c.close()
+        return number
+    }
+
+    fun deleteLineupEntry(gameId: Long, battingOrder: Int) {
+        writableDatabase.delete("opponent_lineup",
+            "game_id=? AND batting_order=?",
+            arrayOf(gameId.toString(), battingOrder.toString()))
+    }
+
+    // --- Opponent Bench ---
+
+    fun insertBenchPlayer(gameId: Long, jerseyNumber: String): Long {
+        val cv = ContentValues().apply {
+            put("game_id", gameId)
+            put("jersey_number", jerseyNumber)
+        }
+        return writableDatabase.insert("opponent_bench", null, cv)
+    }
+
+    fun getBenchPlayers(gameId: Long): List<BenchPlayer> {
+        val list = mutableListOf<BenchPlayer>()
+        val c = readableDatabase.rawQuery(
+            "SELECT id, game_id, jersey_number FROM opponent_bench WHERE game_id=? ORDER BY id ASC",
+            arrayOf(gameId.toString())
+        )
+        while (c.moveToNext()) {
+            list.add(BenchPlayer(c.getLong(0), c.getLong(1), c.getString(2)))
+        }
+        c.close()
+        return list
+    }
+
+    fun deleteBenchPlayer(id: Long) {
+        writableDatabase.delete("opponent_bench", "id=?", arrayOf(id.toString()))
+    }
+
+    fun substitutePlayer(gameId: Long, battingOrder: Int, newJerseyNumber: String) {
+        upsertLineupEntry(gameId, battingOrder, newJerseyNumber)
     }
 }

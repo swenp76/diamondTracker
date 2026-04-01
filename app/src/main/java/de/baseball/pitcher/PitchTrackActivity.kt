@@ -1,5 +1,6 @@
 package de.baseball.pitcher
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
@@ -11,11 +12,14 @@ class PitchTrackActivity : AppCompatActivity() {
 
     private lateinit var db: DatabaseHelper
     private var pitcherId: Long = -1
+    private var gameId: Long = -1
 
     private lateinit var tvPitchCount: TextView
     private lateinit var tvBalls: TextView
     private lateinit var tvStrikes: TextView
     private lateinit var tvBF: TextView
+    private lateinit var tvAtBatCount: TextView
+    private lateinit var tvCurrentBatter: TextView
     private lateinit var pitchLogLayout: LinearLayout
     private lateinit var scrollView: ScrollView
 
@@ -24,6 +28,7 @@ class PitchTrackActivity : AppCompatActivity() {
         setContentView(R.layout.activity_pitch_track)
 
         pitcherId = intent.getLongExtra("pitcherId", -1)
+        gameId = intent.getLongExtra("gameId", -1)
         val pitcherName = intent.getStringExtra("pitcherName") ?: "Pitcher"
         supportActionBar?.title = pitcherName
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -34,8 +39,20 @@ class PitchTrackActivity : AppCompatActivity() {
         tvBalls = findViewById(R.id.tvBalls)
         tvStrikes = findViewById(R.id.tvStrikes)
         tvBF = findViewById(R.id.tvBF)
+        tvAtBatCount = findViewById(R.id.tvAtBatCount)
+        tvCurrentBatter = findViewById(R.id.tvCurrentBatter)
         pitchLogLayout = findViewById(R.id.pitchLogLayout)
         scrollView = findViewById(R.id.scrollPitchLog)
+
+        // Tap on "Aufstellung" hint opens opponent lineup
+        findViewById<TextView>(R.id.tvOpponentLineupHint).setOnClickListener {
+            if (gameId != -1L) {
+                val i = Intent(this, OpponentLineupActivity::class.java)
+                i.putExtra("gameId", gameId)
+                i.putExtra("opponentName", pitcherName)
+                startActivity(i)
+            }
+        }
 
         findViewById<Button>(R.id.btnBall).setOnClickListener {
             db.insertPitch(pitcherId, "B")
@@ -116,6 +133,12 @@ class PitchTrackActivity : AppCompatActivity() {
         return Pair(balls, strikes)
     }
 
+    private fun getBatterJersey(battingOrder: Int): String {
+        if (gameId == -1L) return ""
+        val jersey = db.getJerseyAtBattingOrder(gameId, battingOrder)
+        return if (jersey.isNotEmpty()) "#$jersey" else ""
+    }
+
     private fun refresh() {
         val stats = db.getStatsForPitcher(pitcherId)
         tvBalls.text = stats.balls.toString()
@@ -123,9 +146,22 @@ class PitchTrackActivity : AppCompatActivity() {
         tvBF.text = stats.bf.toString()
         tvPitchCount.text = "Pitch #${stats.totalPitches + 1}"
 
+        // Current at-bat count
+        val (balls, strikes) = currentAtBatCount()
+        tvAtBatCount.text = "$balls-$strikes"
+
+        // Current batter from opponent lineup (bf=0 → slot 1, bf=1 → slot 2, ...)
+        val currentBattingOrder = (stats.bf % 9) + 1
+        val jerseyDisplay = getBatterJersey(currentBattingOrder)
+        tvCurrentBatter.text = if (jerseyDisplay.isNotEmpty())
+            "$jerseyDisplay  (Slot $currentBattingOrder)"
+        else
+            "Slot $currentBattingOrder"
+
         // Rebuild pitch log
         pitchLogLayout.removeAllViews()
         var pitchNumber = 0
+        var bfCount = 0
         stats.pitches.forEach { pitch ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -134,8 +170,15 @@ class PitchTrackActivity : AppCompatActivity() {
             }
             when (pitch.type) {
                 "BF" -> {
+                    bfCount++
+                    val nextBattingOrder = (bfCount % 9) + 1
+                    val nextJersey = getBatterJersey(nextBattingOrder)
+                    val batterLabel = if (nextJersey.isNotEmpty())
+                        "── $nextJersey (Slot $nextBattingOrder) ─────────"
+                    else
+                        "── Slot $nextBattingOrder ──────────────────────"
                     val tv = TextView(this).apply {
-                        text = "── Batter ──────────────────────"
+                        text = batterLabel
                         setTextColor(Color.parseColor("#888888"))
                         textSize = 11f
                     }

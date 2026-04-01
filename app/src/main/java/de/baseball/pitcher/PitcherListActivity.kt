@@ -9,6 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
+private const val MENU_LINEUP = 1
+
 class PitcherListActivity : AppCompatActivity() {
 
     private lateinit var db: DatabaseHelper
@@ -39,6 +41,24 @@ class PitcherListActivity : AppCompatActivity() {
         loadPitchers()
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menu.add(0, MENU_LINEUP, 0, "Gegner Aufstellung").apply {
+            setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+        }
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == MENU_LINEUP) {
+            val intent = Intent(this, OpponentLineupActivity::class.java)
+            intent.putExtra("gameId", gameId)
+            intent.putExtra("opponentName", supportActionBar?.title?.toString() ?: "")
+            startActivity(intent)
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     override fun onSupportNavigateUp(): Boolean {
         finish()
         return true
@@ -51,6 +71,7 @@ class PitcherListActivity : AppCompatActivity() {
                 val intent = Intent(this, PitchTrackActivity::class.java)
                 intent.putExtra("pitcherId", pitcher.id)
                 intent.putExtra("pitcherName", pitcher.name)
+                intent.putExtra("gameId", gameId)
                 startActivity(intent)
             },
             onStats = { pitcher ->
