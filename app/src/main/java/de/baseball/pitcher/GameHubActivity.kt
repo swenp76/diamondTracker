@@ -39,6 +39,13 @@ class GameHubActivity : AppCompatActivity() {
             intent.putExtra("gameDate", gameDate)
             startActivity(intent)
         }
+
+        findViewById<Button>(R.id.btnOppoLineup).setOnClickListener {
+            val intent = Intent(this, OpponentLineupActivity::class.java)
+            intent.putExtra("gameId", gameId)
+            intent.putExtra("opponentName", gameOpponent)
+            startActivity(intent)
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {

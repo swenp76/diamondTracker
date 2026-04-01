@@ -1,154 +1,425 @@
 package de.baseball.pitcher
 
 import android.app.AlertDialog
+import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
-import android.view.*
+import android.view.Gravity
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+
+enum class OppSubStatus { AVAILABLE, ACTIVE, DONE }
+
+data class OppSlotState(
+    val slot: Int,
+    val currentJersey: String,
+    val originalJersey: String,
+    val swapType: SwapType
+)
 
 class OpponentLineupActivity : AppCompatActivity() {
 
     private lateinit var db: DatabaseHelper
     private var gameId: Long = -1
-
-    private lateinit var recyclerLineup: RecyclerView
-    private lateinit var recyclerBench: RecyclerView
-    private lateinit var tvBenchEmpty: TextView
+    private lateinit var container: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_opponent_lineup)
+        setContentView(R.layout.activity_own_lineup)
 
         gameId = intent.getLongExtra("gameId", -1)
         val opponentName = intent.getStringExtra("opponentName") ?: "Gegner"
-        supportActionBar?.title = "Aufstellung – $opponentName"
+        supportActionBar?.title = opponentName
+        supportActionBar?.subtitle = "Aufstellung"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         db = DatabaseHelper(this)
+        container = findViewById(R.id.lineupContainer)
+        buildView()
+    }
 
-        recyclerLineup = findViewById(R.id.recyclerLineup)
-        recyclerLineup.layoutManager = LinearLayoutManager(this)
-        recyclerLineup.isNestedScrollingEnabled = false
+    override fun onResume() { super.onResume(); buildView() }
+    override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
-        recyclerBench = findViewById(R.id.recyclerBench)
-        recyclerBench.layoutManager = LinearLayoutManager(this)
-        recyclerBench.isNestedScrollingEnabled = false
+    // ── State ─────────────────────────────────────────────────────────────────
 
-        tvBenchEmpty = findViewById(R.id.tvBenchEmpty)
+    private fun computeState(): Pair<List<OppSlotState>, Map<String, OppSubStatus>> {
+        val lineup = db.getLineup(gameId)
+        val subs   = db.getOpponentSubstitutionsForGame(gameId)
 
-        findViewById<Button>(R.id.btnAddBench).setOnClickListener {
-            showJerseyInputDialog("Auswechselspieler hinzufügen", "") { jersey ->
-                if (jersey.isNotEmpty()) {
-                    db.insertBenchPlayer(gameId, jersey)
-                    refresh()
-                }
+        val slotStates = (1..9).map { slot ->
+            val originalJersey = lineup.firstOrNull { it.battingOrder == slot }?.jerseyNumber ?: ""
+            val slotSubs = subs.filter { it.slot == slot }
+            val currentJersey = slotSubs.lastOrNull()?.jerseyIn ?: originalJersey
+            val swapType = when {
+                originalJersey.isEmpty()                               -> SwapType.NONE
+                slotSubs.isEmpty()                                     -> SwapType.SUB_IN
+                slotSubs.size == 1 && currentJersey != originalJersey -> SwapType.RETURN_STARTER
+                slotSubs.size >= 2 && currentJersey == originalJersey -> SwapType.INJURY_ONLY
+                else                                                   -> SwapType.NONE
             }
+            OppSlotState(slot, currentJersey, originalJersey, swapType)
         }
 
-        refresh()
+        // Bank players mapped to virtual slots 11–20 by insertion order
+        val bench = db.getBenchPlayers(gameId)
+        val subStatuses = mutableMapOf<String, OppSubStatus>()
+        bench.forEach { bp ->
+            val timesIn  = subs.count { it.jerseyIn  == bp.jerseyNumber }
+            val timesOut = subs.count { it.jerseyOut == bp.jerseyNumber }
+            subStatuses[bp.jerseyNumber] = when {
+                timesIn == 0                  -> OppSubStatus.AVAILABLE
+                timesIn == 1 && timesOut == 0 -> OppSubStatus.ACTIVE
+                else                          -> OppSubStatus.DONE
+            }
+        }
+        return Pair(slotStates, subStatuses)
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
-    }
+    // ── Build UI ──────────────────────────────────────────────────────────────
 
-    private fun refresh() {
-        val lineup = db.getLineup(gameId)
+    private fun buildView() {
+        container.removeAllViews()
+        val (slotStates, subStatuses) = computeState()
         val bench = db.getBenchPlayers(gameId)
 
-        // Build slots 1-9, merging DB entries
-        val slots = (1..9).map { order ->
-            lineup.firstOrNull { it.battingOrder == order }
-                ?: LineupEntry(gameId = gameId, battingOrder = order, jerseyNumber = "")
+        addSectionHeader("Batting Order (1 – 9)")
+        slotStates.forEach { addSlotRow(it) }
+
+        addSectionHeader("Bank (11 – 20)")
+        for (bankSlot in 1..10) {
+            val bp = bench.getOrNull(bankSlot - 1)
+            val status = bp?.let { subStatuses[it.jerseyNumber] }
+            addBankRow(bankSlot, bp, status)
         }
 
-        recyclerLineup.adapter = LineupAdapter(
-            slots,
-            onEdit = { entry -> showEditLineupSlot(entry) },
-            onSub = { entry -> showSubstituteDialog(entry, bench) }
-        )
-
-        recyclerBench.adapter = BenchAdapter(bench) { benchPlayer ->
-            AlertDialog.Builder(this)
-                .setTitle("Auswechselspieler entfernen")
-                .setMessage("Trikotnummer #${benchPlayer.jerseyNumber} von der Bank entfernen?")
-                .setPositiveButton("Entfernen") { _, _ ->
-                    db.deleteBenchPlayer(benchPlayer.id)
-                    refresh()
-                }
-                .setNegativeButton("Abbrechen", null)
-                .show()
-        }
-
-        tvBenchEmpty.visibility = if (bench.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+        addWechselSection(slotStates, subStatuses)
     }
 
-    private fun showEditLineupSlot(entry: LineupEntry) {
-        showJerseyInputDialog(
-            "Batting Order ${entry.battingOrder} – Trikotnummer",
-            entry.jerseyNumber
-        ) { jersey ->
-            if (jersey.isEmpty()) {
-                db.deleteLineupEntry(gameId, entry.battingOrder)
-            } else {
-                db.upsertLineupEntry(gameId, entry.battingOrder, jersey)
+    private fun addSectionHeader(title: String) {
+        container.addView(TextView(this).apply {
+            text = title
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.parseColor("#888888"))
+            setPadding(8, 24, 8, 8)
+        })
+    }
+
+    // ── Starter row – mirrors OwnLineupActivity.addStarterRow exactly ─────────
+
+    private fun addSlotRow(state: OppSlotState) {
+        val subs = db.getOpponentSubstitutionsForGame(gameId)
+        val hasSubs = subs.any { it.slot == state.slot }
+
+        val row = rowLayout()
+
+        row.addView(slotNumberView(state.slot, "#1a5fa8"))
+
+        row.addView(TextView(this).apply {
+            textSize = 16f
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            val isSubstituted = state.currentJersey != state.originalJersey && state.originalJersey.isNotEmpty()
+            text = if (state.currentJersey.isNotEmpty())
+                "#${state.currentJersey}${if (isSubstituted) "  ↩" else ""}"
+            else "— leer —"
+            setTextColor(when {
+                state.currentJersey.isEmpty() -> Color.parseColor("#bbbbbb")
+                isSubstituted                 -> Color.parseColor("#c0392b")
+                else                          -> Color.parseColor("#222222")
+            })
+        })
+
+        if (state.swapType != SwapType.NONE) {
+            row.addView(swapButton(state.swapType) { onSwapPressed(state) })
+        }
+
+        val btnClear = clearButton {
+            db.deleteLineupEntry(gameId, state.slot)
+            buildView()
+        }
+        btnClear.visibility = if (state.currentJersey.isNotEmpty() && !hasSubs) View.VISIBLE else View.INVISIBLE
+        row.addView(btnClear)
+
+        row.setOnClickListener {
+            if (!hasSubs) showJerseyInput("Slot ${state.slot}", state.currentJersey) { jersey ->
+                if (jersey.isEmpty()) db.deleteLineupEntry(gameId, state.slot)
+                else db.upsertLineupEntry(gameId, state.slot, jersey)
+                buildView()
             }
-            refresh()
+        }
+        container.addView(row)
+    }
+
+    // ── Bank row – mirrors OwnLineupActivity.addSubstituteRow exactly ─────────
+
+    private fun addBankRow(bankSlot: Int, bp: BenchPlayer?, status: OppSubStatus?) {
+        val row = rowLayout()
+        row.addView(slotNumberView(bankSlot + 10, "#2c7a2c"))
+
+        row.addView(TextView(this).apply {
+            textSize = 16f
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            text = if (bp != null) "#${bp.jerseyNumber}" else "— leer —"
+            setTextColor(when {
+                bp == null                   -> Color.parseColor("#bbbbbb")
+                status == OppSubStatus.DONE  -> Color.parseColor("#999999")
+                else                         -> Color.parseColor("#222222")
+            })
+        })
+
+        if (bp != null) {
+            when (status) {
+                OppSubStatus.AVAILABLE -> row.addView(statusIcon("✓", "#27ae60"))
+                OppSubStatus.DONE      -> row.addView(statusIcon("✗", "#c0392b"))
+                else                   -> {}
+            }
+
+            val subs = db.getOpponentSubstitutionsForGame(gameId)
+            val isInvolved = subs.any { it.jerseyIn == bp.jerseyNumber || it.jerseyOut == bp.jerseyNumber }
+            val btnClear = clearButton {
+                db.deleteBenchPlayer(bp.id)
+                buildView()
+            }
+            btnClear.visibility = if (!isInvolved) View.VISIBLE else View.INVISIBLE
+            row.addView(btnClear)
+
+            row.setOnClickListener {
+                if (!isInvolved) showJerseyInput("Bank – Slot ${bankSlot + 10}", bp.jerseyNumber) { jersey ->
+                    if (jersey.isEmpty()) db.deleteBenchPlayer(bp.id)
+                    else {
+                        db.deleteBenchPlayer(bp.id)
+                        db.insertBenchPlayer(gameId, jersey)
+                    }
+                    buildView()
+                }
+            }
+        } else {
+            // Empty bank slot – tap to add
+            val btnClear = clearButton {}
+            btnClear.visibility = View.INVISIBLE
+            row.addView(btnClear)
+
+            row.setOnClickListener {
+                showJerseyInput("Bank – Slot ${bankSlot + 10}", "") { jersey ->
+                    if (jersey.isNotEmpty()) { db.insertBenchPlayer(gameId, jersey); buildView() }
+                }
+            }
+        }
+
+        container.addView(row)
+    }
+
+    // ── Wechsel-Übersicht ─────────────────────────────────────────────────────
+
+    private fun addWechselSection(slotStates: List<OppSlotState>, subStatuses: Map<String, OppSubStatus>) {
+        val subs = db.getOpponentSubstitutionsForGame(gameId)
+        if (subs.isEmpty()) return
+
+        addSectionHeader("Wechsel-Übersicht")
+        container.addView(View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1).apply { bottomMargin = 8 }
+            setBackgroundColor(Color.parseColor("#dddddd"))
+        })
+
+        data class Entry(val jersey: String, val label: String, val color: String)
+        val entries = mutableListOf<Entry>()
+        val seen = mutableSetOf<String>()
+
+        subs.forEach { sub ->
+            if (seen.add(sub.jerseyOut)) {
+                val timesIn  = subs.count { it.jerseyIn  == sub.jerseyOut }
+                val isStarter = slotStates.any { it.originalJersey == sub.jerseyOut }
+                val label = when {
+                    isStarter && timesIn == 0 -> "Draußen – kann zurückkehren"
+                    isStarter && timesIn >= 1 -> "Zurückgekehrt"
+                    else                      -> "Fertig (nicht mehr verfügbar)"
+                }
+                val color = when {
+                    isStarter && timesIn == 0 -> "#e67e22"
+                    isStarter && timesIn >= 1 -> "#27ae60"
+                    else                      -> "#c0392b"
+                }
+                entries.add(Entry(sub.jerseyOut, label, color))
+            }
+            if (seen.add(sub.jerseyIn)) {
+                val isOnField = slotStates.any { it.currentJersey == sub.jerseyIn }
+                entries.add(Entry(sub.jerseyIn,
+                    if (isOnField) "Im Spiel" else "Fertig (nicht mehr verfügbar)",
+                    if (isOnField) "#27ae60" else "#c0392b"))
+            }
+        }
+
+        entries.forEach { entry ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(8, 10, 8, 10)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = 2 }
+            }
+            row.addView(TextView(this).apply {
+                text = "#${entry.jersey}"
+                textSize = 15f
+                setTextColor(Color.parseColor("#222222"))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            row.addView(TextView(this).apply {
+                text = entry.label
+                textSize = 13f
+                setTextColor(Color.parseColor(entry.color))
+                gravity = Gravity.END
+            })
+            container.addView(row)
         }
     }
 
-    private fun showSubstituteDialog(entry: LineupEntry, bench: List<BenchPlayer>) {
+    // ── Swap logic ────────────────────────────────────────────────────────────
+
+    private fun onSwapPressed(state: OppSlotState) {
+        when (state.swapType) {
+            SwapType.SUB_IN -> AlertDialog.Builder(this)
+                .setTitle("Einwechslung – Slot ${state.slot}")
+                .setItems(arrayOf("Normal", "Verletzung")) { _, which ->
+                    if (which == 0) showNormalSubDialog(state) else showInjurySubDialog(state)
+                }
+                .setNegativeButton("Abbrechen", null).show()
+            SwapType.RETURN_STARTER -> AlertDialog.Builder(this)
+                .setTitle("Rückwechslung – Slot ${state.slot}")
+                .setMessage("#${state.originalJersey} zurück ins Spiel?")
+                .setPositiveButton("Zurück") { _, _ ->
+                    db.addOpponentSubstitution(gameId, state.slot, state.currentJersey, state.originalJersey)
+                    buildView()
+                }
+                .setNegativeButton("Abbrechen", null).show()
+            SwapType.INJURY_ONLY -> showInjurySubDialog(state)
+            SwapType.NONE -> {}
+        }
+    }
+
+    private fun availableBench(): List<BenchPlayer> {
+        val subs = db.getOpponentSubstitutionsForGame(gameId)
+        val onField = computeState().first.map { it.currentJersey }.toSet()
+        return db.getBenchPlayers(gameId).filter { bp ->
+            subs.none { it.jerseyIn == bp.jerseyNumber } && bp.jerseyNumber !in onField
+        }
+    }
+
+    private fun outStarters(): List<String> {
+        val subs = db.getOpponentSubstitutionsForGame(gameId)
+        val onField = computeState().first.map { it.currentJersey }.toSet()
+        return db.getLineup(gameId).map { it.jerseyNumber }.filter { jersey ->
+            subs.count { it.jerseyOut == jersey } == 1 &&
+            subs.none  { it.jerseyIn  == jersey } &&
+            jersey !in onField
+        }
+    }
+
+    private fun showNormalSubDialog(state: OppSlotState) {
+        val bench = availableBench()
         if (bench.isEmpty()) {
-            showJerseyInputDialog(
-                "Wechsel – Batting Order ${entry.battingOrder}",
-                ""
-            ) { jersey ->
+            showJerseyInput("Einwechslung – Slot ${state.slot}", "") { jersey ->
                 if (jersey.isNotEmpty()) {
-                    val oldJersey = entry.jerseyNumber
-                    db.substitutePlayer(gameId, entry.battingOrder, jersey)
-                    if (oldJersey.isNotEmpty()) db.insertBenchPlayer(gameId, oldJersey)
-                    refresh()
+                    db.insertBenchPlayer(gameId, jersey)
+                    db.addOpponentSubstitution(gameId, state.slot, state.currentJersey, jersey)
+                    buildView()
                 }
             }
             return
         }
-
-        // Show bench players + option to enter a new number
-        val benchLabels = bench.map { "#${it.jerseyNumber}" }.toMutableList()
-        benchLabels.add("Andere Nummer eingeben…")
-
+        val labels = (bench.map { "#${it.jerseyNumber}" } + "Andere Nummer…").toTypedArray()
         AlertDialog.Builder(this)
-            .setTitle("Wechsel – Batting Order ${entry.battingOrder}\nAktuell: #${entry.jerseyNumber.ifEmpty { "–" }}")
-            .setItems(benchLabels.toTypedArray()) { _, which ->
+            .setTitle("Einwechslung – Slot ${state.slot}")
+            .setItems(labels) { _, which ->
                 if (which < bench.size) {
-                    val sub = bench[which]
-                    val oldJersey = entry.jerseyNumber
-                    db.substitutePlayer(gameId, entry.battingOrder, sub.jerseyNumber)
-                    db.deleteBenchPlayer(sub.id)
-                    if (oldJersey.isNotEmpty()) db.insertBenchPlayer(gameId, oldJersey)
-                    refresh()
+                    db.addOpponentSubstitution(gameId, state.slot, state.currentJersey, bench[which].jerseyNumber)
+                    buildView()
                 } else {
-                    showJerseyInputDialog("Trikotnummer des Einwechselspielers", "") { jersey ->
+                    showJerseyInput("Trikotnummer", "") { jersey ->
                         if (jersey.isNotEmpty()) {
-                            val oldJersey = entry.jerseyNumber
-                            db.substitutePlayer(gameId, entry.battingOrder, jersey)
-                            if (oldJersey.isNotEmpty()) db.insertBenchPlayer(gameId, oldJersey)
-                            refresh()
+                            db.insertBenchPlayer(gameId, jersey)
+                            db.addOpponentSubstitution(gameId, state.slot, state.currentJersey, jersey)
+                            buildView()
                         }
                     }
                 }
             }
-            .setNegativeButton("Abbrechen", null)
-            .show()
+            .setNegativeButton("Abbrechen", null).show()
     }
 
-    private fun showJerseyInputDialog(title: String, currentValue: String, onConfirm: (String) -> Unit) {
+    private fun showInjurySubDialog(state: OppSlotState) {
+        val candidates = (availableBench().map { it.jerseyNumber } + outStarters()).distinct()
+        if (candidates.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("Keine Spieler verfügbar")
+                .setMessage("Keine verfügbaren Bank- oder ausgewechselten Starter.")
+                .setPositiveButton("OK", null).show()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Verletzung – Slot ${state.slot}")
+            .setItems(candidates.map { "#$it" }.toTypedArray()) { _, which ->
+                db.addOpponentSubstitution(gameId, state.slot, state.currentJersey, candidates[which])
+                buildView()
+            }
+            .setNegativeButton("Abbrechen", null).show()
+    }
+
+    // ── Shared helpers – identical to OwnLineupActivity ───────────────────────
+
+    private fun rowLayout() = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(8, 12, 8, 12)
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { bottomMargin = 4 }
+    }
+
+    private fun slotNumberView(slot: Int, colorHex: String) = TextView(this).apply {
+        text = "$slot"
+        textSize = 16f
+        setTypeface(null, Typeface.BOLD)
+        setTextColor(Color.parseColor(colorHex))
+        width = 72
+        gravity = Gravity.CENTER
+    }
+
+    private fun swapButton(swapType: SwapType, onClick: () -> Unit) = Button(this).apply {
+        val isInjuryOnly = swapType == SwapType.INJURY_ONLY
+        text = if (isInjuryOnly) "🩹" else "⇄"
+        textSize = if (isInjuryOnly) 16f else 18f
+        setTextColor(Color.WHITE)
+        backgroundTintList = android.content.res.ColorStateList.valueOf(
+            Color.parseColor(if (isInjuryOnly) "#e67e22" else "#1a5fa8")
+        )
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { marginEnd = 8 }
+        setPadding(24, 4, 24, 4)
+        setOnClickListener { onClick() }
+    }
+
+    private fun clearButton(onClick: () -> Unit) = ImageButton(this).apply {
+        setImageDrawable(androidx.core.content.ContextCompat.getDrawable(
+            this@OpponentLineupActivity, android.R.drawable.ic_menu_close_clear_cancel))
+        background = null
+        setOnClickListener { onClick() }
+    }
+
+    private fun statusIcon(symbol: String, colorHex: String) = TextView(this).apply {
+        text = symbol
+        textSize = 20f
+        setTextColor(Color.parseColor(colorHex))
+        setPadding(8, 0, 8, 0)
+    }
+
+    private fun showJerseyInput(title: String, current: String, onConfirm: (String) -> Unit) {
         val et = EditText(this).apply {
             hint = "Trikotnummer"
-            setText(currentValue)
+            setText(current)
             inputType = android.text.InputType.TYPE_CLASS_TEXT
             setPadding(48, 24, 48, 24)
         }
@@ -156,61 +427,7 @@ class OpponentLineupActivity : AppCompatActivity() {
             .setTitle(title)
             .setView(et)
             .setPositiveButton("OK") { _, _ -> onConfirm(et.text.toString().trim()) }
-            .setNegativeButton("Abbrechen", null)
-            .show()
+            .setNegativeButton("Abbrechen", null).show()
         et.post { et.selectAll() }
     }
-}
-
-class LineupAdapter(
-    private val slots: List<LineupEntry>,
-    private val onEdit: (LineupEntry) -> Unit,
-    private val onSub: (LineupEntry) -> Unit
-) : RecyclerView.Adapter<LineupAdapter.VH>() {
-
-    inner class VH(view: View) : RecyclerView.ViewHolder(view) {
-        val tvOrder: TextView = view.findViewById(R.id.tvBattingOrder)
-        val tvJersey: TextView = view.findViewById(R.id.tvJerseyNumber)
-        val btnEdit: Button = view.findViewById(R.id.btnEditSlot)
-        val btnSub: Button = view.findViewById(R.id.btnSub)
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_lineup_slot, parent, false)
-        return VH(v)
-    }
-
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        val entry = slots[position]
-        holder.tvOrder.text = entry.battingOrder.toString()
-        holder.tvJersey.text = if (entry.jerseyNumber.isNotEmpty()) "#${entry.jerseyNumber}" else "–"
-        holder.btnEdit.setOnClickListener { onEdit(entry) }
-        holder.btnSub.setOnClickListener { onSub(entry) }
-    }
-
-    override fun getItemCount() = slots.size
-}
-
-class BenchAdapter(
-    private val bench: List<BenchPlayer>,
-    private val onRemove: (BenchPlayer) -> Unit
-) : RecyclerView.Adapter<BenchAdapter.VH>() {
-
-    inner class VH(view: View) : RecyclerView.ViewHolder(view) {
-        val tvJersey: TextView = view.findViewById(R.id.tvBenchJersey)
-        val btnRemove: ImageButton = view.findViewById(R.id.btnRemoveBench)
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_bench_player, parent, false)
-        return VH(v)
-    }
-
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        val p = bench[position]
-        holder.tvJersey.text = "#${p.jerseyNumber}"
-        holder.btnRemove.setOnClickListener { onRemove(p) }
-    }
-
-    override fun getItemCount() = bench.size
 }

@@ -3,13 +3,13 @@ package de.baseball.pitcher
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
-import android.view.*
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-
-private const val MENU_LINEUP = 1
 
 class PitcherListActivity : AppCompatActivity() {
 
@@ -39,22 +39,6 @@ class PitcherListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadPitchers()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, MENU_LINEUP, 0, "Gegner Aufstellung")
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == MENU_LINEUP) {
-            val intent = Intent(this, OpponentLineupActivity::class.java)
-            intent.putExtra("gameId", gameId)
-            intent.putExtra("opponentName", supportActionBar?.title?.toString() ?: "")
-            startActivity(intent)
-            return true
-        }
-        return super.onOptionsItemSelected(item)
     }
 
     override fun onSupportNavigateUp(): Boolean {

@@ -5,6 +5,9 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
+data class Substitution(val id: Long = 0, val gameId: Long, val slot: Int, val playerOutId: Long, val playerInId: Long)
+data class OppSubstitution(val id: Long = 0, val gameId: Long, val slot: Int, val jerseyOut: String, val jerseyIn: String)
+
 data class Game(val id: Long = 0, val date: String, val opponent: String, val teamId: Long = 0)
 data class Pitcher(val id: Long = 0, val gameId: Long, val name: String, val playerId: Long = 0)
 data class Pitch(val id: Long = 0, val pitcherId: Long, val type: String, val sequenceNr: Int)
@@ -74,7 +77,7 @@ data class PitcherStats(
     val pitches: List<Pitch>
 )
 
-class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db", null, 11) {
+class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db", null, 13) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
@@ -172,6 +175,26 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
                 FOREIGN KEY(player_id) REFERENCES players(id)
             )
         """)
+        db.execSQL("""
+            CREATE TABLE substitutions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id INTEGER NOT NULL,
+                slot INTEGER NOT NULL,
+                player_out_id INTEGER NOT NULL,
+                player_in_id INTEGER NOT NULL,
+                FOREIGN KEY(game_id) REFERENCES games(id)
+            )
+        """)
+        db.execSQL("""
+            CREATE TABLE opponent_substitutions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id INTEGER NOT NULL,
+                slot INTEGER NOT NULL,
+                jersey_out TEXT NOT NULL,
+                jersey_in TEXT NOT NULL,
+                FOREIGN KEY(game_id) REFERENCES games(id)
+            )
+        """)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -196,6 +219,30 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
                     batters_faced INTEGER NOT NULL DEFAULT 0,
                     UNIQUE(player_id, game_id),
                     FOREIGN KEY(player_id) REFERENCES players(id),
+                    FOREIGN KEY(game_id) REFERENCES games(id)
+                )
+            """)
+        }
+        if (oldVersion < 13) {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS opponent_substitutions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    game_id INTEGER NOT NULL,
+                    slot INTEGER NOT NULL,
+                    jersey_out TEXT NOT NULL,
+                    jersey_in TEXT NOT NULL,
+                    FOREIGN KEY(game_id) REFERENCES games(id)
+                )
+            """)
+        }
+        if (oldVersion < 12) {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS substitutions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    game_id INTEGER NOT NULL,
+                    slot INTEGER NOT NULL,
+                    player_out_id INTEGER NOT NULL,
+                    player_in_id INTEGER NOT NULL,
                     FOREIGN KEY(game_id) REFERENCES games(id)
                 )
             """)
@@ -296,6 +343,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
         db.delete("opponent_lineup", "game_id=?", arrayOf(gameId.toString()))
         db.delete("opponent_bench", "game_id=?", arrayOf(gameId.toString()))
         db.delete("own_lineup", "game_id=?", arrayOf(gameId.toString()))
+        db.delete("substitutions", "game_id=?", arrayOf(gameId.toString()))
+        db.delete("opponent_substitutions", "game_id=?", arrayOf(gameId.toString()))
         db.delete("games", "id=?", arrayOf(gameId.toString()))
     }
 
@@ -608,6 +657,56 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
         upsertLineupEntry(gameId, battingOrder, newJerseyNumber)
     }
 
+    // --- Opponent Substitutions ---
+
+    fun addOpponentSubstitution(gameId: Long, slot: Int, jerseyOut: String, jerseyIn: String): Long {
+        val cv = ContentValues().apply {
+            put("game_id", gameId)
+            put("slot", slot)
+            put("jersey_out", jerseyOut)
+            put("jersey_in", jerseyIn)
+        }
+        return writableDatabase.insert("opponent_substitutions", null, cv)
+    }
+
+    fun getOpponentSubstitutionsForGame(gameId: Long): List<OppSubstitution> {
+        val list = mutableListOf<OppSubstitution>()
+        val c = readableDatabase.rawQuery(
+            "SELECT id, game_id, slot, jersey_out, jersey_in FROM opponent_substitutions WHERE game_id=? ORDER BY id ASC",
+            arrayOf(gameId.toString())
+        )
+        while (c.moveToNext()) {
+            list.add(OppSubstitution(c.getLong(0), c.getLong(1), c.getInt(2), c.getString(3), c.getString(4)))
+        }
+        c.close()
+        return list
+    }
+
+    // --- Substitutions ---
+
+    fun addSubstitution(gameId: Long, slot: Int, playerOutId: Long, playerInId: Long): Long {
+        val cv = ContentValues().apply {
+            put("game_id", gameId)
+            put("slot", slot)
+            put("player_out_id", playerOutId)
+            put("player_in_id", playerInId)
+        }
+        return writableDatabase.insert("substitutions", null, cv)
+    }
+
+    fun getSubstitutionsForGame(gameId: Long): List<Substitution> {
+        val list = mutableListOf<Substitution>()
+        val c = readableDatabase.rawQuery(
+            "SELECT id, game_id, slot, player_out_id, player_in_id FROM substitutions WHERE game_id=? ORDER BY id ASC",
+            arrayOf(gameId.toString())
+        )
+        while (c.moveToNext()) {
+            list.add(Substitution(c.getLong(0), c.getLong(1), c.getInt(2), c.getLong(3), c.getLong(4)))
+        }
+        c.close()
+        return list
+    }
+
     // Spieler in Lineup-Slots 1–9 (Starter), sortiert nach Slot
     fun getOwnLineupStarters(gameId: Long): List<Player> {
         return getOwnLineup(gameId).filter { it.key in 1..9 }
@@ -675,6 +774,16 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
     fun clearOwnLineupSlot(gameId: Long, slot: Int) {
         writableDatabase.delete("own_lineup", "game_id=? AND slot=?",
             arrayOf(gameId.toString(), slot.toString()))
+    }
+
+    fun getPlayerById(playerId: Long): Player? {
+        val c = readableDatabase.rawQuery(
+            "SELECT id, team_id, name, number, primary_position, secondary_position, is_pitcher, birth_year FROM players WHERE id=?",
+            arrayOf(playerId.toString())
+        )
+        val p = if (c.moveToFirst()) Player(c.getLong(0), c.getLong(1), c.getString(2), c.getString(3), c.getInt(4), c.getInt(5), c.getInt(6) == 1, c.getInt(7)) else null
+        c.close()
+        return p
     }
 
     // Gibt Map<slot, Player> zurück
