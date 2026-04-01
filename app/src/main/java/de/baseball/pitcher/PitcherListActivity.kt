@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 private const val MENU_LINEUP = 1
+private const val MENU_AVAILABILITY = 2
 
 class PitcherListActivity : AppCompatActivity() {
 
@@ -42,6 +43,9 @@ class PitcherListActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menu.add(0, MENU_AVAILABILITY, 0, "Anwesenheit").apply {
+            setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+        }
         menu.add(0, MENU_LINEUP, 0, "Gegner Aufstellung").apply {
             setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
         }
@@ -49,14 +53,20 @@ class PitcherListActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == MENU_LINEUP) {
-            val intent = Intent(this, OpponentLineupActivity::class.java)
-            intent.putExtra("gameId", gameId)
-            intent.putExtra("opponentName", supportActionBar?.title?.toString() ?: "")
-            startActivity(intent)
-            return true
+        return when (item.itemId) {
+            MENU_LINEUP -> {
+                val intent = Intent(this, OpponentLineupActivity::class.java)
+                intent.putExtra("gameId", gameId)
+                intent.putExtra("opponentName", supportActionBar?.title?.toString() ?: "")
+                startActivity(intent)
+                true
+            }
+            MENU_AVAILABILITY -> {
+                showAvailabilityDialog()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
-        return super.onOptionsItemSelected(item)
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -93,9 +103,32 @@ class PitcherListActivity : AppCompatActivity() {
         )
     }
 
-    private fun showAddPitcherDialog() {
+    private fun showAvailabilityDialog() {
         val teamId = db.getGame(gameId)?.teamId ?: 0L
-        val players = if (teamId > 0) db.getPlayersForTeam(teamId) else emptyList()
+        val allPlayers = if (teamId > 0) db.getPlayersForTeam(teamId) else emptyList()
+        if (allPlayers.isEmpty()) return
+
+        val availableIds = db.getAvailablePlayerIds(gameId)
+        val labels = allPlayers.map { "#${it.number} ${it.name}" }.toTypedArray()
+        val checked = BooleanArray(allPlayers.size) { i ->
+            availableIds.isEmpty() || allPlayers[i].id in availableIds
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Anwesenheit")
+            .setMultiChoiceItems(labels, checked) { _, which, isChecked ->
+                checked[which] = isChecked
+            }
+            .setPositiveButton("Speichern") { _, _ ->
+                val availableSet = allPlayers.filterIndexed { i, _ -> checked[i] }.map { it.id }.toSet()
+                db.saveAvailability(gameId, availableSet)
+            }
+            .setNegativeButton("Abbrechen", null)
+            .show()
+    }
+
+    private fun showAddPitcherDialog() {
+        val players = db.getAvailablePlayers(gameId)
 
         if (players.isEmpty()) {
             // Kein Team oder keine Spieler → Freitexteingabe

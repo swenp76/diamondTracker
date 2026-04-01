@@ -74,7 +74,7 @@ data class PitcherStats(
     val pitches: List<Pitch>
 )
 
-class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db", null, 8) {
+class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db", null, 9) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
@@ -162,6 +162,15 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
                 FOREIGN KEY(game_id) REFERENCES games(id)
             )
         """)
+        db.execSQL("""
+            CREATE TABLE game_availability (
+                game_id INTEGER NOT NULL,
+                player_id INTEGER NOT NULL,
+                PRIMARY KEY(game_id, player_id),
+                FOREIGN KEY(game_id) REFERENCES games(id),
+                FOREIGN KEY(player_id) REFERENCES players(id)
+            )
+        """)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -187,6 +196,17 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
                     UNIQUE(player_id, game_id),
                     FOREIGN KEY(player_id) REFERENCES players(id),
                     FOREIGN KEY(game_id) REFERENCES games(id)
+                )
+            """)
+        }
+        if (oldVersion < 9) {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS game_availability (
+                    game_id INTEGER NOT NULL,
+                    player_id INTEGER NOT NULL,
+                    PRIMARY KEY(game_id, player_id),
+                    FOREIGN KEY(game_id) REFERENCES games(id),
+                    FOREIGN KEY(player_id) REFERENCES players(id)
                 )
             """)
         }
@@ -251,6 +271,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
         db.delete("pitchers", "game_id=?", arrayOf(gameId.toString()))
         db.delete("opponent_lineup", "game_id=?", arrayOf(gameId.toString()))
         db.delete("opponent_bench", "game_id=?", arrayOf(gameId.toString()))
+        db.delete("game_availability", "game_id=?", arrayOf(gameId.toString()))
         db.delete("games", "id=?", arrayOf(gameId.toString()))
     }
 
@@ -561,5 +582,51 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
 
     fun substitutePlayer(gameId: Long, battingOrder: Int, newJerseyNumber: String) {
         upsertLineupEntry(gameId, battingOrder, newJerseyNumber)
+    }
+
+    // --- Game Availability ---
+
+    fun setPlayerAvailability(gameId: Long, playerId: Long, available: Boolean) {
+        if (available) {
+            val cv = ContentValues().apply {
+                put("game_id", gameId)
+                put("player_id", playerId)
+            }
+            writableDatabase.insertWithOnConflict("game_availability", null, cv, SQLiteDatabase.CONFLICT_IGNORE)
+        } else {
+            writableDatabase.delete("game_availability",
+                "game_id=? AND player_id=?",
+                arrayOf(gameId.toString(), playerId.toString()))
+        }
+    }
+
+    fun getAvailablePlayerIds(gameId: Long): Set<Long> {
+        val set = mutableSetOf<Long>()
+        val c = readableDatabase.rawQuery(
+            "SELECT player_id FROM game_availability WHERE game_id=?", arrayOf(gameId.toString())
+        )
+        while (c.moveToNext()) set.add(c.getLong(0))
+        c.close()
+        return set
+    }
+
+    // Gibt anwesende Spieler zurück. Wenn noch keine Anwesenheit gesetzt wurde, alle Spieler des Teams.
+    fun getAvailablePlayers(gameId: Long): List<Player> {
+        val game = getGame(gameId) ?: return emptyList()
+        val allPlayers = getPlayersForTeam(game.teamId)
+        val availableIds = getAvailablePlayerIds(gameId)
+        return if (availableIds.isEmpty()) allPlayers else allPlayers.filter { it.id in availableIds }
+    }
+
+    fun saveAvailability(gameId: Long, availablePlayerIds: Set<Long>) {
+        val db = writableDatabase
+        db.delete("game_availability", "game_id=?", arrayOf(gameId.toString()))
+        availablePlayerIds.forEach { playerId ->
+            val cv = ContentValues().apply {
+                put("game_id", gameId)
+                put("player_id", playerId)
+            }
+            db.insert("game_availability", null, cv)
+        }
     }
 }

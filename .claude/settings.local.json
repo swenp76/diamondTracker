@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew assembleDebug --quiet)",
+      "Bash(cmd.exe /c \"gradlew.bat assembleDebug --quiet 2>&1\")",
+      "Bash(cmd.exe /c \"cd C:\\\\\\\\Users\\\\\\\\Swen\\\\\\\\Documents\\\\\\\\PitcherApp\\\\\\\\PitcherApp && gradlew.bat assembleDebug 2>&1\")"
+    ]
+  }
+}
