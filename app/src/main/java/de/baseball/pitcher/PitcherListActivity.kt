@@ -24,8 +24,8 @@ class PitcherListActivity : AppCompatActivity() {
         db = DatabaseHelper(this)
 
         gameId = intent.getLongExtra("gameId", -1)
-        val gameTitle = intent.getStringExtra("gameTitle") ?: ""
-        supportActionBar?.title = gameTitle
+        supportActionBar?.title = intent.getStringExtra("gameOpponent") ?: ""
+        supportActionBar?.subtitle = intent.getStringExtra("gameDate") ?: ""
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         recycler = findViewById(R.id.recyclerPitchers)
@@ -43,9 +43,7 @@ class PitcherListActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, MENU_LINEUP, 0, "Gegner Aufstellung").apply {
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-        }
+        menu.add(0, MENU_LINEUP, 0, "Gegner Aufstellung")
         menu.add(0, MENU_AVAILABILITY, 0, "Anwesenheit")
         return true
     }

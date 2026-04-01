@@ -44,9 +44,11 @@ class GameListActivity : AppCompatActivity() {
             onClick = { game ->
                 val intent = Intent(this, PitcherListActivity::class.java)
                 intent.putExtra("gameId", game.id)
-                intent.putExtra("gameTitle", "${game.date} – ${game.opponent}")
+                intent.putExtra("gameOpponent", game.opponent)
+                intent.putExtra("gameDate", game.date)
                 startActivity(intent)
             },
+            onCopy = { game -> showCopyGameDialog(game) },
             onEdit = { game -> showEditGameDialog(game) },
             onDelete = { game ->
                 AlertDialog.Builder(this)
@@ -133,6 +135,34 @@ class GameListActivity : AppCompatActivity() {
         dialog.show()
     }
 
+    private fun showCopyGameDialog(game: Game) {
+        val et = EditText(this).apply {
+            setText(game.opponent)
+            hint = "Mannschaft"
+            inputType = android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            setPadding(48, 24, 48, 24)
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Spiel kopieren (${game.date})")
+            .setView(et)
+            .setPositiveButton("Kopieren", null)
+            .setNegativeButton("Abbrechen", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val opp = et.text.toString().trim()
+                if (opp.isNotEmpty()) {
+                    db.copyGame(game.id, opp)
+                    loadGames()
+                    dialog.dismiss()
+                } else {
+                    et.error = "Pflichtfeld"
+                }
+            }
+        }
+        dialog.show()
+    }
+
     private fun showEditGameDialog(game: Game) {
         val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
         val cal = Calendar.getInstance()
@@ -200,6 +230,7 @@ class GameListActivity : AppCompatActivity() {
 class GameAdapter(
     private val games: List<Game>,
     private val onClick: (Game) -> Unit,
+    private val onCopy: (Game) -> Unit,
     private val onEdit: (Game) -> Unit,
     private val onDelete: (Game) -> Unit
 ) : RecyclerView.Adapter<GameAdapter.VH>() {
@@ -207,6 +238,7 @@ class GameAdapter(
     inner class VH(view: View) : RecyclerView.ViewHolder(view) {
         val tvDate: TextView = view.findViewById(R.id.tvDate)
         val tvOpponent: TextView = view.findViewById(R.id.tvOpponent)
+        val btnCopy: ImageButton = view.findViewById(R.id.btnCopy)
         val btnEdit: ImageButton = view.findViewById(R.id.btnEdit)
         val btnDelete: ImageButton = view.findViewById(R.id.btnDelete)
     }
@@ -221,6 +253,7 @@ class GameAdapter(
         holder.tvDate.text = game.date
         holder.tvOpponent.text = game.opponent
         holder.itemView.setOnClickListener { onClick(game) }
+        holder.btnCopy.setOnClickListener { onCopy(game) }
         holder.btnEdit.setOnClickListener { onEdit(game) }
         holder.btnDelete.setOnClickListener { onDelete(game) }
     }

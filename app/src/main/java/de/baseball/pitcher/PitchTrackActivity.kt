@@ -35,6 +35,13 @@ class PitchTrackActivity : AppCompatActivity() {
 
         db = DatabaseHelper(this)
 
+        // Pitcherwechsel: offenen At-Bat vom Vorgänger übernehmen
+        if (gameId != -1L && db.getPitchesForPitcher(pitcherId).isEmpty()) {
+            db.getIncompleteAtBatBeforePitcher(gameId, pitcherId).forEach { type ->
+                db.insertPitch(pitcherId, type)
+            }
+        }
+
         tvPitchCount = findViewById(R.id.tvPitchCount)
         tvBalls = findViewById(R.id.tvBalls)
         tvStrikes = findViewById(R.id.tvStrikes)
@@ -143,15 +150,24 @@ class PitchTrackActivity : AppCompatActivity() {
         val stats = db.getStatsForPitcher(pitcherId)
         tvBalls.text = stats.balls.toString()
         tvStrikes.text = stats.strikes.toString()
-        tvBF.text = stats.bf.toString()
-        tvPitchCount.text = "Pitch #${stats.totalPitches + 1}"
+        tvPitchCount.text = "#${stats.totalPitches + 1}"
+
+        // BF: Tagesgesamt anzeigen wenn Spieler aus Roster (player_id > 0)
+        val playerId = stats.pitcher.playerId
+        val date = if (gameId != -1L) db.getGame(gameId)?.date ?: "" else ""
+        val totalBF = if (playerId > 0 && date.isNotEmpty())
+            db.getTotalBFForPlayerOnDate(playerId, date)
+        else
+            stats.bf
+        tvBF.text = totalBF.toString()
 
         // Current at-bat count
         val (balls, strikes) = currentAtBatCount()
         tvAtBatCount.text = "$balls-$strikes"
 
-        // Current batter from opponent lineup (bf=0 → slot 1, bf=1 → slot 2, ...)
-        val currentBattingOrder = (stats.bf % 9) + 1
+        // Current batter: spielübergreifende BF-Summe für korrekten Batting-Order-Slot
+        val gameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
+        val currentBattingOrder = (gameBF % 9) + 1
         val jerseyDisplay = getBatterJersey(currentBattingOrder)
         tvCurrentBatter.text = if (jerseyDisplay.isNotEmpty())
             "$jerseyDisplay  (Slot $currentBattingOrder)"
@@ -161,7 +177,9 @@ class PitchTrackActivity : AppCompatActivity() {
         // Rebuild pitch log
         pitchLogLayout.removeAllViews()
         var pitchNumber = 0
-        var bfCount = 0
+        // BF-Offset: wieviele Batters haben Pitcher vor diesem schon beendet?
+        val bfOffset = gameBF - stats.bf
+        var bfCount = bfOffset
         stats.pitches.forEach { pitch ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL

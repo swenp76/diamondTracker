@@ -368,10 +368,10 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
 
     private fun getPitcherById(pitcherId: Long): Pitcher {
         val cursor = readableDatabase.rawQuery(
-            "SELECT * FROM pitchers WHERE id=?", arrayOf(pitcherId.toString())
+            "SELECT id, game_id, name, player_id FROM pitchers WHERE id=?", arrayOf(pitcherId.toString())
         )
         cursor.moveToFirst()
-        val p = Pitcher(cursor.getLong(0), cursor.getLong(1), cursor.getString(2))
+        val p = Pitcher(cursor.getLong(0), cursor.getLong(1), cursor.getString(2), cursor.getLong(3))
         cursor.close()
         return p
     }
@@ -624,6 +624,56 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "pitcher.db",
         val allPlayers = getPlayersForTeam(game.teamId)
         val availableIds = getAvailablePlayerIds(gameId)
         return if (availableIds.isEmpty()) allPlayers else allPlayers.filter { it.id in availableIds }
+    }
+
+    // Gesamtzahl BF über alle Pitcher eines Spiels
+    fun getTotalBFForGame(gameId: Long): Int {
+        val c = readableDatabase.rawQuery("""
+            SELECT COUNT(*) FROM pitches pi
+            JOIN pitchers p ON p.id = pi.pitcher_id
+            WHERE p.game_id = ? AND pi.type = 'BF'
+        """.trimIndent(), arrayOf(gameId.toString()))
+        val total = if (c.moveToFirst()) c.getInt(0) else 0
+        c.close()
+        return total
+    }
+
+    // Pitches (B/S/F) nach dem letzten BF des letzten anderen Pitchers im Spiel
+    // → wird beim Pitcherwechsel übernommen, damit der Count nicht verloren geht
+    fun getIncompleteAtBatBeforePitcher(gameId: Long, currentPitcherId: Long): List<String> {
+        val c = readableDatabase.rawQuery("""
+            SELECT pi.type FROM pitches pi
+            JOIN pitchers p ON p.id = pi.pitcher_id
+            WHERE p.game_id = ? AND p.id != ?
+            ORDER BY p.id ASC, pi.sequence_nr ASC
+        """.trimIndent(), arrayOf(gameId.toString(), currentPitcherId.toString()))
+        val all = mutableListOf<String>()
+        while (c.moveToNext()) all.add(c.getString(0))
+        c.close()
+        val lastBf = all.indexOfLast { it == "BF" }
+        val tail = if (lastBf == -1) all else all.drop(lastBf + 1)
+        return tail.filter { it == "B" || it == "S" || it == "F" }
+    }
+
+    fun copyGame(sourceGameId: Long, newOpponent: String): Long {
+        val source = getGame(sourceGameId) ?: return -1
+        val newGameId = insertGame(source.date, newOpponent, source.teamId)
+        val availableIds = getAvailablePlayerIds(sourceGameId)
+        saveAvailability(newGameId, availableIds)
+        return newGameId
+    }
+
+    // BF eines Spielers (per player_id) über alle Spiele an einem bestimmten Datum
+    fun getTotalBFForPlayerOnDate(playerId: Long, date: String): Int {
+        val c = readableDatabase.rawQuery("""
+            SELECT COUNT(*) FROM pitches pi
+            JOIN pitchers p ON p.id = pi.pitcher_id
+            JOIN games g ON g.id = p.game_id
+            WHERE p.player_id = ? AND g.date = ? AND pi.type = 'BF'
+        """.trimIndent(), arrayOf(playerId.toString(), date))
+        val total = if (c.moveToFirst()) c.getInt(0) else 0
+        c.close()
+        return total
     }
 
     fun saveAvailability(gameId: Long, availablePlayerIds: Set<Long>) {
