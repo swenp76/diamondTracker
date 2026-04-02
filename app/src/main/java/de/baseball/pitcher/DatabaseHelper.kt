@@ -147,6 +147,8 @@ class DatabaseHelper(context: Context) {
 
     fun getAllGames(): List<Game> = gameDao.getAllGames()
 
+    fun getGamesForTeam(teamId: Long): List<Game> = gameDao.getGamesForTeam(teamId)
+
     fun getGame(gameId: Long): Game? = gameDao.getGame(gameId)
 
     fun updateGame(gameId: Long, date: String, opponent: String) =

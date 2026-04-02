@@ -10,13 +10,15 @@
         android:theme="@style/Theme.PitcherApp">
 
         <activity
-            android:name=".GameListActivity"
+            android:name=".CoachSelectActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".GameListActivity" android:exported="false" />
 
         <activity android:name=".PitcherListActivity" android:exported="false" />
         <activity android:name=".PitchTrackActivity" android:exported="false" />

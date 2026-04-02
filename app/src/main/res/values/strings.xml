@@ -161,6 +161,10 @@
     <string name="dialog_jersey_title">Trikotnummer</string>
     <string name="dialog_other_number">Andere Nummer…</string>
 
+    <!-- Coach Select -->
+    <string name="coach_select_title">Welches Team möchtest du heute coachen?</string>
+    <string name="coach_select_no_teams">Noch keine Teams angelegt.\nGehe zu Einstellungen → Teams.</string>
+
     <!-- FAB Labels -->
     <string name="fab_add_game">Spiel hinzufügen</string>
     <string name="fab_add_pitcher">Pitcher hinzufügen</string>

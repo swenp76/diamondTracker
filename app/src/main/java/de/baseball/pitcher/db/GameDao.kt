@@ -9,6 +9,9 @@ abstract class GameDao {
     @Query("SELECT * FROM games ORDER BY id DESC")
     abstract fun getAllGames(): List<Game>
 
+    @Query("SELECT * FROM games WHERE team_id = :teamId ORDER BY id DESC")
+    abstract fun getGamesForTeam(teamId: Long): List<Game>
+
     @Query("SELECT * FROM games WHERE id = :gameId")
     abstract fun getGame(gameId: Long): Game?
 

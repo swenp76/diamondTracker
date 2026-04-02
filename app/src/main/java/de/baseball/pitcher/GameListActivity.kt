@@ -19,10 +19,17 @@ class GameListActivity : AppCompatActivity() {
     private lateinit var recycler: RecyclerView
     private lateinit var adapter: GameAdapter
 
+    private var teamId: Long = 0L
+    private var teamName: String = ""
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_game_list)
         db = DatabaseHelper(this)
+
+        teamId = intent.getLongExtra("teamId", 0L)
+        teamName = intent.getStringExtra("teamName") ?: ""
+        title = teamName
 
         recycler = findViewById(R.id.recyclerGames)
         recycler.layoutManager = LinearLayoutManager(this)
@@ -39,7 +46,7 @@ class GameListActivity : AppCompatActivity() {
     }
 
     private fun loadGames() {
-        val games = db.getAllGames()
+        val games = db.getGamesForTeam(teamId)
         adapter = GameAdapter(games,
             onClick = { game ->
                 val intent = Intent(this, GameHubActivity::class.java)
@@ -65,38 +72,10 @@ class GameListActivity : AppCompatActivity() {
         recycler.adapter = adapter
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, 1, 0, getString(R.string.menu_settings))
-            .setIcon(android.R.drawable.ic_menu_manage)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == 1) {
-            startActivity(Intent(this, SettingsActivity::class.java))
-            return true
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
     private fun showAddGameDialog() {
-        val teams = db.getAllTeams()
-        if (teams.isEmpty()) {
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.dialog_no_team_title))
-                .setMessage(getString(R.string.dialog_no_team_message))
-                .setPositiveButton("OK", null)
-                .show()
-            return
-        }
-
         val view = layoutInflater.inflate(R.layout.dialog_add_game, null)
-        val spinnerTeam = view.findViewById<Spinner>(R.id.spinnerTeam)
         val etDate = view.findViewById<EditText>(R.id.etDate)
         val etOpponent = view.findViewById<EditText>(R.id.etOpponent)
-
-        spinnerTeam.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, teams.map { it.name })
 
         val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
         val cal = Calendar.getInstance()
@@ -120,9 +99,8 @@ class GameListActivity : AppCompatActivity() {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val date = etDate.text.toString().trim()
                 val opp = etOpponent.text.toString().trim()
-                val selectedTeam = teams[spinnerTeam.selectedItemPosition]
                 if (date.isNotEmpty() && opp.isNotEmpty()) {
-                    db.insertGame(date, opp, selectedTeam.id)
+                    db.insertGame(date, opp, teamId)
                     loadGames()
                     dialog.dismiss()
                 } else {
