@@ -30,6 +30,7 @@ class GameListActivity : AppCompatActivity() {
         teamId = intent.getLongExtra("teamId", 0L)
         teamName = intent.getStringExtra("teamName") ?: ""
         title = teamName
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         recycler = findViewById(R.id.recyclerGames)
         recycler.layoutManager = LinearLayoutManager(this)
@@ -43,6 +44,21 @@ class GameListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadGames()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menu.add(0, 1, 0, getString(R.string.menu_settings))
+            .setIcon(android.R.drawable.ic_menu_manage)
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> { finish(); true }
+            1 -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     private fun loadGames() {
