@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Pitcher Tracker</string>
+
+    <!-- ── Common Buttons ───────────────────────────────────────────────────── -->
+    <string name="btn_save">Save</string>
+    <string name="btn_create">Create</string>
+    <string name="btn_add">Add</string>
+    <string name="btn_delete">Delete</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_copy">Copy</string>
+    <string name="btn_done">Done</string>
+    <string name="btn_back_to_game">Back</string>
+    <string name="btn_import">Import</string>
+    <string name="error_required_field">Required</string>
+
+    <!-- ── Stat Labels ──────────────────────────────────────────────────────── -->
+    <string name="stat_bf">BF</string>
+    <string name="stat_balls">Balls</string>
+    <string name="stat_strikes">Strikes</string>
+    <string name="stat_total_pitches">Total Pitches</string>
+    <string name="stat_strike_percent">Strike%</string>
+    <string name="stat_pitch">Pitch</string>
+    <string name="stat_count">Count</string>
+    <string name="stat_pitch_log">Pitch Log</string>
+
+    <!-- ── Pitch Buttons ─────────────────────────────────────────────────────── -->
+    <string name="btn_ball">BALL</string>
+    <string name="btn_strike">STRIKE</string>
+    <string name="btn_hbp">HBP</string>
+    <string name="btn_walk">WALK</string>
+    <string name="btn_strikeout">K</string>
+    <string name="btn_foul">FOUL</string>
+    <string name="btn_add_batter">+ BATTER</string>
+    <string name="btn_undo">↩ UNDO</string>
+
+    <!-- ── Pitch Log Labels ──────────────────────────────────────────────────── -->
+    <string name="pitch_label_ball">Ball</string>
+    <string name="pitch_label_strike">Strike</string>
+    <string name="pitch_label_foul">Foul</string>
+    <string name="pitch_label_hbp">── Hit by Pitch ─────────────────</string>
+    <string name="pitch_label_walk">── Walk ─────────────────────────</string>
+    <string name="pitch_label_strikeout">── Strike-Out (K) ───────────────</string>
+    <string name="pitch_label_slot">── Slot %d ──────────────────────────</string>
+    <string name="pitch_label_slot_with_jersey">── %1$s (Slot %2$d) ─────────────</string>
+
+    <!-- ── PitchTrackActivity ────────────────────────────────────────────────── -->
+    <string name="label_batter">Batter:</string>
+    <string name="label_batter_slot">Slot %d</string>
+    <string name="label_batter_slot_with_jersey">%1$s  (Slot %2$d)</string>
+    <string name="hint_lineup">Lineup ▶</string>
+    <string name="pitcher_default_name">Pitcher</string>
+
+    <!-- ── Settings ──────────────────────────────────────────────────────────── -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_general">GENERAL</string>
+    <string name="settings_teams_title">Manage Teams</string>
+    <string name="settings_teams_subtitle">Teams, positions and players</string>
+    <string name="menu_settings">Settings</string>
+
+    <!-- ── Games ─────────────────────────────────────────────────────────────── -->
+    <string name="dialog_no_team_title">No team available</string>
+    <string name="dialog_no_team_message">Please create a team first under Settings → Teams.</string>
+    <string name="dialog_add_game_title">New Game</string>
+    <string name="dialog_copy_game_title">Copy Game (%s)</string>
+    <string name="dialog_edit_game_title">Edit Game</string>
+    <string name="dialog_delete_game_title">Delete Game</string>
+    <string name="dialog_delete_game_message">Really delete %1$s vs %2$s?</string>
+    <string name="label_own_team">Own Team</string>
+    <string name="label_date">Date</string>
+    <string name="hint_date_format">DD.MM.YYYY</string>
+    <string name="label_opponent">Opponent</string>
+    <string name="hint_opponent">Team name</string>
+
+    <!-- ── GameHub ───────────────────────────────────────────────────────────── -->
+    <string name="gamehub_offense">Offense</string>
+    <string name="gamehub_defense">Defense</string>
+    <string name="gamehub_lineup">Lineup</string>
+    <string name="gamehub_oppo_lineup">Oppo Lineup</string>
+    <string name="toast_offense_coming_soon">Offense – coming soon</string>
+
+    <!-- ── Pitcher ───────────────────────────────────────────────────────────── -->
+    <string name="dialog_add_pitcher_title">New Pitcher</string>
+    <string name="hint_pitcher_name">Pitcher\'s name</string>
+    <string name="dialog_delete_pitcher_title">Delete Pitcher</string>
+    <string name="dialog_delete_pitcher_message">Really delete %s?</string>
+    <string name="btn_pitch">Pitch</string>
+    <string name="btn_stats">Stats</string>
+
+    <!-- ── Teams ─────────────────────────────────────────────────────────────── -->
+    <string name="teams_title">Teams</string>
+    <string name="menu_import_team">Import Team</string>
+    <string name="menu_export_team">Export Team</string>
+    <string name="dialog_delete_team_title">Delete Team</string>
+    <string name="dialog_delete_team_message">Really delete \"%s\" and all players?</string>
+    <string name="dialog_add_team_title">New Team</string>
+    <string name="hint_team_name">Team name</string>
+    <string name="dialog_import_team_title">Import Team</string>
+    <string name="dialog_import_team_message">Import \"%s\" and add as new team?</string>
+    <string name="toast_team_imported">\"%s\" imported</string>
+    <string name="toast_import_failed">Import failed: %s</string>
+    <string name="toast_file_read_error">Could not read file</string>
+    <string name="toast_invalid_json">Invalid format – not a valid JSON file</string>
+    <string name="toast_invalid_team_format">Invalid format – no team found</string>
+    <string name="team_tap_to_edit">Tap to edit</string>
+
+    <!-- ── Team Detail ───────────────────────────────────────────────────────── -->
+    <string name="team_detail_title">Edit Team</string>
+    <string name="label_team_name_header">TEAM NAME</string>
+    <string name="label_roster">ROSTER</string>
+    <string name="menu_active_positions">Active Positions</string>
+    <string name="dialog_active_positions_title">Active Positions</string>
+    <string name="dialog_delete_player_title">Delete Player</string>
+    <string name="dialog_delete_player_message">Really delete %s?</string>
+    <string name="toast_saved">Saved</string>
+    <string name="toast_team_exported">Team exported</string>
+    <string name="toast_export_failed">Export failed: %s</string>
+    <string name="dialog_add_player_title">New Player</string>
+    <string name="dialog_edit_player_title">Edit Player</string>
+    <string name="spinner_no_position">– None –</string>
+
+    <!-- ── Player Dialog ─────────────────────────────────────────────────────── -->
+    <string name="label_name">Name</string>
+    <string name="hint_full_name">First and last name</string>
+    <string name="label_jersey_number">Jersey number</string>
+    <string name="hint_jersey_number">e.g. 7</string>
+    <string name="label_primary_position">Primary position</string>
+    <string name="label_secondary_position">Secondary position</string>
+    <string name="label_is_pitcher">Pitcher</string>
+    <string name="label_birth_year">Birth year</string>
+    <string name="hint_birth_year">e.g. 2009</string>
+
+    <!-- ── Own Lineup ────────────────────────────────────────────────────────── -->
+    <string name="lineup_section_starters">Starters (1 – 10)</string>
+    <string name="lineup_section_substitutes">Substitutes (11 – 20)</string>
+    <string name="lineup_slot_empty">— empty —</string>
+    <string name="lineup_section_changes">Substitution Overview</string>
+    <string name="dialog_sub_title">Substitution – Slot %d</string>
+    <string name="dialog_sub_normal">Normal</string>
+    <string name="dialog_sub_injury">Injury</string>
+    <string name="dialog_return_title">Return – Slot %d</string>
+    <string name="dialog_return_message">%s back in the game?</string>
+    <string name="dialog_injury_title">Injury – Slot %d</string>
+    <string name="dialog_no_subs_title">No substitutes available</string>
+    <string name="dialog_no_subs_message">All substitutes have already been used.</string>
+    <string name="dialog_no_players_title">No players available</string>
+    <string name="dialog_no_players_own_message">No available substitutes or substituted starters.</string>
+    <string name="dialog_no_players_oppo_message">No available bench or substituted starters.</string>
+    <string name="dialog_pick_player_title">Slot %d – Pick Player</string>
+    <string name="dialog_no_more_players">No more players available.</string>
+    <string name="status_out_can_return">Out – can return</string>
+    <string name="status_returned">Returned</string>
+    <string name="status_done">Done (no longer available)</string>
+    <string name="status_out">Out</string>
+    <string name="status_in_game">In Game</string>
+
+    <!-- ── Opponent Lineup ───────────────────────────────────────────────────── -->
+    <string name="oppo_lineup_subtitle">Lineup</string>
+    <string name="oppo_section_batting_order">Batting Order (1 – 9)</string>
+    <string name="oppo_section_bench">Bench (11 – 20)</string>
+    <string name="dialog_jersey_title">Jersey Number</string>
+    <string name="dialog_other_number">Other number…</string>
+
+    <!-- ── Coach Select ──────────────────────────────────────────────────────── -->
+    <string name="coach_select_title">Which team do you want to coach today?</string>
+    <string name="coach_select_no_teams">No teams created yet.\nGo to Settings → Teams.</string>
+
+    <!-- ── FAB Labels ────────────────────────────────────────────────────────── -->
+    <string name="fab_add_game">Add Game</string>
+    <string name="fab_add_pitcher">Add Pitcher</string>
+    <string name="fab_add_team">Add Team</string>
+    <string name="fab_add_player">Add Player</string>
+
+</resources>
