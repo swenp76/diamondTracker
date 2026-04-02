@@ -1,72 +1,105 @@
-# diamondTracker – Claude Code Projektbeschreibung
+# diamond9 – Claude Code Projektbeschreibung
 
 ## Was ist diese App?
-diamondTracker ist eine Android-App für Baseball Coaches.
+diamond9 ist eine Android-App für Baseball Coaches.
 Sie hilft beim Verwalten von Teams, Erstellen von Aufstellungen und Tracken von Statistiken – direkt während des Spiels.
-
-Die App ist eine Weiterentwicklung der "PitcherApp" und wird schrittweise zu diamondTracker ausgebaut.
 
 ## Technologie
 - **Sprache:** Kotlin
-- **Ziel:** Android (minSdk 24, targetSdk 34)
-- **Datenbank:** SQLite über eigene DatabaseHelper-Klasse
-- **UI:** XML Layouts, AppCompat, RecyclerView, CardView, Material FAB
-- **Package:** de.baseball.pitcher
+- **Ziel:** Android (minSdk 26, targetSdk 34)
+- **Datenbank:** Room (SQLite) über DAOs + DatabaseHelper-Wrapper
+- **UI:** XML Layouts, AppCompat, RecyclerView, CardView, Material ExtendedFAB
+- **Package:** de.baseball.diamond9
+- **Lokalisierung:** Deutsch (Fallback, `values/`), Englisch (`values-en/`)
 
 ## Projektstruktur
 ```
 app/src/main/
-├── java/de/baseball/pitcher/
-│   ├── DatabaseHelper.kt        ← Zentrale DB-Klasse (alle Tabellen & Methoden)
-│   ├── GameListActivity.kt      ← Hauptscreen: Spiele verwalten
-│   ├── GameDetailActivity.kt    ← Spiel-Detail: Pitcher pro Spiel
-│   ├── PitchTrackActivity.kt    ← Live Pitch-Tracking während des Spiels
-│   ├── StatisticsActivity.kt    ← Statistik-Ansicht
-│   ├── SettingsActivity.kt      ← Einstellungen-Hub (NEU)
-│   ├── TeamListActivity.kt      ← Teams verwalten (NEU)
-│   └── TeamDetailActivity.kt    ← Team-Detail: Positionen + Roster (NEU)
+├── java/de/baseball/diamond9/
+│   ├── DatabaseHelper.kt          ← Wrapper um Room-DAOs (alle DB-Zugriffe)
+│   ├── CoachSelectActivity.kt     ← Einstieg: Team auswählen
+│   ├── GameListActivity.kt        ← Spiele eines Teams verwalten
+│   ├── GameHubActivity.kt         ← Spiel-Hub: Offense / Defense / Lineup
+│   ├── PitcherListActivity.kt     ← Pitcher pro Spiel
+│   ├── PitchTrackActivity.kt      ← Live Pitch-Tracking während des Spiels
+│   ├── StatsActivity.kt           ← Statistik-Ansicht
+│   ├── OwnLineupActivity.kt       ← Eigene Aufstellung verwalten
+│   ├── OpponentLineupActivity.kt  ← Gegner-Aufstellung verwalten
+│   ├── SettingsActivity.kt        ← Einstellungen-Hub
+│   ├── TeamListActivity.kt        ← Teams verwalten
+│   ├── TeamDetailActivity.kt      ← Team-Detail: Positionen + Roster
+│   └── db/
+│       ├── AppDatabase.kt         ← Room-Datenbank (Version 1)
+│       ├── GameDao.kt
+│       ├── PitcherDao.kt
+│       ├── PlayerDao.kt
+│       ├── TeamDao.kt
+│       └── LineupDao.kt
 └── res/
-    ├── layout/                  ← XML Layouts (activity_*, item_*, dialog_*)
-    └── drawable/                ← Shapes, Badges (badge_position.xml, etc.)
+    ├── layout/                    ← XML Layouts (activity_*, item_*, dialog_*)
+    ├── values/strings.xml         ← Deutsch (Fallback)
+    ├── values-en/strings.xml      ← Englisch
+    └── drawable/                  ← Shapes, Badges
 ```
 
-## Datenbank (DatabaseHelper.kt)
-**Aktuelle Version: 7**
+## Datenbank (Room)
+**AppDatabase Version: 1**
 
-### Tabellen:
+### Entities / Tabellen:
 - `games` – Spiele (id, date, opponent, team_id)
-- `pitchers` – Pitcher pro Spiel (id, game_id, name, player_id) – player_id=0 für Freitext-Einträge
-- `pitches` – Einzelne Pitches (id, pitcher_id, type, timestamp)
-- `teams` – Teams (id, name) ← NEU
-- `team_positions` – Aktive Positionen pro Team (team_id, position 1-10) ← NEU
+- `pitchers` – Pitcher pro Spiel (id, game_id, name, player_id) – player_id=0 für Freitext
+- `pitches` – Einzelne Pitches (id, pitcher_id, type, sequence_nr)
+- `teams` – Teams (id, name)
+- `team_positions` – Aktive Positionen pro Team (team_id, position 1-10)
 - `players` – Spieler/Roster (id, team_id, name, number, primary_position, secondary_position, is_pitcher, birth_year)
-- `pitcher_appearances` – Pitcheinsätze (id, player_id, game_id, date, batters_faced) – UNIQUE(player_id, game_id) ← NEU
+- `pitcher_appearances` – Pitcheinsätze (id, player_id, game_id, date, batters_faced)
+- `opponent_lineup` – Gegner Batting Order (game_id, batting_order, jersey_number)
+- `opponent_bench` – Gegner Bank (id, game_id, jersey_number)
+- `opponent_substitutions` – Gegner-Wechsel
+- `own_lineup` – Eigene Aufstellung (game_id, slot, player_id)
+- `substitutions` – Eigene Wechsel
 
 ### Baseball Positionen:
 1=Pitcher, 2=Catcher, 3=1B, 4=2B, 5=3B, 6=SS, 7=LF, 8=CF, 9=RF, 10=DH
 
+## App-Flow
+```
+CoachSelectActivity  →  GameListActivity (gefiltert nach Team)
+                              ↓
+                        GameHubActivity
+                       ↙      ↓       ↘
+            PitcherList  OwnLineup  OpponentLineup
+                ↓
+          PitchTrackActivity
+```
+
 ## Aktuelle Features
-- ✅ Spiele anlegen und verwalten
+- ✅ Team-Auswahl beim Start (CoachSelectActivity)
+- ✅ Spiele pro Team anlegen und verwalten
 - ✅ Pitcher pro Spiel erfassen
-- ✅ Live Pitch-Tracking (Ball, Strike, Batter Faced) mit Undo
+- ✅ Live Pitch-Tracking (Ball, Strike, Batter Faced, HBP, Walk, K, Foul) mit Undo
 - ✅ Statistiken (BF, Balls, Strikes, Strike%)
-- ✅ Einstellungen-Screen
+- ✅ Eigene Aufstellung (Starter + Substitutes, Wechsel)
+- ✅ Gegner-Aufstellung (Batting Order + Bank, Wechsel)
 - ✅ Teams anlegen mit Name und aktiven Positionen (1-9 + DH)
-- ✅ Spieler/Roster pro Team verwalten (Name, Trikotnummer, Hauptposition)
+- ✅ Spieler/Roster pro Team verwalten (Name, Trikotnummer, Position, Geburtsjahr)
+- ✅ Team Export/Import (JSON)
+- ✅ Einstellungen-Screen
+- ✅ Mehrsprachigkeit (Deutsch/Englisch)
 
 ## Nächste geplante Features
-- Lineup/Aufstellung pro Spiel (Spieler auf Positionen einteilen)
 - Batting Statistiken (Hits, RBI, AVG)
 - Spielstand tracken (Inning by Inning)
-- Export/Import Teams & Roster (JSON oder CSV) – getrennt von App-Einstellungen
-- Export/Import App-Einstellungen (JSON) – getrennt von Teams/Roster
 - Export Spielstatistiken (PDF oder CSV)
+- Export/Import App-Einstellungen (JSON)
 
 ## Coding-Konventionen
+- Alle UI-Texte in `strings.xml` (nie hardcoded), beide Sprachdateien pflegen
 - Alle Texte auf **Deutsch** (UI) und **Englisch** (Code/Variablen)
-- DB-Version bei neuen Tabellen/Spalten immer erhöhen + onUpgrade() anpassen
-- Neue Activities immer im AndroidManifest.xml eintragen
+- DB-Version bei neuen Tabellen/Spalten erhöhen + Migration in `AppDatabase` ergänzen
+- Neue Activities immer im `AndroidManifest.xml` eintragen
 - RecyclerView mit eigenem Adapter und ViewHolder
+- FABs als `ExtendedFloatingActionButton` mit Icon + Label
 - Farben: Primär #1a5fa8 (Blau), Akzent #c0392b (Rot)
 
 ## Wichtige Hinweise
