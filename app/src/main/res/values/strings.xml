@@ -161,4 +161,10 @@
     <string name="dialog_jersey_title">Trikotnummer</string>
     <string name="dialog_other_number">Andere Nummer…</string>
 
+    <!-- FAB Labels -->
+    <string name="fab_add_game">Spiel hinzufügen</string>
+    <string name="fab_add_pitcher">Pitcher hinzufügen</string>
+    <string name="fab_add_team">Team hinzufügen</string>
+    <string name="fab_add_player">Spieler hinzufügen</string>
+
 </resources>

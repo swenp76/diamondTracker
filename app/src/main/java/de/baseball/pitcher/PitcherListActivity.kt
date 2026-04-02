@@ -30,7 +30,7 @@ class PitcherListActivity : AppCompatActivity() {
         recycler = findViewById(R.id.recyclerPitchers)
         recycler.layoutManager = LinearLayoutManager(this)
 
-        findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabAddPitcher)
+        findViewById<com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton>(R.id.fabAddPitcher)
             .setOnClickListener { showAddPitcherDialog() }
 
         loadPitchers()

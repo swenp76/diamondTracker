@@ -48,7 +48,7 @@ class TeamDetailActivity : AppCompatActivity() {
         loadTeamName()
         loadPlayers()
 
-        findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabAddPlayer)
+        findViewById<com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton>(R.id.fabAddPlayer)
             .setOnClickListener { showAddPlayerDialog() }
 
         findViewById<android.widget.Button>(R.id.btnSaveTeamName).setOnClickListener {

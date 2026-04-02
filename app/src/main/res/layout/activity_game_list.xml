@@ -12,13 +12,16 @@
         android:padding="16dp"
         android:clipToPadding="false" />
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fabAddGame"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
-        android:src="@android:drawable/ic_input_add"
-        app:tint="@android:color/white" />
+        android:text="@string/fab_add_game"
+        app:icon="@android:drawable/ic_input_add"
+        app:iconTint="@android:color/white"
+        android:textColor="@android:color/white"
+        app:backgroundTint="#1a5fa8" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

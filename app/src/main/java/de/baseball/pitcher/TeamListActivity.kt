@@ -40,7 +40,7 @@ class TeamListActivity : AppCompatActivity() {
         recycler = findViewById(R.id.recyclerTeams)
         recycler.layoutManager = LinearLayoutManager(this)
 
-        findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabAddTeam)
+        findViewById<com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton>(R.id.fabAddTeam)
             .setOnClickListener { showAddTeamDialog() }
 
         loadTeams()

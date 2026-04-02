@@ -27,7 +27,7 @@ class GameListActivity : AppCompatActivity() {
         recycler = findViewById(R.id.recyclerGames)
         recycler.layoutManager = LinearLayoutManager(this)
 
-        findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabAddGame)
+        findViewById<com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton>(R.id.fabAddGame)
             .setOnClickListener { showAddGameDialog() }
 
         loadGames()
