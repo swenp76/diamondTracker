@@ -3,10 +3,9 @@ package de.baseball.diamond9
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -27,6 +26,10 @@ class CoachSelectActivity : AppCompatActivity() {
         recycler = findViewById(R.id.recyclerTeamSelect)
         tvNoTeams = findViewById(R.id.tvNoTeams)
         recycler.layoutManager = LinearLayoutManager(this)
+
+        findViewById<ImageButton>(R.id.btnSettings).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
     }
 
     override fun onResume() {
@@ -51,20 +54,6 @@ class CoachSelectActivity : AppCompatActivity() {
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, 1, 0, getString(R.string.menu_settings))
-            .setIcon(android.R.drawable.ic_menu_manage)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == 1) {
-            startActivity(Intent(this, SettingsActivity::class.java))
-            return true
-        }
-        return super.onOptionsItemSelected(item)
-    }
 }
 
 class TeamSelectAdapter(
