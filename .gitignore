@@ -32,3 +32,9 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Baseline profiles (generiert)
+app/release/baselineProfiles/
+
+# Claude Code local settings
+.claude/settings.local.json
