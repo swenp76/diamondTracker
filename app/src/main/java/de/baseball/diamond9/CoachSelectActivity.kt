@@ -22,6 +22,7 @@ class CoachSelectActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_coach_select)
 
+        supportActionBar?.hide()
         db = DatabaseHelper(this)
         recycler = findViewById(R.id.recyclerTeamSelect)
         tvNoTeams = findViewById(R.id.tvNoTeams)
