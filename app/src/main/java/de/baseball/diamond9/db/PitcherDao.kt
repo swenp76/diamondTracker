@@ -1,7 +1,7 @@
-package de.baseball.pitcher.db
+package de.baseball.diamond9.db
 
 import androidx.room.*
-import de.baseball.pitcher.*
+import de.baseball.diamond9.*
 
 @Dao
 abstract class PitcherDao {

@@ -1,4 +1,4 @@
-package de.baseball.pitcher
+package de.baseball.diamond9
 
 import android.app.AlertDialog
 import android.content.Intent

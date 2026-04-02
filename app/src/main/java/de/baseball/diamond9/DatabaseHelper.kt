@@ -1,8 +1,8 @@
-package de.baseball.pitcher
+package de.baseball.diamond9
 
 import android.content.Context
 import androidx.room.*
-import de.baseball.pitcher.db.*
+import de.baseball.diamond9.db.*
 
 // ── Entities ──────────────────────────────────────────────────────────────────
 

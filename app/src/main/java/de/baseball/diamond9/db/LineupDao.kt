@@ -1,7 +1,7 @@
-package de.baseball.pitcher.db
+package de.baseball.diamond9.db
 
 import androidx.room.*
-import de.baseball.pitcher.*
+import de.baseball.diamond9.*
 
 @Entity(tableName = "own_lineup", primaryKeys = ["game_id", "slot"])
 data class OwnLineupSlot(

@@ -1,7 +1,7 @@
-package de.baseball.pitcher.db
+package de.baseball.diamond9.db
 
 import androidx.room.*
-import de.baseball.pitcher.*
+import de.baseball.diamond9.*
 
 @Entity(tableName = "team_positions", primaryKeys = ["team_id", "position"])
 data class TeamPosition(

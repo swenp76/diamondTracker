@@ -1,12 +1,12 @@
-package de.baseball.pitcher
+package de.baseball.diamond9
 
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import de.baseball.pitcher.db.AppDatabase
-import de.baseball.pitcher.db.GameDao
-import de.baseball.pitcher.db.PitcherDao
+import de.baseball.diamond9.db.AppDatabase
+import de.baseball.diamond9.db.GameDao
+import de.baseball.diamond9.db.PitcherDao
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before

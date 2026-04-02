@@ -1,4 +1,4 @@
-package de.baseball.pitcher
+package de.baseball.diamond9
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals

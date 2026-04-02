@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace 'de.baseball.pitcher'
+    namespace 'de.baseball.diamond9'
     compileSdk 34
 
     defaultConfig {
-        applicationId "de.baseball.pitcher"
+        applicationId "de.baseball.diamond9"
         minSdk 26
         targetSdk 34
         versionCode 1

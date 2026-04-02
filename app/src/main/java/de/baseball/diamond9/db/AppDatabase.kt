@@ -1,10 +1,10 @@
-package de.baseball.pitcher.db
+package de.baseball.diamond9.db
 
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import de.baseball.pitcher.*
+import de.baseball.diamond9.*
 
 @Database(
     entities = [

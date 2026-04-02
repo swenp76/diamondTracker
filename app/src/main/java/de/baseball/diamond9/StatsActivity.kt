@@ -1,4 +1,4 @@
-package de.baseball.pitcher
+package de.baseball.diamond9
 
 import android.graphics.Color
 import android.os.Bundle
