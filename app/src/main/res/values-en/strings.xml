@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Pitcher Tracker</string>
+    <string name="app_name">diamond9</string>
 
     <!-- ── Common Buttons ───────────────────────────────────────────────────── -->
     <string name="btn_save">Save</string>
