@@ -17,7 +17,7 @@ Sie hilft beim Verwalten von Teams, Erstellen von Aufstellungen und Tracken von 
 app/src/main/
 ├── java/de/baseball/diamond9/
 │   ├── DatabaseHelper.kt          ← Wrapper um Room-DAOs (alle DB-Zugriffe)
-│   ├── CoachSelectActivity.kt     ← Einstieg: Team auswählen
+│   ├── CoachAct.kt                ← Einstieg: Team auswählen
 │   ├── GameListActivity.kt        ← Spiele eines Teams verwalten
 │   ├── GameHubActivity.kt         ← Spiel-Hub: Offense / Defense / Lineup
 │   ├── PitcherListActivity.kt     ← Pitcher pro Spiel
@@ -64,7 +64,7 @@ app/src/main/
 
 ## App-Flow
 ```
-CoachSelectActivity  →  GameListActivity (gefiltert nach Team)
+CoachAct  →  GameListActivity (gefiltert nach Team)
                               ↓
                         GameHubActivity
                        ↙      ↓       ↘
@@ -74,7 +74,7 @@ CoachSelectActivity  →  GameListActivity (gefiltert nach Team)
 ```
 
 ## Aktuelle Features
-- ✅ Team-Auswahl beim Start (CoachSelectActivity)
+- ✅ Team-Auswahl beim Start (CoachAct)
 - ✅ Spiele pro Team anlegen und verwalten
 - ✅ Pitcher pro Spiel erfassen
 - ✅ Live Pitch-Tracking (Ball, Strike, Batter Faced, HBP, Walk, K, Foul) mit Undo

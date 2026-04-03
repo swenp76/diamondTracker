@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -46,7 +47,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 
 private val Primary = Color(0xFF1a5fa8)
 
-class CoachSelectActivity : ComponentActivity() {
+class CoachAct : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
 
@@ -98,8 +99,7 @@ private fun CoachSelectScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = androidx.compose.foundation.layout.WindowInsets.statusBars
-                        .asPaddingValues().calculateTopPadding())
+                    .statusBarsPadding()
             ) {
                 Text(
                     text = stringResource(R.string.app_name),
@@ -147,11 +147,8 @@ private fun CoachSelectScreen(
                 onClick = onSettingsClick,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(
-                        top = androidx.compose.foundation.layout.WindowInsets.statusBars
-                            .asPaddingValues().calculateTopPadding() + 8.dp,
-                        end = 8.dp
-                    )
+                    .statusBarsPadding()
+                    .padding(top = 8.dp, end = 8.dp)
                     .size(48.dp)
             ) {
                 Icon(

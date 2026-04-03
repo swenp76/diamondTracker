@@ -10,7 +10,7 @@
         android:theme="@style/Theme.Diamond9">
 
         <activity
-            android:name=".CoachSelectActivity"
+            android:name=".CoachAct"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
