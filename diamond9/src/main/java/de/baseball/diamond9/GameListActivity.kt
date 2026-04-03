@@ -1,281 +1,457 @@
 package de.baseball.diamond9
 
-import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.content.Intent
 import android.os.Bundle
-import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import android.view.*
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 
+private val Primary = Color(0xFF1a5fa8)
+private val DeleteRed = Color(0xFFc0392b)
 
-
-class GameListActivity : AppCompatActivity() {
+class GameListActivity : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
-    private lateinit var recycler: RecyclerView
-    private lateinit var adapter: GameAdapter
-    private lateinit var tvEmpty: android.widget.TextView
-
-    private var teamId: Long = 0L
-    private var teamName: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_game_list)
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-
+        enableEdgeToEdge()
         db = DatabaseHelper(this)
 
-        teamId = intent.getLongExtra("teamId", 0L)
-        teamName = intent.getStringExtra("teamName") ?: ""
-        title = teamName
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        val teamId = intent.getLongExtra("teamId", 0L)
+        val teamName = intent.getStringExtra("teamName") ?: ""
 
-        recycler = findViewById(R.id.recyclerGames)
-        tvEmpty = findViewById(R.id.tvEmptyGames)
-        recycler.layoutManager = LinearLayoutManager(this)
-
-        findViewById<com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton>(R.id.fabAddGame)
-            .setOnClickListener { showAddGameDialog() }
-
-        loadGames()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        loadGames()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, 1, 0, getString(R.string.menu_settings))
-            .setIcon(android.R.drawable.ic_menu_manage)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            android.R.id.home -> { finish(); true }
-            1 -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
-    private fun loadGames() {
-        val games = db.getGamesForTeam(teamId)
-        tvEmpty.visibility = if (games.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
-        recycler.visibility = if (games.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
-        adapter = GameAdapter(games,
-            onClick = { game ->
-                val intent = Intent(this, GameHubActivity::class.java)
-                intent.putExtra("gameId", game.id)
-                intent.putExtra("gameOpponent", game.opponent)
-                intent.putExtra("gameDate", game.date)
-                startActivity(intent)
-            },
-            onCopy = { game -> showCopyGameDialog(game) },
-            onEdit = { game -> showEditGameDialog(game) },
-            onDelete = { game ->
-                AlertDialog.Builder(this)
-                    .setTitle(getString(R.string.dialog_delete_game_title))
-                    .setMessage(getString(R.string.dialog_delete_game_message, game.date, game.opponent))
-                    .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
-                        db.deleteGame(game.id)
-                        loadGames()
-                    }
-                    .setNegativeButton(getString(R.string.btn_cancel), null)
-                    .show()
-            }
-        )
-        recycler.adapter = adapter
-    }
-
-    private fun showAddGameDialog() {
-        val view = layoutInflater.inflate(R.layout.dialog_add_game, null)
-        val etDate = view.findViewById<EditText>(R.id.etDate)
-        val spinnerOpponent = view.findViewById<Spinner>(R.id.spinnerOpponent)
-        val tvOrEnter = view.findViewById<android.widget.TextView>(R.id.tvOrEnter)
-        val etOpponent = view.findViewById<EditText>(R.id.etOpponent)
-
-        val opponents = db.getAllOpponentTeams()
-        if (opponents.isNotEmpty()) {
-            spinnerOpponent.visibility = android.view.View.VISIBLE
-            tvOrEnter.visibility = android.view.View.VISIBLE
-            val names = opponents.map { it.name }
-            spinnerOpponent.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, names)
-        }
-
-        val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
-        val cal = Calendar.getInstance()
-        etDate.setText(sdf.format(cal.time))
-        etDate.isFocusable = false
-        etDate.setOnClickListener {
-            DatePickerDialog(this, { _, year, month, day ->
-                cal.set(year, month, day)
-                etDate.setText(sdf.format(cal.time))
-            }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
-        }
-
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.dialog_add_game_title))
-            .setView(view)
-            .setPositiveButton(getString(R.string.btn_create), null)
-            .setNegativeButton(getString(R.string.btn_cancel), null)
-            .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val date = etDate.text.toString().trim()
-                val freeText = etOpponent.text.toString().trim()
-                val opp = if (freeText.isNotEmpty()) freeText
-                          else if (opponents.isNotEmpty()) opponents[spinnerOpponent.selectedItemPosition].name
-                          else ""
-                if (date.isNotEmpty() && opp.isNotEmpty()) {
-                    db.insertOpponentTeamIfNew(opp)
-                    db.insertGame(date, opp, teamId)
-                    loadGames()
-                    dialog.dismiss()
-                } else {
-                    if (date.isEmpty()) etDate.error = getString(R.string.error_required_field)
-                    if (opp.isEmpty()) etOpponent.error = getString(R.string.error_required_field)
+        setContent {
+            GameListScreen(
+                teamId = teamId,
+                teamName = teamName,
+                db = db,
+                onBackClick = { finish() },
+                onSettingsClick = { startActivity(Intent(this, SettingsActivity::class.java)) },
+                onGameClick = { game ->
+                    startActivity(Intent(this, GameHubActivity::class.java).apply {
+                        putExtra("gameId", game.id)
+                        putExtra("gameOpponent", game.opponent)
+                        putExtra("gameDate", game.date)
+                    })
                 }
-            }
+            )
         }
-        dialog.show()
     }
-
-    private fun showCopyGameDialog(game: Game) {
-        val et = EditText(this).apply {
-            setText(game.opponent)
-            hint = getString(R.string.hint_opponent)
-            inputType = android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
-            setPadding(48, 24, 48, 24)
-        }
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.dialog_copy_game_title, game.date))
-            .setView(et)
-            .setPositiveButton(getString(R.string.btn_copy), null)
-            .setNegativeButton(getString(R.string.btn_cancel), null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val opp = et.text.toString().trim()
-                if (opp.isNotEmpty()) {
-                    db.copyGame(game.id, opp)
-                    loadGames()
-                    dialog.dismiss()
-                } else {
-                    et.error = getString(R.string.error_required_field)
-                }
-            }
-        }
-        dialog.show()
-    }
-
-    private fun showEditGameDialog(game: Game) {
-        val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
-        val cal = Calendar.getInstance()
-        try { cal.time = sdf.parse(game.date)!! } catch (_: Exception) {}
-
-        val view = layoutInflater.inflate(R.layout.dialog_edit_game, null)
-        val etDate = view.findViewById<EditText>(R.id.etEditDate)
-        val spinnerOpponent = view.findViewById<Spinner>(R.id.spinnerEditOpponent)
-        val tvOrEnter = view.findViewById<android.widget.TextView>(R.id.tvOrEnterEdit)
-        val etOpponent = view.findViewById<EditText>(R.id.etEditOpponent)
-
-        val opponents = db.getAllOpponentTeams()
-        if (opponents.isNotEmpty()) {
-            spinnerOpponent.visibility = android.view.View.VISIBLE
-            tvOrEnter.visibility = android.view.View.VISIBLE
-            val names = opponents.map { it.name }
-            spinnerOpponent.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, names)
-            val existingIndex = opponents.indexOfFirst { it.name == game.opponent }
-            if (existingIndex >= 0) spinnerOpponent.setSelection(existingIndex)
-        } else {
-            etOpponent.setText(game.opponent)
-        }
-
-        etDate.setText(game.date)
-        etDate.isFocusable = false
-        etDate.setOnClickListener {
-            DatePickerDialog(this, { _, year, month, day ->
-                cal.set(year, month, day)
-                etDate.setText(sdf.format(cal.time))
-            }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
-        }
-
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.dialog_edit_game_title))
-            .setView(view)
-            .setPositiveButton(getString(R.string.btn_save), null)
-            .setNegativeButton(getString(R.string.btn_cancel), null)
-            .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val date = etDate.text.toString().trim()
-                val freeText = etOpponent.text.toString().trim()
-                val opp = if (freeText.isNotEmpty()) freeText
-                          else if (opponents.isNotEmpty()) opponents[spinnerOpponent.selectedItemPosition].name
-                          else ""
-                if (date.isNotEmpty() && opp.isNotEmpty()) {
-                    db.insertOpponentTeamIfNew(opp)
-                    db.updateGame(game.id, date, opp)
-                    loadGames()
-                    dialog.dismiss()
-                } else {
-                    if (date.isEmpty()) etDate.error = getString(R.string.error_required_field)
-                    if (opp.isEmpty()) etOpponent.error = getString(R.string.error_required_field)
-                }
-            }
-        }
-        dialog.show()
-    }
-
 }
 
-class GameAdapter(
-    private val games: List<Game>,
-    private val onClick: (Game) -> Unit,
-    private val onCopy: (Game) -> Unit,
-    private val onEdit: (Game) -> Unit,
-    private val onDelete: (Game) -> Unit
-) : RecyclerView.Adapter<GameAdapter.VH>() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GameListScreen(
+    teamId: Long,
+    teamName: String,
+    db: DatabaseHelper,
+    onBackClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onGameClick: (Game) -> Unit
+) {
+    var games by remember { mutableStateOf(emptyList<Game>()) }
+    var showAddDialog by remember { mutableStateOf(false) }
+    var gameToEdit by remember { mutableStateOf<Game?>(null) }
+    var gameToDelete by remember { mutableStateOf<Game?>(null) }
+    var gameToCopy by remember { mutableStateOf<Game?>(null) }
 
-    inner class VH(view: View) : RecyclerView.ViewHolder(view) {
-        val tvDate: TextView = view.findViewById(R.id.tvDate)
-        val tvOpponent: TextView = view.findViewById(R.id.tvOpponent)
-        val btnCopy: ImageButton = view.findViewById(R.id.btnCopy)
-        val btnEdit: ImageButton = view.findViewById(R.id.btnEdit)
-        val btnDelete: ImageButton = view.findViewById(R.id.btnDelete)
+    fun refresh() {
+        games = db.getGamesForTeam(teamId)
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_game, parent, false)
-        return VH(v)
+    LaunchedEffect(Unit) {
+        refresh()
     }
 
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        val game = games[position]
-        holder.tvDate.text = game.date
-        holder.tvOpponent.text = game.opponent
-        holder.itemView.setOnClickListener { onClick(game) }
-        holder.btnCopy.setOnClickListener { onCopy(game) }
-        holder.btnEdit.setOnClickListener { onEdit(game) }
-        holder.btnDelete.setOnClickListener { onDelete(game) }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(teamName) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Default.Settings, stringResource(R.string.menu_settings))
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { showAddDialog = true },
+                containerColor = Primary,
+                contentColor = Color.White,
+                icon = { Icon(Icons.Default.Add, null) },
+                text = { Text(stringResource(R.string.fab_add_game)) }
+            )
+        }
+    ) { padding ->
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            color = Color(0xFFF5F5F5)
+        ) {
+            if (games.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(R.string.empty_games),
+                        fontSize = 15.sp,
+                        color = Color(0xFF888888),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(32.dp)
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(games) { game ->
+                        GameItem(
+                            game = game,
+                            onClick = { onGameClick(game) },
+                            onEdit = { gameToEdit = game },
+                            onCopy = { gameToCopy = game },
+                            onDelete = { gameToDelete = game }
+                        )
+                    }
+                }
+            }
+        }
     }
 
-    override fun getItemCount() = games.size
+    if (showAddDialog) {
+        GameDialog(
+            title = stringResource(R.string.dialog_add_game_title),
+            confirmLabel = stringResource(R.string.btn_create),
+            opponents = db.getAllOpponentTeams(),
+            onDismiss = { showAddDialog = false },
+            onConfirm = { date, opponent ->
+                db.insertOpponentTeamIfNew(opponent)
+                db.insertGame(date, opponent, teamId)
+                refresh()
+                showAddDialog = false
+            }
+        )
+    }
+
+    gameToEdit?.let { game ->
+        GameDialog(
+            title = stringResource(R.string.dialog_edit_game_title),
+            confirmLabel = stringResource(R.string.btn_save),
+            initialDate = game.date,
+            initialOpponent = game.opponent,
+            opponents = db.getAllOpponentTeams(),
+            onDismiss = { gameToEdit = null },
+            onConfirm = { date, opponent ->
+                db.insertOpponentTeamIfNew(opponent)
+                db.updateGame(game.id, date, opponent)
+                refresh()
+                gameToEdit = null
+            }
+        )
+    }
+
+    gameToCopy?.let { game ->
+        var newOpponent by remember { mutableStateOf(game.opponent) }
+        var error by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { gameToCopy = null },
+            title = { Text(stringResource(R.string.dialog_copy_game_title, game.date)) },
+            text = {
+                OutlinedTextField(
+                    value = newOpponent,
+                    onValueChange = { newOpponent = it; error = false },
+                    label = { Text(stringResource(R.string.label_opponent)) },
+                    isError = error,
+                    supportingText = if (error) { { Text(stringResource(R.string.error_required_field)) } } else null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (newOpponent.isNotBlank()) {
+                        db.copyGame(game.id, newOpponent.trim())
+                        refresh()
+                        gameToCopy = null
+                    } else {
+                        error = true
+                    }
+                }) { Text(stringResource(R.string.btn_copy)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { gameToCopy = null }) { Text(stringResource(R.string.btn_cancel)) }
+            }
+        )
+    }
+
+    gameToDelete?.let { game ->
+        AlertDialog(
+            onDismissRequest = { gameToDelete = null },
+            title = { Text(stringResource(R.string.dialog_delete_game_title)) },
+            text = { Text(stringResource(R.string.dialog_delete_game_message, game.date, game.opponent)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        db.deleteGame(game.id)
+                        refresh()
+                        gameToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DeleteRed)
+                ) { Text(stringResource(R.string.btn_delete)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { gameToDelete = null }) { Text(stringResource(R.string.btn_cancel)) }
+            }
+        )
+    }
+}
+
+@Composable
+private fun GameItem(
+    game: Game,
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+    onCopy: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = game.opponent,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(
+                    text = game.date,
+                    fontSize = 14.sp,
+                    color = Color(0xFF888888)
+                )
+            }
+
+            IconButton(onClick = onCopy) {
+                Icon(Icons.Default.ContentCopy, null, tint = Primary)
+            }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Default.Edit, null, tint = Primary)
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, null, tint = DeleteRed)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GameDialog(
+    title: String,
+    confirmLabel: String,
+    initialDate: String = "",
+    initialOpponent: String = "",
+    opponents: List<OpponentTeam>,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit
+) {
+    val context = LocalContext.current
+    val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+    val calendar = remember {
+        Calendar.getInstance().apply {
+            if (initialDate.isNotEmpty()) {
+                try { time = sdf.parse(initialDate)!! } catch (_: Exception) {}
+            }
+        }
+    }
+
+    var date by remember { mutableStateOf(if (initialDate.isNotEmpty()) initialDate else sdf.format(calendar.time)) }
+    var opponentText by remember { mutableStateOf(if (initialOpponent.isNotEmpty() && opponents.none { it.name == initialOpponent }) initialOpponent else "") }
+    var selectedOpponent by remember { mutableStateOf(opponents.find { it.name == initialOpponent }) }
+    var dateError by remember { mutableStateOf(false) }
+    var opponentError by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            calendar.set(year, month, dayOfMonth)
+            date = sdf.format(calendar.time)
+            dateError = false
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = date,
+                    onValueChange = { },
+                    label = { Text(stringResource(R.string.label_date)) },
+                    readOnly = true,
+                    isError = dateError,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { datePickerDialog.show() },
+                    enabled = false,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        disabledBorderColor = if (dateError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
+                        disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+
+                if (opponents.isNotEmpty()) {
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedOpponent?.name ?: "",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text(stringResource(R.string.label_opponent)) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            modifier = Modifier
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            opponents.forEach { opp ->
+                                DropdownMenuItem(
+                                    text = { Text(opp.name) },
+                                    onClick = {
+                                        selectedOpponent = opp
+                                        expanded = false
+                                        opponentError = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        stringResource(R.string.label_or_enter_new),
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+
+                OutlinedTextField(
+                    value = opponentText,
+                    onValueChange = {
+                        opponentText = it
+                        if (it.isNotEmpty()) selectedOpponent = null
+                        opponentError = false
+                    },
+                    label = { Text(stringResource(R.string.hint_opponent)) },
+                    isError = opponentError,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val finalOpponent = opponentText.trim().ifEmpty { selectedOpponent?.name ?: "" }
+                if (date.isNotBlank() && finalOpponent.isNotBlank()) {
+                    onConfirm(date, finalOpponent)
+                } else {
+                    if (date.isBlank()) dateError = true
+                    if (finalOpponent.isBlank()) opponentError = true
+                }
+            }) { Text(confirmLabel) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }
+        }
+    )
 }
