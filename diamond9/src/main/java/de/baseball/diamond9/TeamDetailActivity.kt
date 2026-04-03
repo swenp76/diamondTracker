@@ -1,27 +1,44 @@
 package de.baseball.diamond9
 
-import android.app.AlertDialog
-import android.graphics.Color
 import android.os.Bundle
-import android.view.*
-import android.widget.*
-import android.widget.CheckBox
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.json.JSONArray
 import org.json.JSONObject
 
-class TeamDetailActivity : AppCompatActivity() {
+class TeamDetailActivity : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
     private var teamId: Long = -1
-    private lateinit var recyclerPlayers: RecyclerView
-    private lateinit var tvEmptyPlayers: android.widget.TextView
-    private lateinit var etTeamName: EditText
 
     private val exportLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -36,196 +53,24 @@ class TeamDetailActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.toast_export_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_team_detail)
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-
         db = DatabaseHelper(this)
         teamId = intent.getLongExtra("teamId", -1)
-        supportActionBar?.title = getString(R.string.team_detail_title)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        etTeamName = findViewById(R.id.etTeamName)
-        recyclerPlayers = findViewById(R.id.recyclerPlayers)
-        tvEmptyPlayers = findViewById(R.id.tvEmptyPlayers)
-        recyclerPlayers.layoutManager = LinearLayoutManager(this)
-
-        loadTeamName()
-        loadPlayers()
-
-        findViewById<com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton>(R.id.fabAddPlayer)
-            .setOnClickListener { showAddPlayerDialog() }
-
-        findViewById<android.widget.Button>(R.id.btnSaveTeamName).setOnClickListener {
-            val name = etTeamName.text.toString().trim()
-            if (name.isNotEmpty()) {
-                db.updateTeamName(teamId, name)
-                supportActionBar?.title = name
-                Toast.makeText(this, getString(R.string.toast_saved), Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        loadPlayers()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, 1, 0, getString(R.string.menu_active_positions)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
-        menu.add(0, 2, 0, getString(R.string.menu_export_team)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            1 -> { showPositionsDialog(); true }
-            2 -> {
-                val teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: "team"
-                val safeName = teamName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
-                exportLauncher.launch("$safeName.json")
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
-    }
-
-    private fun loadTeamName() {
-        val team = db.getAllTeams().firstOrNull { it.id == teamId } ?: return
-        etTeamName.setText(team.name)
-    }
-
-    private fun showPositionsDialog() {
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(48, 24, 48, 24)
-        }
-        val enabledPositions = db.getEnabledPositions(teamId)
-
-        BaseballPositions.ALL.forEach { (pos, label) ->
-            val cb = CheckBox(this).apply {
-                text = label
-                isChecked = pos in enabledPositions
-                textSize = 15f
-                setPadding(0, 8, 0, 8)
-                setOnCheckedChangeListener { _, checked ->
-                    db.setPositionEnabled(teamId, pos, checked)
+        setContent {
+            TeamDetailScreen(
+                teamId = teamId,
+                db = db,
+                onBack = { finish() },
+                onExport = {
+                    val teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: "team"
+                    val safeName = teamName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
+                    exportLauncher.launch("$safeName.json")
                 }
-            }
-            container.addView(cb)
+            )
         }
-
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.dialog_active_positions_title))
-            .setView(container)
-            .setPositiveButton(getString(R.string.btn_done), null)
-            .show()
-    }
-
-    private fun loadPlayers() {
-        val players = db.getPlayersForTeam(teamId)
-        tvEmptyPlayers.visibility = if (players.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
-        recyclerPlayers.visibility = if (players.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
-        recyclerPlayers.adapter = PlayerAdapter(
-            players,
-            onEdit = { player -> showEditPlayerDialog(player) },
-            onDelete = { player ->
-                AlertDialog.Builder(this)
-                    .setTitle(getString(R.string.dialog_delete_player_title))
-                    .setMessage(getString(R.string.dialog_delete_player_message, player.name))
-                    .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
-                        db.deletePlayer(player.id)
-                        loadPlayers()
-                    }
-                    .setNegativeButton(getString(R.string.btn_cancel), null)
-                    .show()
-            }
-        )
-    }
-
-    private fun showAddPlayerDialog() {
-        showPlayerDialog(null)
-    }
-
-    private fun showEditPlayerDialog(player: Player) {
-        showPlayerDialog(player)
-    }
-
-    private fun showPlayerDialog(existing: Player?) {
-        val view = layoutInflater.inflate(R.layout.dialog_add_player, null)
-        val etName = view.findViewById<EditText>(R.id.etPlayerName)
-        val etNumber = view.findViewById<EditText>(R.id.etPlayerNumber)
-        val spinnerPos = view.findViewById<Spinner>(R.id.spinnerPosition)
-        val spinnerSecondaryPos = view.findViewById<Spinner>(R.id.spinnerSecondaryPosition)
-        val cbIsPitcher = view.findViewById<CheckBox>(R.id.cbIsPitcher)
-        val etBirthYear = view.findViewById<EditText>(R.id.etBirthYear)
-
-        val enabledPositions = db.getEnabledPositions(teamId).sorted()
-        val positionItems = listOf(0 to getString(R.string.spinner_no_position)) +
-                BaseballPositions.ALL.filter { it.first in enabledPositions }
-        val spinnerLabels = positionItems.map { it.second }
-
-        val primaryAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, spinnerLabels)
-        spinnerPos.adapter = primaryAdapter
-
-        val secondaryAdapter = PositionAdapter(this, spinnerLabels)
-        spinnerSecondaryPos.adapter = secondaryAdapter
-
-        // Beim Ändern der 1. Position: gewählte Position in 2. Spinner ausgrauen
-        spinnerPos.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
-                secondaryAdapter.setDisabledIndex(pos)
-                // Falls 2. Spinner die gleiche Position hat, auf "Keine" zurücksetzen
-                if (spinnerSecondaryPos.selectedItemPosition == pos) {
-                    spinnerSecondaryPos.setSelection(0)
-                }
-            }
-            override fun onNothingSelected(parent: AdapterView<*>) {}
-        }
-
-        existing?.let {
-            etName.setText(it.name)
-            etNumber.setText(it.number)
-            val idx1 = positionItems.indexOfFirst { p -> p.first == it.primaryPosition }
-            if (idx1 >= 0) spinnerPos.setSelection(idx1)
-            val idx2 = positionItems.indexOfFirst { p -> p.first == it.secondaryPosition }
-            if (idx2 >= 0) spinnerSecondaryPos.setSelection(idx2)
-            cbIsPitcher.isChecked = it.isPitcher
-            if (it.birthYear > 0) etBirthYear.setText(it.birthYear.toString())
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle(if (existing == null) getString(R.string.dialog_add_player_title) else getString(R.string.dialog_edit_player_title))
-            .setView(view)
-            .setPositiveButton(if (existing == null) getString(R.string.btn_add) else getString(R.string.btn_save)) { _, _ ->
-                val name = etName.text.toString().trim()
-                val number = etNumber.text.toString().trim()
-                val selectedPos = positionItems[spinnerPos.selectedItemPosition].first
-                val selectedSecondaryPos = positionItems[spinnerSecondaryPos.selectedItemPosition].first
-                val isPitcher = cbIsPitcher.isChecked
-                val birthYear = etBirthYear.text.toString().trim().toIntOrNull() ?: 0
-                if (name.isNotEmpty()) {
-                    if (existing == null) {
-                        db.insertPlayer(teamId, name, number, selectedPos, selectedSecondaryPos, isPitcher, birthYear)
-                    } else {
-                        db.updatePlayer(existing.copy(name = name, number = number, primaryPosition = selectedPos, secondaryPosition = selectedSecondaryPos, isPitcher = isPitcher, birthYear = birthYear))
-                    }
-                    loadPlayers()
-                }
-            }
-            .setNegativeButton(getString(R.string.btn_cancel), null)
-            .show()
     }
 
     private fun buildTeamJson(teamId: Long): String {
@@ -252,63 +97,485 @@ class TeamDetailActivity : AppCompatActivity() {
     }
 }
 
-class PlayerAdapter(
-    private val players: List<Player>,
-    private val onEdit: (Player) -> Unit,
-    private val onDelete: (Player) -> Unit
-) : RecyclerView.Adapter<PlayerAdapter.VH>() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TeamDetailScreen(
+    teamId: Long,
+    db: DatabaseHelper,
+    onBack: () -> Unit,
+    onExport: () -> Unit
+) {
+    var teamName by remember { mutableStateOf("") }
+    var players by remember { mutableStateOf(emptyList<Player>()) }
+    var showPositionsDialog by remember { mutableStateOf(false) }
+    var playerToEdit by remember { mutableStateOf<Player?>(null) }
+    var showAddPlayerDialog by remember { mutableStateOf(false) }
+    var playerToDelete by remember { mutableStateOf<Player?>(null) }
+    var menuExpanded by remember { mutableStateOf(false) }
 
-    inner class VH(view: View) : RecyclerView.ViewHolder(view) {
-        val tvNumber: TextView = view.findViewById(R.id.tvPlayerNumber)
-        val tvName: TextView = view.findViewById(R.id.tvPlayerName)
-        val tvPosition: TextView = view.findViewById(R.id.tvPlayerPosition)
-        val tvSecondaryPosition: TextView = view.findViewById(R.id.tvPlayerSecondaryPosition)
-        val tvPitcherBadge: TextView = view.findViewById(R.id.tvPitcherBadge)
-        val btnDelete: ImageButton = view.findViewById(R.id.btnDeletePlayer)
+    fun refresh() {
+        teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: ""
+        players = db.getPlayersForTeam(teamId)
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-        VH(LayoutInflater.from(parent.context).inflate(R.layout.item_player, parent, false))
+    LaunchedEffect(teamId) {
+        refresh()
+    }
 
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        val p = players[position]
-        holder.tvNumber.text = if (p.number.isNotEmpty()) "#${p.number}" else "–"
-        holder.tvName.text = p.name
-        holder.tvPosition.text = if (p.primaryPosition > 0)
-            BaseballPositions.shortLabel(p.primaryPosition) else "–"
-        if (p.secondaryPosition > 0) {
-            holder.tvSecondaryPosition.text = BaseballPositions.shortLabel(p.secondaryPosition)
-            holder.tvSecondaryPosition.visibility = android.view.View.VISIBLE
-        } else {
-            holder.tvSecondaryPosition.visibility = android.view.View.GONE
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.team_detail_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_active_positions)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    showPositionsDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_export_team)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onExport()
+                                }
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { showAddPlayerDialog = true },
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.fab_add_player)) },
+                containerColor = Color(0xFF1a5fa8),
+                contentColor = Color.White
+            )
         }
-        holder.tvPitcherBadge.visibility = if (p.isPitcher) android.view.View.VISIBLE else android.view.View.GONE
-        holder.itemView.setOnClickListener { onEdit(p) }
-        holder.btnDelete.setOnClickListener { onDelete(p) }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color(0xFFF5F5F5))
+                .padding(16.dp)
+        ) {
+            // Team Name Card
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(R.string.label_team_name_header).uppercase(),
+                        fontSize = 11.sp,
+                        color = Color.Gray,
+                        letterSpacing = 0.1.sp
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        var tempName by remember(teamName) { mutableStateOf(teamName) }
+                        OutlinedTextField(
+                            value = tempName,
+                            onValueChange = { tempName = it },
+                            modifier = Modifier.weight(1f).padding(end = 12.dp),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontSize = 18.sp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words)
+                        )
+                        Button(
+                            onClick = {
+                                if (tempName.trim().isNotEmpty()) {
+                                    db.updateTeamName(teamId, tempName.trim())
+                                    teamName = tempName.trim()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1a5fa8))
+                        ) {
+                            Text(stringResource(R.string.btn_save))
+                        }
+                    }
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.label_roster).uppercase(),
+                fontSize = 11.sp,
+                color = Color.Gray,
+                letterSpacing = 0.1.sp,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            if (players.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(R.string.empty_players),
+                        fontSize = 15.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(32.dp)
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    items(players) { player ->
+                        PlayerItem(
+                            player = player,
+                            onEdit = { playerToEdit = it },
+                            onDelete = { playerToDelete = it }
+                        )
+                    }
+                }
+            }
+        }
     }
 
-    override fun getItemCount() = players.size
+    if (showPositionsDialog) {
+        ActivePositionsDialog(
+            teamId = teamId,
+            db = db,
+            onDismiss = { showPositionsDialog = false }
+        )
+    }
+
+    if (showAddPlayerDialog) {
+        PlayerEditDialog(
+            teamId = teamId,
+            db = db,
+            player = null,
+            onDismiss = { showAddPlayerDialog = false },
+            onSave = { refresh() }
+        )
+    }
+
+    playerToEdit?.let { player ->
+        PlayerEditDialog(
+            teamId = teamId,
+            db = db,
+            player = player,
+            onDismiss = { playerToEdit = null },
+            onSave = { refresh() }
+        )
+    }
+
+    playerToDelete?.let { player ->
+        AlertDialog(
+            onDismissRequest = { playerToDelete = null },
+            title = { Text(stringResource(R.string.dialog_delete_player_title)) },
+            text = { Text(stringResource(R.string.dialog_delete_player_message, player.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    db.deletePlayer(player.id)
+                    refresh()
+                    playerToDelete = null
+                }) {
+                    Text(stringResource(R.string.btn_delete), color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { playerToDelete = null }) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
+            }
+        )
+    }
 }
 
-class PositionAdapter(context: android.content.Context, items: List<String>) :
-    ArrayAdapter<String>(context, android.R.layout.simple_spinner_item, items) {
+@Composable
+fun PlayerItem(
+    player: Player,
+    onEdit: (Player) -> Unit,
+    onDelete: (Player) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onEdit(player) },
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Jersey Number
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, Color(0xFF1a5fa8), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (player.number.isNotEmpty()) "#${player.number}" else "–",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1a5fa8)
+                )
+            }
 
-    private var disabledIndex: Int = -1
+            Spacer(modifier = Modifier.width(12.dp))
 
-    init {
-        setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            Text(
+                text = player.name,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF333333),
+                modifier = Modifier.weight(1f)
+            )
+
+            if (player.isPitcher) {
+                Surface(
+                    color = Color(0xFF1a5fa8),
+                    shape = RoundedCornerShape(2.dp),
+                    modifier = Modifier.padding(end = 6.dp)
+                ) {
+                    Text(
+                        text = "P",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            // Primary Position
+            PositionBadge(
+                pos = player.primaryPosition,
+                textColor = Color(0xFFc0392b)
+            )
+
+            if (player.secondaryPosition > 0) {
+                Spacer(modifier = Modifier.width(4.dp))
+                PositionBadge(
+                    pos = player.secondaryPosition,
+                    textColor = Color(0xFF888888)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(onClick = { onDelete(player) }, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = Color(0xFFc0392b)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PositionBadge(pos: Int, textColor: Color) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .border(1.dp, Color(0xFFDDDDDD), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = if (pos > 0) BaseballPositions.shortLabel(pos) else "–",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = textColor
+        )
+    }
+}
+
+@Composable
+fun ActivePositionsDialog(
+    teamId: Long,
+    db: DatabaseHelper,
+    onDismiss: () -> Unit
+) {
+    val enabledPositions = remember { mutableStateListOf<Int>().apply { addAll(db.getEnabledPositions(teamId)) } }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dialog_active_positions_title)) },
+        text = {
+            LazyColumn {
+                items(BaseballPositions.ALL) { (pos, label) ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            val isChecked = pos !in enabledPositions
+                            if (isChecked) enabledPositions.add(pos) else enabledPositions.remove(pos)
+                            db.setPositionEnabled(teamId, pos, isChecked)
+                        }.padding(vertical = 4.dp)
+                    ) {
+                        Checkbox(
+                            checked = pos in enabledPositions,
+                            onCheckedChange = { isChecked ->
+                                if (isChecked) enabledPositions.add(pos) else enabledPositions.remove(pos)
+                                db.setPositionEnabled(teamId, pos, isChecked)
+                            }
+                        )
+                        Text(text = label, fontSize = 15.sp)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_done)) }
+        }
+    )
+}
+
+@Composable
+fun PlayerEditDialog(
+    teamId: Long,
+    db: DatabaseHelper,
+    player: Player?,
+    onDismiss: () -> Unit,
+    onSave: () -> Unit
+) {
+    var name by remember { mutableStateOf(player?.name ?: "") }
+    var number by remember { mutableStateOf(player?.number ?: "") }
+    var primaryPos by remember { mutableStateOf(player?.primaryPosition ?: 0) }
+    var secondaryPos by remember { mutableStateOf(player?.secondaryPosition ?: 0) }
+    var isPitcher by remember { mutableStateOf(player?.isPitcher ?: false) }
+    var birthYear by remember { mutableStateOf(if (player != null && player.birthYear > 0) player.birthYear.toString() else "") }
+
+    val enabledPositions = remember { db.getEnabledPositions(teamId).sorted() }
+    val positionItems = remember {
+        listOf(0 to "Keine") + BaseballPositions.ALL.filter { it.first in enabledPositions }
     }
 
-    fun setDisabledIndex(index: Int) {
-        disabledIndex = index
-        notifyDataSetChanged()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(if (player == null) R.string.dialog_add_player_title else R.string.dialog_edit_player_title)) },
+        text = {
+            Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                DialogTextField(label = stringResource(R.string.label_name), value = name, onValueChange = { name = it }, hint = stringResource(R.string.hint_full_name))
+                DialogTextField(label = stringResource(R.string.label_jersey_number), value = number, onValueChange = { number = it }, hint = stringResource(R.string.hint_jersey_number), keyboardType = KeyboardType.Number)
+
+                Text(stringResource(R.string.label_primary_position), fontSize = 12.sp, color = Color.Gray)
+                PositionSpinner(
+                    selectedPos = primaryPos,
+                    items = positionItems,
+                    onSelected = {
+                        primaryPos = it
+                        if (secondaryPos == it) secondaryPos = 0
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(stringResource(R.string.label_secondary_position), fontSize = 12.sp, color = Color.Gray)
+                PositionSpinner(
+                    selectedPos = secondaryPos,
+                    items = positionItems,
+                    disabledPos = primaryPos,
+                    onSelected = { secondaryPos = it }
+                )
+
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { isPitcher = !isPitcher }.padding(vertical = 8.dp)) {
+                    Checkbox(checked = isPitcher, onCheckedChange = { isPitcher = it })
+                    Text(stringResource(R.string.label_is_pitcher), fontSize = 15.sp)
+                }
+
+                DialogTextField(label = stringResource(R.string.label_birth_year), value = birthYear, onValueChange = { birthYear = it }, hint = stringResource(R.string.hint_birth_year), keyboardType = KeyboardType.Number)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (name.trim().isNotEmpty()) {
+                    val bYear = birthYear.trim().toIntOrNull() ?: 0
+                    if (player == null) {
+                        db.insertPlayer(teamId, name.trim(), number.trim(), primaryPos, secondaryPos, isPitcher, bYear)
+                    } else {
+                        db.updatePlayer(player.copy(name = name.trim(), number = number.trim(), primaryPosition = primaryPos, secondaryPosition = secondaryPos, isPitcher = isPitcher, birthYear = bYear))
+                    }
+                    onSave()
+                    onDismiss()
+                }
+            }) {
+                Text(stringResource(if (player == null) R.string.btn_add else R.string.btn_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }
+        }
+    )
+}
+
+@Composable
+fun DialogTextField(label: String, value: String, onValueChange: (String) -> Unit, hint: String, keyboardType: KeyboardType = KeyboardType.Text) {
+    Column(modifier = Modifier.padding(bottom = 16.dp)) {
+        Text(label, fontSize = 12.sp, color = Color.Gray)
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(hint) },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = keyboardType,
+                capitalization = if (keyboardType == KeyboardType.Text) KeyboardCapitalization.Words else KeyboardCapitalization.None
+            ),
+            singleLine = true
+        )
     }
+}
 
-    override fun isEnabled(position: Int) = position != disabledIndex
+@Composable
+fun PositionSpinner(
+    selectedPos: Int,
+    items: List<Pair<Int, String>>,
+    disabledPos: Int = -1,
+    onSelected: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = items.firstOrNull { it.first == selectedPos }?.second ?: "Keine"
 
-    override fun getDropDownView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
-        val view = super.getDropDownView(position, convertView, parent) as TextView
-        view.setTextColor(if (position == disabledIndex) Color.LTGRAY else Color.BLACK)
-        return view
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(4.dp)
+        ) {
+            Text(selectedLabel, modifier = Modifier.weight(1f), textAlign = TextAlign.Start, color = Color.Black)
+            Icon(Icons.Default.MoreVert, contentDescription = null)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            items.forEach { (pos, label) ->
+                DropdownMenuItem(
+                    text = { Text(label, color = if (pos != 0 && pos == disabledPos) Color.Gray else Color.Black) },
+                    onClick = {
+                        if (pos == 0 || pos != disabledPos) {
+                            onSelected(pos)
+                            expanded = false
+                        }
+                    },
+                    enabled = (pos == 0 || pos != disabledPos)
+                )
+            }
+        }
     }
 }
