@@ -71,6 +71,7 @@
     <string name="hint_date_format">TT.MM.JJJJ</string>
     <string name="label_opponent">Gegner</string>
     <string name="hint_opponent">Mannschaft</string>
+    <string name="label_or_enter_new">Oder neu eingeben:</string>
 
     <!-- ── GameHub ────────────────────────────────────────────────────────── -->
     <string name="gamehub_offense">Offense</string>
@@ -171,10 +172,20 @@
     <string name="fab_add_team">Team hinzufügen</string>
     <string name="fab_add_player">Spieler hinzufügen</string>
 
+    <!-- ── Einstellungen: Opponents ─────────────────────────────────────── -->
+    <string name="settings_opponents_title">Gegner verwalten</string>
+    <string name="settings_opponents_subtitle">Gegnerische Teams anlegen</string>
+    <string name="dialog_add_opponent_title">Neues gegnerisches Team</string>
+    <string name="dialog_delete_opponent_title">Gegner löschen</string>
+    <string name="dialog_delete_opponent_message">\"%s\" aus der Liste entfernen?</string>
+    <string name="hint_opponent_team_name">Teamname</string>
+    <string name="fab_add_opponent">Gegner hinzufügen</string>
+
     <!-- ── Empty States ──────────────────────────────────────────────────── -->
     <string name="empty_games">Noch keine Spiele vorhanden.\nFüge zuerst ein neues Spiel hinzu.</string>
     <string name="empty_pitchers">Noch keine Pitcher vorhanden.\nFüge zuerst einen neuen Pitcher hinzu.</string>
     <string name="empty_teams">Noch keine Teams vorhanden. Füge zuerst ein neues Team hinzu oder importiere eins</string>
     <string name="empty_players">Noch keine Spieler vorhanden.\nFüge zuerst einen neuen Spieler hinzu.</string>
+    <string name="empty_opponents">Noch keine Gegner angelegt.\nFüge zuerst ein gegnerisches Team hinzu.</string>
 
 </resources>

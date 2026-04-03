@@ -27,6 +27,23 @@
         android:textSize="12sp"
         android:textColor="#888888" />
 
+    <Spinner
+        android:id="@+id/spinnerOpponent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tvOrEnter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/label_or_enter_new"
+        android:textSize="12sp"
+        android:textColor="#888888"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone" />
+
     <EditText
         android:id="@+id/etOpponent"
         android:layout_width="match_parent"

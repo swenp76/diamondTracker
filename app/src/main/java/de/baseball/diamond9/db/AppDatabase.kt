@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import de.baseball.diamond9.*
 
 @Database(
@@ -19,9 +21,10 @@ import de.baseball.diamond9.*
         BenchPlayer::class,
         OwnLineupSlot::class,
         Substitution::class,
-        OppSubstitution::class
+        OppSubstitution::class,
+        OpponentTeam::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -31,9 +34,20 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun teamDao(): TeamDao
     abstract fun playerDao(): PlayerDao
     abstract fun lineupDao(): LineupDao
+    abstract fun opponentTeamDao(): OpponentTeamDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
+
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS opponent_teams " +
+                    "(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "name TEXT NOT NULL UNIQUE)"
+                )
+            }
+        }
 
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -43,7 +57,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "pitcher.db"
                 )
                     .allowMainThreadQueries()
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_1_2)
                     .build().also { INSTANCE = it }
             }
         }

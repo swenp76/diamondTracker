@@ -30,11 +30,29 @@
         android:textSize="12sp"
         android:textColor="#888888" />
 
-    <EditText
+    <Spinner
+        android:id="@+id/spinnerEditOpponent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tvOrEnterEdit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/label_or_enter_new"
+        android:textSize="12sp"
+        android:textColor="#888888"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone" />
+
+    <AutoCompleteTextView
         android:id="@+id/etEditOpponent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/hint_opponent"
-        android:inputType="textCapWords" />
+        android:inputType="textCapWords"
+        android:completionThreshold="1" />
 
 </LinearLayout>

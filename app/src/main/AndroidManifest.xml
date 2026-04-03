@@ -29,6 +29,7 @@
         <activity android:name=".OpponentLineupActivity" android:exported="false" />
         <activity android:name=".GameHubActivity" android:exported="false" />
         <activity android:name=".OwnLineupActivity" android:exported="false" />
+        <activity android:name=".ManageOpponentsActivity" android:exported="false" />
 
     </application>
 

@@ -18,6 +18,9 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<CardView>(R.id.cardTeams).setOnClickListener {
             startActivity(Intent(this, TeamListActivity::class.java))
         }
+        findViewById<CardView>(R.id.cardOpponents).setOnClickListener {
+            startActivity(Intent(this, ManageOpponentsActivity::class.java))
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {

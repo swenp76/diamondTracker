@@ -71,6 +71,7 @@
     <string name="hint_date_format">DD.MM.YYYY</string>
     <string name="label_opponent">Opponent</string>
     <string name="hint_opponent">Team name</string>
+    <string name="label_or_enter_new">Or enter new:</string>
 
     <!-- ── GameHub ───────────────────────────────────────────────────────────── -->
     <string name="gamehub_offense">Offense</string>
@@ -171,10 +172,20 @@
     <string name="fab_add_team">Add Team</string>
     <string name="fab_add_player">Add Player</string>
 
+    <!-- ── Settings: Opponents ───────────────────────────────────────────────── -->
+    <string name="settings_opponents_title">Manage Opponents</string>
+    <string name="settings_opponents_subtitle">Add opposing teams</string>
+    <string name="dialog_add_opponent_title">New Opponent Team</string>
+    <string name="dialog_delete_opponent_title">Delete Opponent</string>
+    <string name="dialog_delete_opponent_message">Remove \"%s\" from the list?</string>
+    <string name="hint_opponent_team_name">Team name</string>
+    <string name="fab_add_opponent">Add Opponent</string>
+
     <!-- ── Empty States ──────────────────────────────────────────────────────── -->
     <string name="empty_games">No games yet.\nAdd a new game first.</string>
     <string name="empty_pitchers">No pitchers yet.\nAdd a new pitcher first.</string>
     <string name="empty_teams">No teams yet.\nAdd or import a new team first.</string>
     <string name="empty_players">No players yet.\nAdd a new player first.</string>
+    <string name="empty_opponents">No opponents added yet.\nAdd an opposing team first.</string>
 
 </resources>

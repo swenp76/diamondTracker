@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 
+
 class GameListActivity : AppCompatActivity() {
 
     private lateinit var db: DatabaseHelper
@@ -95,7 +96,17 @@ class GameListActivity : AppCompatActivity() {
     private fun showAddGameDialog() {
         val view = layoutInflater.inflate(R.layout.dialog_add_game, null)
         val etDate = view.findViewById<EditText>(R.id.etDate)
+        val spinnerOpponent = view.findViewById<Spinner>(R.id.spinnerOpponent)
+        val tvOrEnter = view.findViewById<android.widget.TextView>(R.id.tvOrEnter)
         val etOpponent = view.findViewById<EditText>(R.id.etOpponent)
+
+        val opponents = db.getAllOpponentTeams()
+        if (opponents.isNotEmpty()) {
+            spinnerOpponent.visibility = android.view.View.VISIBLE
+            tvOrEnter.visibility = android.view.View.VISIBLE
+            val names = opponents.map { it.name }
+            spinnerOpponent.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, names)
+        }
 
         val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
         val cal = Calendar.getInstance()
@@ -118,8 +129,12 @@ class GameListActivity : AppCompatActivity() {
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val date = etDate.text.toString().trim()
-                val opp = etOpponent.text.toString().trim()
+                val freeText = etOpponent.text.toString().trim()
+                val opp = if (freeText.isNotEmpty()) freeText
+                          else if (opponents.isNotEmpty()) opponents[spinnerOpponent.selectedItemPosition].name
+                          else ""
                 if (date.isNotEmpty() && opp.isNotEmpty()) {
+                    db.insertOpponentTeamIfNew(opp)
                     db.insertGame(date, opp, teamId)
                     loadGames()
                     dialog.dismiss()
@@ -167,10 +182,23 @@ class GameListActivity : AppCompatActivity() {
 
         val view = layoutInflater.inflate(R.layout.dialog_edit_game, null)
         val etDate = view.findViewById<EditText>(R.id.etEditDate)
+        val spinnerOpponent = view.findViewById<Spinner>(R.id.spinnerEditOpponent)
+        val tvOrEnter = view.findViewById<android.widget.TextView>(R.id.tvOrEnterEdit)
         val etOpponent = view.findViewById<EditText>(R.id.etEditOpponent)
 
+        val opponents = db.getAllOpponentTeams()
+        if (opponents.isNotEmpty()) {
+            spinnerOpponent.visibility = android.view.View.VISIBLE
+            tvOrEnter.visibility = android.view.View.VISIBLE
+            val names = opponents.map { it.name }
+            spinnerOpponent.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, names)
+            val existingIndex = opponents.indexOfFirst { it.name == game.opponent }
+            if (existingIndex >= 0) spinnerOpponent.setSelection(existingIndex)
+        } else {
+            etOpponent.setText(game.opponent)
+        }
+
         etDate.setText(game.date)
-        etOpponent.setText(game.opponent)
         etDate.isFocusable = false
         etDate.setOnClickListener {
             DatePickerDialog(this, { _, year, month, day ->
@@ -189,8 +217,12 @@ class GameListActivity : AppCompatActivity() {
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val date = etDate.text.toString().trim()
-                val opp = etOpponent.text.toString().trim()
+                val freeText = etOpponent.text.toString().trim()
+                val opp = if (freeText.isNotEmpty()) freeText
+                          else if (opponents.isNotEmpty()) opponents[spinnerOpponent.selectedItemPosition].name
+                          else ""
                 if (date.isNotEmpty() && opp.isNotEmpty()) {
+                    db.insertOpponentTeamIfNew(opp)
                     db.updateGame(game.id, date, opp)
                     loadGames()
                     dialog.dismiss()

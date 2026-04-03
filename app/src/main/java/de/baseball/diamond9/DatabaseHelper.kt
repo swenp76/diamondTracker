@@ -88,6 +88,12 @@ data class Substitution(
     @ColumnInfo(name = "player_in_id") val playerInId: Long
 )
 
+@Entity(tableName = "opponent_teams", indices = [Index(value = ["name"], unique = true)])
+data class OpponentTeam(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String
+)
+
 @Entity(tableName = "opponent_substitutions")
 data class OppSubstitution(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -139,6 +145,7 @@ class DatabaseHelper(context: Context) {
     private val teamDao = db.teamDao()
     private val playerDao = db.playerDao()
     private val lineupDao = db.lineupDao()
+    private val opponentTeamDao = db.opponentTeamDao()
 
     // ── Games ──────────────────────────────────────────────────────────────────
 
@@ -325,6 +332,15 @@ class DatabaseHelper(context: Context) {
 
     fun getOwnLineupStarters(gameId: Long): List<Player> =
         getOwnLineup(gameId).filter { it.key in 1..9 }.toSortedMap().values.toList()
+
+    // ── Opponent Teams ─────────────────────────────────────────────────────────
+
+    fun getAllOpponentTeams(): List<OpponentTeam> = opponentTeamDao.getAll()
+
+    fun insertOpponentTeamIfNew(name: String): Long =
+        opponentTeamDao.insert(OpponentTeam(name = name))
+
+    fun deleteOpponentTeam(id: Long) = opponentTeamDao.delete(id)
 
     // ── Own Substitutions ──────────────────────────────────────────────────────
 
