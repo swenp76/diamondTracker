@@ -97,16 +97,6 @@ class PitchTrackActivity : AppCompatActivity() {
             db.insertPitch(pitcherId, "BF")
             refresh()
         }
-        findViewById<Button>(R.id.btnWalk).setOnClickListener {
-            db.insertPitch(pitcherId, "W")
-            db.insertPitch(pitcherId, "BF")
-            refresh()
-        }
-        findViewById<Button>(R.id.btnStrikeOut).setOnClickListener {
-            db.insertPitch(pitcherId, "SO")
-            db.insertPitch(pitcherId, "BF")
-            refresh()
-        }
         findViewById<Button>(R.id.btnBatterFaced).setOnClickListener {
             db.insertPitch(pitcherId, "BF")
             refresh()

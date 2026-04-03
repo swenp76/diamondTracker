@@ -144,8 +144,11 @@ class PitcherAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val p = pitchers[position]
+        val isActive = position == pitchers.lastIndex
         holder.tvName.text = p.name
-        holder.btnTrack.setOnClickListener { onTrack(p) }
+        holder.btnTrack.isEnabled = isActive
+        holder.btnTrack.alpha = if (isActive) 1f else 0.35f
+        holder.btnTrack.setOnClickListener { if (isActive) onTrack(p) }
         holder.btnStats.setOnClickListener { onStats(p) }
         holder.btnDelete.setOnClickListener { onDelete(p) }
     }
