@@ -171,4 +171,10 @@
     <string name="fab_add_team">Team hinzufügen</string>
     <string name="fab_add_player">Spieler hinzufügen</string>
 
+    <!-- ── Empty States ──────────────────────────────────────────────────── -->
+    <string name="empty_games">Noch keine Spiele vorhanden.\nFüge zuerst ein neues Spiel hinzu.</string>
+    <string name="empty_pitchers">Noch keine Pitcher vorhanden.\nFüge zuerst einen neuen Pitcher hinzu.</string>
+    <string name="empty_teams">Noch keine Teams vorhanden. Füge zuerst ein neues Team hinzu oder importiere eins</string>
+    <string name="empty_players">Noch keine Spieler vorhanden.\nFüge zuerst einen neuen Spieler hinzu.</string>
+
 </resources>

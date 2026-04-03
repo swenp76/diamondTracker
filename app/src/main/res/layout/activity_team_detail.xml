@@ -73,6 +73,18 @@
             android:letterSpacing="0.1"
             android:layout_marginBottom="8dp" />
 
+        <!-- Empty State -->
+        <TextView
+            android:id="@+id/tvEmptyPlayers"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/empty_players"
+            android:textSize="15sp"
+            android:textColor="#888888"
+            android:gravity="center"
+            android:padding="32dp"
+            android:visibility="gone" />
+
         <!-- RecyclerView füllt den verbleibenden Platz und scrollt selbst -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerPlayers"

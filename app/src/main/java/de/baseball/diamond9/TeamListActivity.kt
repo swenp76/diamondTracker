@@ -15,6 +15,7 @@ class TeamListActivity : AppCompatActivity() {
 
     private lateinit var db: DatabaseHelper
     private lateinit var recycler: RecyclerView
+    private lateinit var tvEmpty: android.widget.TextView
 
     private val importLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -38,6 +39,7 @@ class TeamListActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         recycler = findViewById(R.id.recyclerTeams)
+        tvEmpty = findViewById(R.id.tvEmptyTeams)
         recycler.layoutManager = LinearLayoutManager(this)
 
         findViewById<com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton>(R.id.fabAddTeam)
@@ -70,6 +72,8 @@ class TeamListActivity : AppCompatActivity() {
 
     private fun loadTeams() {
         val teams = db.getAllTeams()
+        tvEmpty.visibility = if (teams.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+        recycler.visibility = if (teams.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
         recycler.adapter = TeamAdapter(
             teams,
             onClick = { team ->

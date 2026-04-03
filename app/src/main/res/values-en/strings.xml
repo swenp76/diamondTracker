@@ -171,4 +171,10 @@
     <string name="fab_add_team">Add Team</string>
     <string name="fab_add_player">Add Player</string>
 
+    <!-- ── Empty States ──────────────────────────────────────────────────────── -->
+    <string name="empty_games">No games yet.\nAdd a new game first.</string>
+    <string name="empty_pitchers">No pitchers yet.\nAdd a new pitcher first.</string>
+    <string name="empty_teams">No teams yet.\nAdd or import a new team first.</string>
+    <string name="empty_players">No players yet.\nAdd a new player first.</string>
+
 </resources>

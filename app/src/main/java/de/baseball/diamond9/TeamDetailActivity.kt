@@ -18,6 +18,7 @@ class TeamDetailActivity : AppCompatActivity() {
     private lateinit var db: DatabaseHelper
     private var teamId: Long = -1
     private lateinit var recyclerPlayers: RecyclerView
+    private lateinit var tvEmptyPlayers: android.widget.TextView
     private lateinit var etTeamName: EditText
 
     private val exportLauncher = registerForActivityResult(
@@ -43,6 +44,7 @@ class TeamDetailActivity : AppCompatActivity() {
 
         etTeamName = findViewById(R.id.etTeamName)
         recyclerPlayers = findViewById(R.id.recyclerPlayers)
+        tvEmptyPlayers = findViewById(R.id.tvEmptyPlayers)
         recyclerPlayers.layoutManager = LinearLayoutManager(this)
 
         loadTeamName()
@@ -124,6 +126,8 @@ class TeamDetailActivity : AppCompatActivity() {
 
     private fun loadPlayers() {
         val players = db.getPlayersForTeam(teamId)
+        tvEmptyPlayers.visibility = if (players.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+        recyclerPlayers.visibility = if (players.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
         recyclerPlayers.adapter = PlayerAdapter(
             players,
             onEdit = { player -> showEditPlayerDialog(player) },

@@ -15,6 +15,7 @@ class PitcherListActivity : AppCompatActivity() {
 
     private lateinit var db: DatabaseHelper
     private lateinit var recycler: RecyclerView
+    private lateinit var tvEmpty: android.widget.TextView
     private var gameId: Long = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,6 +29,7 @@ class PitcherListActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         recycler = findViewById(R.id.recyclerPitchers)
+        tvEmpty = findViewById(R.id.tvEmptyPitchers)
         recycler.layoutManager = LinearLayoutManager(this)
 
         findViewById<com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton>(R.id.fabAddPitcher)
@@ -48,6 +50,8 @@ class PitcherListActivity : AppCompatActivity() {
 
     private fun loadPitchers() {
         val pitchers = db.getPitchersForGame(gameId)
+        tvEmpty.visibility = if (pitchers.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+        recycler.visibility = if (pitchers.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
         recycler.adapter = PitcherAdapter(pitchers,
             onTrack = { pitcher ->
                 val intent = Intent(this, PitchTrackActivity::class.java)

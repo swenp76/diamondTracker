@@ -18,6 +18,7 @@ class GameListActivity : AppCompatActivity() {
     private lateinit var db: DatabaseHelper
     private lateinit var recycler: RecyclerView
     private lateinit var adapter: GameAdapter
+    private lateinit var tvEmpty: android.widget.TextView
 
     private var teamId: Long = 0L
     private var teamName: String = ""
@@ -33,6 +34,7 @@ class GameListActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         recycler = findViewById(R.id.recyclerGames)
+        tvEmpty = findViewById(R.id.tvEmptyGames)
         recycler.layoutManager = LinearLayoutManager(this)
 
         findViewById<com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton>(R.id.fabAddGame)
@@ -63,6 +65,8 @@ class GameListActivity : AppCompatActivity() {
 
     private fun loadGames() {
         val games = db.getGamesForTeam(teamId)
+        tvEmpty.visibility = if (games.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+        recycler.visibility = if (games.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
         adapter = GameAdapter(games,
             onClick = { game ->
                 val intent = Intent(this, GameHubActivity::class.java)
