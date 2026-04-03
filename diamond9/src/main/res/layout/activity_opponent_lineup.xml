@@ -7,82 +7,13 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_height="match_parent">
 
         <LinearLayout
+            android:id="@+id/lineupContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
-
-            <!-- Batting Order Header -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Batting Order"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textColor="#888888"
-                android:textAllCaps="true"
-                android:letterSpacing="0.1"
-                android:paddingBottom="8dp" />
-
-            <!-- Lineup slots 1-9 -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerLineup"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false" />
-
-            <!-- Bench Header -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="24dp"
-                android:paddingBottom="8dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Bank / Auswechselspieler"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:textColor="#888888"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.1" />
-
-                <Button
-                    android:id="@+id/btnAddBench"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="+ Hinzufügen"
-                    android:textSize="13sp"
-                    android:backgroundTint="#1a5fa8"
-                    android:textColor="@android:color/white" />
-            </LinearLayout>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerBench"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false" />
-
-            <TextView
-                android:id="@+id/tvBenchEmpty"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Keine Auswechselspieler eingetragen"
-                android:textSize="14sp"
-                android:textColor="#AAAAAA"
-                android:gravity="center"
-                android:padding="16dp"
-                android:visibility="gone" />
-
-        </LinearLayout>
+            android:padding="16dp" />
     </ScrollView>
-
 </LinearLayout>

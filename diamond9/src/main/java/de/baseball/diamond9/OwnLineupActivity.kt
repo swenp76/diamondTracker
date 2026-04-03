@@ -236,7 +236,7 @@ private fun OwnLineupScreen(
 
                 item { SectionHeader(stringResource(R.string.lineup_section_substitutes)) }
 
-                items(11..20) { slot ->
+                items((11..20).toList()) { slot ->
                     val player = lineup[slot]
                     val status = player?.let { subStatuses[it.id] } ?: SubStatus.AVAILABLE
                     val isInvolved = player?.let { p -> substitutions.any { it.playerInId == p.id || it.playerOutId == p.id } } ?: false

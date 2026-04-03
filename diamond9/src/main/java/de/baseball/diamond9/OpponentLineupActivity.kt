@@ -26,7 +26,7 @@ class OpponentLineupActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_own_lineup)
+        setContentView(R.layout.activity_opponent_lineup)
 
         gameId = intent.getLongExtra("gameId", -1)
         val opponentName = intent.getStringExtra("opponentName") ?: "Gegner"
