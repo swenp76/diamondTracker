@@ -215,11 +215,32 @@ class DatabaseHelper(context: Context) {
     fun getStatsForPitcher(pitcherId: Long): PitcherStats {
         val pitcher = pitcherDao.getPitcherById(pitcherId)
         val pitches = getPitchesForPitcher(pitcherId)
+
+        var strikes = 0
+        var currentStrikesAtBat = 0
+        for (p in pitches) {
+            when (p.type) {
+                "S" -> {
+                    strikes++
+                    currentStrikesAtBat++
+                }
+                "F" -> {
+                    if (currentStrikesAtBat < 2) {
+                        strikes++
+                        currentStrikesAtBat++
+                    }
+                }
+                "BF" -> {
+                    currentStrikesAtBat = 0
+                }
+            }
+        }
+
         return PitcherStats(
             pitcher = pitcher,
             bf = pitches.count { it.type == "BF" },
             balls = pitches.count { it.type == "B" },
-            strikes = pitches.count { it.type == "S" },
+            strikes = strikes,
             totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "F" },
             pitches = pitches
         )

@@ -99,33 +99,25 @@ class PitchTrackActivity : ComponentActivity() {
                 }
                 ActionButtons(
                     onBall = {
+                        val (ballsBefore, _) = currentAtBatCount(stats.pitches)
                         db.insertPitch(pitcherId, "B")
-                        val (balls, _) = currentAtBatCount(stats.pitches)
-                        if (balls >= 4) {
+                        if (ballsBefore >= 3) {
                             db.insertPitch(pitcherId, "W")
                             db.insertPitch(pitcherId, "BF")
                         }
                         refresh()
                     },
                     onStrike = {
+                        val (_, strikesBefore) = currentAtBatCount(stats.pitches)
                         db.insertPitch(pitcherId, "S")
-                        val (_, strikes) = currentAtBatCount(stats.pitches)
-                        if (strikes >= 3) {
+                        if (strikesBefore >= 2) {
                             db.insertPitch(pitcherId, "SO")
                             db.insertPitch(pitcherId, "BF")
                         }
                         refresh()
                     },
                     onFoul = {
-                        val (_, strikesBefore) = currentAtBatCount(stats.pitches)
                         db.insertPitch(pitcherId, "F")
-                        if (strikesBefore < 2) {
-                            val (_, strikesAfter) = currentAtBatCount(db.getPitchesForPitcher(pitcherId))
-                            if (strikesAfter >= 3) {
-                                db.insertPitch(pitcherId, "SO")
-                                db.insertPitch(pitcherId, "BF")
-                            }
-                        }
                         refresh()
                     },
                     onHbp = {
@@ -377,7 +369,7 @@ class PitchTrackActivity : ComponentActivity() {
                 "F" -> if (strikes < 2) strikes++
             }
         }
-        return Pair(balls, strikes)
+        return Pair(minOf(balls, 3), minOf(strikes, 2))
     }
 
     private fun getBatterJersey(battingOrder: Int): String {
