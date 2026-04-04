@@ -241,7 +241,7 @@ class DatabaseHelper(context: Context) {
             bf = pitches.count { it.type == "BF" },
             balls = pitches.count { it.type == "B" },
             strikes = strikes,
-            totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "F" },
+            totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "F" || it.type == "HBP" },
             pitches = pitches
         )
     }
