@@ -1,142 +1,178 @@
 package de.baseball.diamond9
 
-import android.graphics.Color
 import android.os.Bundle
-import android.view.Gravity
-import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
-class StatsActivity : AppCompatActivity() {
+class StatsActivity : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_stats)
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-
         db = DatabaseHelper(this)
         val pitcherId = intent.getLongExtra("pitcherId", -1)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-
         val stats = db.getStatsForPitcher(pitcherId)
-        supportActionBar?.title = stats.pitcher.name
 
-        // Summary cards
-        findViewById<TextView>(R.id.statBF).text = stats.bf.toString()
-        findViewById<TextView>(R.id.statBalls).text = stats.balls.toString()
-        findViewById<TextView>(R.id.statStrikes).text = stats.strikes.toString()
-        findViewById<TextView>(R.id.statTotal).text = stats.totalPitches.toString()
-
-        // Strike percentage
-        val strikePercent = if (stats.totalPitches > 0)
-            (stats.strikes * 100.0 / stats.totalPitches).toInt() else 0
-        findViewById<TextView>(R.id.statStrikePercent).text = "$strikePercent%"
-
-        // Pitch grid: 3 groups of B/S columns
-        val gridLayout = findViewById<LinearLayout>(R.id.pitchGrid)
-        buildPitchGrid(gridLayout, stats)
-    }
-
-    private fun buildPitchGrid(container: LinearLayout, stats: PitcherStats) {
-        container.removeAllViews()
-        val pitchesOnly = stats.pitches.filter { it.type == "B" || it.type == "S" }
-        val rows = 35
-        val groups = 3
-
-        val horizontal = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+        setContent {
+            StatsScreen(
+                stats = stats,
+                onBackClick = { finish() }
+            )
         }
+    }
+}
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StatsScreen(
+    stats: PitcherStats,
+    onBackClick: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stats.pitcher.name) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color(0xFFF5F5F5))
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+        ) {
+            // Summary cards
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatCard(label = stringResource(R.string.stat_bf), value = stats.bf.toString(), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_balls), value = stats.balls.toString(), valueColor = Color(0xFF1A5FA8), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_strikes), value = stats.strikes.toString(), valueColor = Color(0xFFC0392B), modifier = Modifier.weight(1f))
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatCard(label = stringResource(R.string.stat_total_pitches), value = stats.totalPitches.toString(), modifier = Modifier.weight(1f))
+                val strikePercent = if (stats.totalPitches > 0) (stats.strikes * 100.0 / stats.totalPitches).toInt() else 0
+                StatCard(label = stringResource(R.string.stat_strike_percent), value = "$strikePercent%", valueColor = Color(0xFF3B6D11), modifier = Modifier.weight(1f))
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = stringResource(R.string.stat_pitch_log),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF333333),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            PitchGrid(stats.pitches)
+        }
+    }
+}
+
+@Composable
+fun StatCard(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    valueColor: Color = Color.Black
+) {
+    Card(
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = label, fontSize = 11.sp, color = Color(0xFF888888))
+            Text(text = value, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = valueColor)
+        }
+    }
+}
+
+@Composable
+fun PitchGrid(pitches: List<Pitch>) {
+    val pitchesOnly = pitches.filter { it.type == "B" || it.type == "S" }
+    val rows = 35
+    val groups = 3
+
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         for (grp in 0 until groups) {
             val startIdx = grp * rows
-            val endIdx = minOf(startIdx + rows, pitchesOnly.size)
             val startNum = startIdx + 1
             val endNum = startIdx + rows
 
-            val groupLayout = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginEnd = if (grp < groups - 1) 8 else 0
-                }
-            }
-
-            // Group header
-            val header = TextView(this).apply {
-                text = "$startNum–$endNum"
-                textSize = 10f
-                gravity = Gravity.CENTER
-                setTextColor(Color.parseColor("#888888"))
-            }
-            groupLayout.addView(header)
-
-            // B / S column headers
-            val colHeaders = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-            }
-            listOf("B" to "#1a5fa8", "S" to "#c0392b").forEach { (label, color) ->
-                val tv = TextView(this).apply {
-                    text = label
-                    textSize = 11f
-                    gravity = Gravity.CENTER
-                    setTextColor(Color.parseColor(color))
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                }
-                colHeaders.addView(tv)
-            }
-            groupLayout.addView(colHeaders)
-
-            // Rows
-            for (i in 0 until rows) {
-                val pitchNum = startIdx + i
-                val row = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "$startNum–$endNum",
+                    fontSize = 10.sp,
+                    color = Color(0xFF888888),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(text = "B", modifier = Modifier.weight(1f), fontSize = 11.sp, color = Color(0xFF1A5FA8), textAlign = TextAlign.Center)
+                    Text(text = "S", modifier = Modifier.weight(1f), fontSize = 11.sp, color = Color(0xFFC0392B), textAlign = TextAlign.Center)
                 }
 
-                val actual = if (pitchNum < pitchesOnly.size) pitchesOnly[pitchNum] else null
-
-                for (col in 0..1) {
-                    val expectedType = if (col == 0) "B" else "S"
-                    val tv = TextView(this).apply {
-                        textSize = 11f
-                        gravity = Gravity.CENTER
-                        layoutParams = LinearLayout.LayoutParams(0, 44, 1f)
-                        text = when {
-                            actual == null -> ""
-                            actual.type == expectedType -> "✓"
-                            else -> "·"
-                        }
-                        setTextColor(when {
-                            actual == null -> Color.parseColor("#dddddd")
-                            actual.type == expectedType && col == 0 -> Color.parseColor("#1a5fa8")
-                            actual.type == expectedType && col == 1 -> Color.parseColor("#c0392b")
-                            else -> Color.parseColor("#cccccc")
-                        })
-                        background = ContextCompat.getDrawable(this@StatsActivity, R.drawable.cell_border)
+                for (i in 0 until rows) {
+                    val pitchIdx = startIdx + i
+                    val actual = if (pitchIdx < pitchesOnly.size) pitchesOnly[pitchIdx] else null
+                    
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        PitchCell(actual, "B", Color(0xFF1A5FA8), Modifier.weight(1f))
+                        PitchCell(actual, "S", Color(0xFFC0392B), Modifier.weight(1f))
                     }
-                    row.addView(tv)
                 }
-
-                groupLayout.addView(row)
             }
-
-            horizontal.addView(groupLayout)
         }
-
-        container.addView(horizontal)
     }
+}
 
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
+@Composable
+fun PitchCell(pitch: Pitch?, type: String, activeColor: Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .height(24.dp)
+            .border(0.5.dp, Color(0xFFDDDDDD))
+            .padding(2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        val isMatch = pitch?.type == type
+        Text(
+            text = if (pitch == null) "" else if (isMatch) "✓" else "·",
+            fontSize = 11.sp,
+            color = if (isMatch) activeColor else if (pitch == null) Color(0xFFDDDDDD) else Color(0xFFCCCCCC)
+        )
     }
 }
