@@ -3,98 +3,85 @@ package de.baseball.diamond9
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import android.widget.EditText
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
-class PitcherListActivity : AppCompatActivity() {
+class PitcherListActivity : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
-    private lateinit var recycler: RecyclerView
-    private lateinit var tvEmpty: android.widget.TextView
     private var gameId: Long = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_pitcher_list)
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-
         db = DatabaseHelper(this)
 
         gameId = intent.getLongExtra("gameId", -1)
-        supportActionBar?.title = intent.getStringExtra("gameOpponent") ?: ""
-        supportActionBar?.subtitle = intent.getStringExtra("gameDate") ?: ""
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        val gameOpponent = intent.getStringExtra("gameOpponent") ?: ""
+        val gameDate = intent.getStringExtra("gameDate") ?: ""
 
-        recycler = findViewById(R.id.recyclerPitchers)
-        tvEmpty = findViewById(R.id.tvEmptyPitchers)
-        recycler.layoutManager = LinearLayoutManager(this)
+        setContent {
+            var pitchers by remember { mutableStateOf(db.getPitchersForGame(gameId)) }
 
-        findViewById<com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton>(R.id.fabAddPitcher)
-            .setOnClickListener { showAddPitcherDialog() }
-
-        loadPitchers()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        loadPitchers()
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
-    }
-
-    private fun loadPitchers() {
-        val pitchers = db.getPitchersForGame(gameId)
-        tvEmpty.visibility = if (pitchers.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
-        recycler.visibility = if (pitchers.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
-        recycler.adapter = PitcherAdapter(pitchers,
-            onTrack = { pitcher ->
-                val intent = Intent(this, PitchTrackActivity::class.java)
-                intent.putExtra("pitcherId", pitcher.id)
-                intent.putExtra("pitcherName", pitcher.name)
-                intent.putExtra("gameId", gameId)
-                startActivity(intent)
-            },
-            onStats = { pitcher ->
-                val intent = Intent(this, StatsActivity::class.java)
-                intent.putExtra("pitcherId", pitcher.id)
-                startActivity(intent)
-            },
-            onDelete = { pitcher ->
-                AlertDialog.Builder(this)
-                    .setTitle(getString(R.string.dialog_delete_pitcher_title))
-                    .setMessage(getString(R.string.dialog_delete_pitcher_message, pitcher.name))
-                    .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
-                        db.deletePitcher(pitcher.id)
-                        loadPitchers()
-                    }
-                    .setNegativeButton(getString(R.string.btn_cancel), null)
-                    .show()
+            fun refreshPitchers() {
+                pitchers = db.getPitchersForGame(gameId)
             }
-        )
+
+            PitcherListScreen(
+                title = gameOpponent,
+                subtitle = gameDate,
+                pitchers = pitchers,
+                onTrack = { pitcher ->
+                    val intent = Intent(this, PitchTrackActivity::class.java)
+                    intent.putExtra("pitcherId", pitcher.id)
+                    intent.putExtra("pitcherName", pitcher.name)
+                    intent.putExtra("gameId", gameId)
+                    startActivity(intent)
+                },
+                onStats = { pitcher ->
+                    val intent = Intent(this, StatsActivity::class.java)
+                    intent.putExtra("pitcherId", pitcher.id)
+                    startActivity(intent)
+                },
+                onDelete = { pitcher ->
+                    AlertDialog.Builder(this)
+                        .setTitle(getString(R.string.dialog_delete_pitcher_title))
+                        .setMessage(getString(R.string.dialog_delete_pitcher_message, pitcher.name))
+                        .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
+                            db.deletePitcher(pitcher.id)
+                            refreshPitchers()
+                        }
+                        .setNegativeButton(getString(R.string.btn_cancel), null)
+                        .show()
+                },
+                onAddPitcherClick = { showAddPitcherDialog { refreshPitchers() } },
+                onBackClick = { finish() }
+            )
+        }
     }
 
-    private fun showAddPitcherDialog() {
-        // Nur Spieler aus Lineup-Slots 1–9; Fallback: alle Team-Spieler
+    private fun showAddPitcherDialog(onSuccess: () -> Unit) {
         val starters = db.getOwnLineupStarters(gameId)
         val teamId = db.getGame(gameId)?.teamId ?: 0L
         val players = if (starters.isNotEmpty()) starters
-                      else if (teamId > 0) db.getPlayersForTeam(teamId)
-                      else emptyList()
+        else if (teamId > 0) db.getPlayersForTeam(teamId)
+        else emptyList()
 
         if (players.isEmpty()) {
             val et = EditText(this).apply {
@@ -108,7 +95,7 @@ class PitcherListActivity : AppCompatActivity() {
                     val name = et.text.toString().trim()
                     if (name.isNotEmpty()) {
                         db.insertPitcher(gameId, name)
-                        loadPitchers()
+                        onSuccess()
                     }
                 }
                 .setNegativeButton(getString(R.string.btn_cancel), null)
@@ -125,42 +112,150 @@ class PitcherListActivity : AppCompatActivity() {
             .setPositiveButton(getString(R.string.btn_add)) { _, _ ->
                 val selected = players[selectedIndex]
                 db.insertPitcher(gameId, selected.name, selected.id)
-                loadPitchers()
+                onSuccess()
             }
             .setNegativeButton(getString(R.string.btn_cancel), null)
             .show()
     }
 }
 
-class PitcherAdapter(
-    private val pitchers: List<Pitcher>,
-    private val onTrack: (Pitcher) -> Unit,
-    private val onStats: (Pitcher) -> Unit,
-    private val onDelete: (Pitcher) -> Unit
-) : RecyclerView.Adapter<PitcherAdapter.VH>() {
-
-    inner class VH(view: View) : RecyclerView.ViewHolder(view) {
-        val tvName: TextView = view.findViewById(R.id.tvPitcherName)
-        val btnTrack: Button = view.findViewById(R.id.btnTrack)
-        val btnStats: Button = view.findViewById(R.id.btnStats)
-        val btnDelete: ImageButton = view.findViewById(R.id.btnDeletePitcher)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PitcherListScreen(
+    title: String,
+    subtitle: String,
+    pitchers: List<Pitcher>,
+    onTrack: (Pitcher) -> Unit,
+    onStats: (Pitcher) -> Unit,
+    onDelete: (Pitcher) -> Unit,
+    onAddPitcherClick: () -> Unit,
+    onBackClick: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(title)
+                        if (subtitle.isNotEmpty()) {
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onAddPitcherClick,
+                containerColor = Color(0xFF1A5FA8),
+                contentColor = Color.White,
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.fab_add_pitcher)) }
+            )
+        }
+    ) { padding ->
+        if (pitchers.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.empty_pitchers),
+                    fontSize = 15.sp,
+                    color = Color(0xFF888888),
+                    modifier = Modifier.padding(32.dp)
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                itemsIndexed(pitchers) { index, pitcher ->
+                    val isActive = index == pitchers.lastIndex
+                    PitcherItem(
+                        pitcher = pitcher,
+                        isActive = isActive,
+                        onTrack = { onTrack(pitcher) },
+                        onStats = { onStats(pitcher) },
+                        onDelete = { onDelete(pitcher) }
+                    )
+                }
+            }
+        }
     }
+}
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_pitcher, parent, false)
-        return VH(v)
+@Composable
+fun PitcherItem(
+    pitcher: Pitcher,
+    isActive: Boolean,
+    onTrack: () -> Unit,
+    onStats: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = pitcher.name,
+                modifier = Modifier.weight(1f),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            
+            Button(
+                onClick = onTrack,
+                enabled = isActive,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1A5FA8),
+                    disabledContainerColor = Color(0xFF1A5FA8).copy(alpha = 0.35f)
+                ),
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.padding(end = 8.dp)
+            ) {
+                Text(stringResource(R.string.btn_pitch), color = Color.White)
+            }
+
+            Button(
+                onClick = onStats,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B6D11)),
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.padding(end = 8.dp)
+            ) {
+                Text(stringResource(R.string.btn_stats), color = Color.White)
+            }
+
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = Color(0xFFC0392B)
+                )
+            }
+        }
     }
-
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        val p = pitchers[position]
-        val isActive = position == pitchers.lastIndex
-        holder.tvName.text = p.name
-        holder.btnTrack.isEnabled = isActive
-        holder.btnTrack.alpha = if (isActive) 1f else 0.35f
-        holder.btnTrack.setOnClickListener { if (isActive) onTrack(p) }
-        holder.btnStats.setOnClickListener { onStats(p) }
-        holder.btnDelete.setOnClickListener { onDelete(p) }
-    }
-
-    override fun getItemCount() = pitchers.size
 }
