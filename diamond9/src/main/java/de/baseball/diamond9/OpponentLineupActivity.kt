@@ -123,16 +123,16 @@ fun OpponentLineupScreen(
                 val timesIn = subs.count { it.jerseyIn == sub.jerseyOut }
                 val isStarter = slotStates.any { it.originalJersey == sub.jerseyOut }
                 val (label, color) = when {
-                    isStarter && timesIn == 0 -> "Draußen – kann zurückkehren" to Color(0xFFe67e22)
-                    isStarter && timesIn >= 1 -> "Zurückgekehrt" to Color(0xFF27ae60)
-                    else -> "Draußen" to Color(0xFFc0392b)
+                    isStarter && timesIn == 0 -> "OUT_CAN_RETURN" to Color(0xFFe67e22)
+                    isStarter && timesIn >= 1 -> "RETURNED" to Color(0xFF27ae60)
+                    else -> "OUT" to Color(0xFFc0392b)
                 }
                 entries.add(OppWechselEntry(sub.jerseyOut, label, color))
             }
             if (seen.add(sub.jerseyIn)) {
                 val isOnField = slotStates.any { it.currentJersey == sub.jerseyIn }
-                val (label, color) = if (isOnField) "Im Spiel" to Color(0xFF27ae60)
-                else "Fertig (nicht mehr verfügbar)" to Color(0xFFc0392b)
+                val (label, color) = if (isOnField) "IN_GAME" to Color(0xFF27ae60)
+                else "DONE" to Color(0xFFc0392b)
                 entries.add(OppWechselEntry(sub.jerseyIn, label, color))
             }
         }
@@ -154,7 +154,7 @@ fun OpponentLineupScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -371,7 +371,7 @@ fun OpponentLineupScreen(
                     db.addOpponentSubstitution(gameId, state.slot, state.currentJersey, state.originalJersey)
                     refresh()
                     returnStarterDialogState = null
-                }) { Text("Zurück") }
+                }) { Text(stringResource(R.string.btn_back_to_game)) }
             },
             dismissButton = { TextButton(onClick = { returnStarterDialogState = null }) { Text(stringResource(R.string.btn_cancel)) } }
         )
@@ -483,7 +483,7 @@ private fun OpponentStarterRow(
             Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                 if (state.currentJersey.isNotEmpty() && !hasSubs) {
                     IconButton(onClick = onClearClick) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color.Gray)
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.content_desc_clear), tint = Color.Gray)
                     }
                 }
             }
@@ -532,7 +532,7 @@ private fun OpponentSubstituteRow(
             Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                 if (bp != null && !isInvolved) {
                     IconButton(onClick = onClearClick) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color.Gray)
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.content_desc_clear), tint = Color.Gray)
                     }
                 }
             }
@@ -542,6 +542,14 @@ private fun OpponentSubstituteRow(
 
 @Composable
 private fun OpponentChangeRow(entry: OppWechselEntry) {
+    val statusText = when (entry.label) {
+        "OUT_CAN_RETURN" -> stringResource(R.string.status_out_can_return)
+        "RETURNED" -> stringResource(R.string.status_returned)
+        "OUT" -> stringResource(R.string.status_out)
+        "IN_GAME" -> stringResource(R.string.status_in_game)
+        "DONE" -> stringResource(R.string.status_done)
+        else -> entry.label
+    }
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -553,7 +561,7 @@ private fun OpponentChangeRow(entry: OppWechselEntry) {
             modifier = Modifier.weight(1f)
         )
         Text(
-            text = entry.label,
+            text = statusText,
             fontSize = 13.sp,
             color = entry.color,
             textAlign = TextAlign.End

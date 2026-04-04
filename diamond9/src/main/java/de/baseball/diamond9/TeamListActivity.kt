@@ -174,7 +174,7 @@ fun TeamListScreen(
                 title = { Text(stringResource(R.string.teams_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
                     }
                 },
                 actions = {
@@ -270,7 +270,7 @@ fun TeamItem(
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.content_desc_delete),
                     tint = Color(0xFFC0392B)
                 )
             }

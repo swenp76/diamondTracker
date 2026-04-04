@@ -128,13 +128,13 @@ fun TeamDetailScreen(
                 title = { Text(stringResource(R.string.team_detail_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
                     }
                 },
                 actions = {
                     Box {
                         IconButton(onClick = { menuExpanded = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.content_desc_more))
                         }
                         DropdownMenu(
                             expanded = menuExpanded,
@@ -355,7 +355,7 @@ fun PlayerItem(
                     modifier = Modifier.padding(end = 6.dp)
                 ) {
                     Text(
-                        text = "P",
+                        text = stringResource(R.string.badge_pitcher),
                         color = Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -383,7 +383,7 @@ fun PlayerItem(
             IconButton(onClick = { onDelete(player) }, modifier = Modifier.size(36.dp)) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.content_desc_delete),
                     tint = Color(0xFFc0392b)
                 )
             }
@@ -400,7 +400,7 @@ fun PositionBadge(pos: Int, textColor: Color) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = if (pos > 0) BaseballPositions.shortLabel(pos) else "–",
+            text = if (pos > 0) stringResource(BaseballPositions.shortLabelRes(pos)) else "–",
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             color = textColor
@@ -421,7 +421,7 @@ fun ActivePositionsDialog(
         title = { Text(stringResource(R.string.dialog_active_positions_title)) },
         text = {
             LazyColumn {
-                items(BaseballPositions.ALL) { (pos, label) ->
+                items(BaseballPositions.ALL) { (pos, labelRes) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().clickable {
@@ -437,7 +437,7 @@ fun ActivePositionsDialog(
                                 db.setPositionEnabled(teamId, pos, isChecked)
                             }
                         )
-                        Text(text = label, fontSize = 15.sp)
+                        Text(text = stringResource(labelRes), fontSize = 15.sp)
                     }
                 }
             }
@@ -465,7 +465,7 @@ fun PlayerEditDialog(
 
     val enabledPositions = remember { db.getEnabledPositions(teamId).sorted() }
     val positionItems = remember {
-        listOf(0 to "Keine") + BaseballPositions.ALL.filter { it.first in enabledPositions }
+        listOf(0 to R.string.spinner_no_position) + BaseballPositions.ALL.filter { it.first in enabledPositions }
     }
 
     AlertDialog(
@@ -547,12 +547,12 @@ fun DialogTextField(label: String, value: String, onValueChange: (String) -> Uni
 @Composable
 fun PositionSpinner(
     selectedPos: Int,
-    items: List<Pair<Int, String>>,
+    items: List<Pair<Int, Int>>,
     disabledPos: Int = -1,
     onSelected: (Int) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedLabel = items.firstOrNull { it.first == selectedPos }?.second ?: "Keine"
+    val selectedLabel = items.firstOrNull { it.first == selectedPos }?.second?.let { stringResource(it) } ?: stringResource(R.string.spinner_no_position)
 
     Box(modifier = Modifier.fillMaxWidth()) {
         OutlinedButton(
@@ -564,7 +564,8 @@ fun PositionSpinner(
             Icon(Icons.Default.MoreVert, contentDescription = null)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            items.forEach { (pos, label) ->
+            items.forEach { (pos, labelRes) ->
+                val label = stringResource(labelRes)
                 DropdownMenuItem(
                     text = { Text(label, color = if (pos != 0 && pos == disabledPos) Color.Gray else Color.Black) },
                     onClick = {

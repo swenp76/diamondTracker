@@ -130,7 +130,7 @@ private fun GameListScreen(
                 title = { Text(teamName) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.content_desc_back))
                     }
                 },
                 actions = {
@@ -336,11 +336,18 @@ private fun GameDialog(
     onConfirm: (String, String) -> Unit
 ) {
     val context = LocalContext.current
-    val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+    val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.US)
     val calendar = remember {
         Calendar.getInstance().apply {
             if (initialDate.isNotEmpty()) {
-                try { time = sdf.parse(initialDate)!! } catch (_: Exception) {}
+                try {
+                    val parts = initialDate.split(".")
+                    if (parts.size == 3) {
+                        set(Calendar.DAY_OF_MONTH, parts[0].toInt())
+                        set(Calendar.MONTH, parts[1].toInt() - 1)
+                        set(Calendar.YEAR, parts[2].toInt())
+                    }
+                } catch (_: Exception) {}
             }
         }
     }

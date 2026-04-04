@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">diamond9</string>
+
+    <!-- ── Gemeinsame Buttons ──────────────────────────────────────────────── -->
+    <string name="btn_save">Speichern</string>
+    <string name="btn_create">Erstellen</string>
+    <string name="btn_add">Hinzufügen</string>
+    <string name="btn_delete">Löschen</string>
+    <string name="btn_cancel">Abbrechen</string>
+    <string name="btn_copy">Kopieren</string>
+    <string name="btn_done">Fertig</string>
+    <string name="btn_back_to_game">Zurück</string>
+    <string name="btn_import">Importieren</string>
+    <string name="error_required_field">Pflichtfeld</string>
+
+    <!-- ── Barrierefreiheit / Content Descriptions ───────────────────────── -->
+    <string name="content_desc_back">Zurück</string>
+    <string name="content_desc_more">Mehr</string>
+    <string name="content_desc_delete">Löschen</string>
+    <string name="content_desc_add">Hinzufügen</string>
+    <string name="content_desc_clear">Leeren</string>
+
+    <!-- ── Statistik-Labels ───────────────────────────────────────────────── -->
+    <string name="stat_bf">BF</string>
+    <string name="stat_balls">Balls</string>
+    <string name="stat_strikes">Strikes</string>
+    <string name="stat_total_pitches">Total Pitches</string>
+    <string name="stat_strike_percent">Strike%</string>
+    <string name="stat_pitch">Pitch</string>
+    <string name="stat_count">Count</string>
+    <string name="stat_pitch_log">Pitch-Verlauf</string>
+
+    <!-- ── Pitch-Buttons ──────────────────────────────────────────────────── -->
+    <string name="btn_ball">BALL</string>
+    <string name="btn_strike">STRIKE</string>
+    <string name="btn_hbp">HBP</string>
+    <string name="btn_walk">WALK</string>
+    <string name="btn_strikeout">K</string>
+    <string name="btn_foul">FOUL</string>
+    <string name="btn_add_batter">+ BATTER</string>
+    <string name="btn_undo">↩ RÜCKGÄNGIG</string>
+
+    <!-- ── Pitch-Log Labels ───────────────────────────────────────────────── -->
+    <string name="pitch_label_ball">Ball</string>
+    <string name="pitch_label_strike">Strike</string>
+    <string name="pitch_label_foul">Foul</string>
+    <string name="pitch_label_hbp">── Hit by Pitch ─────────────────</string>
+    <string name="pitch_label_walk">── Walk ─────────────────────────</string>
+    <string name="pitch_label_strikeout">── Strike-Out (K) ───────────────</string>
+    <string name="pitch_label_slot">── Slot %d ──────────────────────────</string>
+    <string name="pitch_label_slot_with_jersey">── %1$s (Slot %2$d) ─────────────</string>
+
+    <!-- ── PitchTrackActivity ─────────────────────────────────────────────── -->
+    <string name="label_batter">Batter:</string>
+    <string name="label_batter_slot">Slot %d</string>
+    <string name="label_batter_slot_with_jersey">%1$s  (Slot %2$d)</string>
+    <string name="hint_lineup">Aufstellung ▶</string>
+    <string name="pitcher_default_name">Pitcher</string>
+
+    <!-- ── Einstellungen ──────────────────────────────────────────────────── -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_section_general">ALLGEMEIN</string>
+    <string name="settings_teams_title">Teams verwalten</string>
+    <string name="settings_teams_subtitle">Teams, Positionen und Spieler</string>
+    <string name="menu_settings">Einstellungen</string>
+
+    <!-- ── Spiele ─────────────────────────────────────────────────────────── -->
+    <string name="dialog_no_team_title">Kein Team vorhanden</string>
+    <string name="dialog_no_team_message">Bitte zuerst ein eigenes Team unter Einstellungen → Teams anlegen.</string>
+    <string name="dialog_add_game_title">Neues Spiel</string>
+    <string name="dialog_copy_game_title">Spiel kopieren (%s)</string>
+    <string name="dialog_edit_game_title">Spiel bearbeiten</string>
+    <string name="dialog_delete_game_title">Spiel löschen</string>
+    <string name="dialog_delete_game_message">%1$s vs %2$s wirklich löschen?</string>
+    <string name="label_own_team">Eigenes Team</string>
+    <string name="label_date">Datum</string>
+    <string name="hint_date_format">TT.MM.JJJJ</string>
+    <string name="label_opponent">Gegner</string>
+    <string name="hint_opponent">Mannschaft</string>
+    <string name="label_or_enter_new">Oder neu eingeben:</string>
+
+    <!-- ── GameHub ────────────────────────────────────────────────────────── -->
+    <string name="gamehub_offense">Offense</string>
+    <string name="gamehub_defense">Defense</string>
+    <string name="gamehub_lineup">Lineup</string>
+    <string name="gamehub_oppo_lineup">Oppo-Lineup</string>
+    <string name="toast_offense_coming_soon">Offense – coming soon</string>
+
+    <!-- ── Pitcher ────────────────────────────────────────────────────────── -->
+    <string name="dialog_add_pitcher_title">Neuer Pitcher</string>
+    <string name="hint_pitcher_name">Name des Pitchers</string>
+    <string name="dialog_delete_pitcher_title">Pitcher löschen</string>
+    <string name="dialog_delete_pitcher_message">%s wirklich löschen?</string>
+    <string name="btn_pitch">Pitchen</string>
+    <string name="btn_stats">Stats</string>
+    <string name="badge_pitcher">P</string>
+
+    <!-- ── Teams ──────────────────────────────────────────────────────────── -->
+    <string name="teams_title">Teams</string>
+    <string name="menu_import_team">Team importieren</string>
+    <string name="menu_export_team">Team exportieren</string>
+    <string name="dialog_delete_team_title">Team löschen</string>
+    <string name="dialog_delete_team_message">\"%s\" und alle Spieler wirklich löschen?</string>
+    <string name="dialog_add_team_title">Neues Team</string>
+    <string name="hint_team_name">Teamname</string>
+    <string name="dialog_import_team_title">Team importieren</string>
+    <string name="dialog_import_team_message">\"%s\" importieren und als neues Team hinzufügen?</string>
+    <string name="toast_team_imported">\"%s\" importiert</string>
+    <string name="toast_import_failed">Import fehlgeschlagen: %s</string>
+    <string name="toast_file_read_error">Datei konnte nicht gelesen werden</string>
+    <string name="toast_invalid_json">Ungültiges Format – keine gültige JSON-Datei</string>
+    <string name="toast_invalid_team_format">Ungültiges Format – kein Team gefunden</string>
+    <string name="team_tap_to_edit">Tippen zum Bearbeiten</string>
+
+    <!-- ── Team-Detail ────────────────────────────────────────────────────── -->
+    <string name="team_detail_title">Team bearbeiten</string>
+    <string name="label_team_name_header">TEAMNAME</string>
+    <string name="label_roster">ROSTER</string>
+    <string name="menu_active_positions">Aktive Positionen</string>
+    <string name="dialog_active_positions_title">Aktive Positionen</string>
+    <string name="dialog_delete_player_title">Spieler löschen</string>
+    <string name="dialog_delete_player_message">%s wirklich löschen?</string>
+    <string name="toast_saved">Gespeichert</string>
+    <string name="toast_team_exported">Team exportiert</string>
+    <string name="toast_export_failed">Export fehlgeschlagen: %s</string>
+    <string name="dialog_add_player_title">Neuer Spieler</string>
+    <string name="dialog_edit_player_title">Spieler bearbeiten</string>
+    <string name="spinner_no_position">Keine</string>
+
+    <!-- ── Baseball-Positionen ────────────────────────────────────────────── -->
+    <string name="pos_1">1 – Pitcher</string>
+    <string name="pos_2">2 – Catcher</string>
+    <string name="pos_3">3 – First Base</string>
+    <string name="pos_4">4 – Second Base</string>
+    <string name="pos_5">5 – Third Base</string>
+    <string name="pos_6">6 – Shortstop</string>
+    <string name="pos_7">7 – Left Field</string>
+    <string name="pos_8">8 – Center Field</string>
+    <string name="pos_9">9 – Right Field</string>
+    <string name="pos_10">DH – Designated Hitter</string>
+
+    <string name="pos_short_1">P</string>
+    <string name="pos_short_2">C</string>
+    <string name="pos_short_3">1B</string>
+    <string name="pos_short_4">2B</string>
+    <string name="pos_short_5">3B</string>
+    <string name="pos_short_6">SS</string>
+    <string name="pos_short_7">LF</string>
+    <string name="pos_short_8">CF</string>
+    <string name="pos_short_9">RF</string>
+    <string name="pos_short_10">DH</string>
+    <string name="pos_short_unknown">?</string>
+
+    <!-- ── Spieler-Dialog ─────────────────────────────────────────────────── -->
+    <string name="label_name">Name</string>
+    <string name="hint_full_name">Vor- und Nachname</string>
+    <string name="label_jersey_number">Trikotnummer</string>
+    <string name="hint_jersey_number">z.B. 7</string>
+    <string name="label_primary_position">Hauptposition</string>
+    <string name="label_secondary_position">Zweite Position</string>
+    <string name="label_is_pitcher">Pitcher</string>
+    <string name="label_birth_year">Geburtsjahr</string>
+    <string name="hint_birth_year">z.B. 2009</string>
+
+    <!-- ── Eigenes Lineup ─────────────────────────────────────────────────── -->
+    <string name="lineup_section_starters">Starter (1 – 10)</string>
+    <string name="lineup_section_substitutes">Substitutes (11 – 20)</string>
+    <string name="lineup_slot_empty">— leer —</string>
+    <string name="lineup_section_changes">Wechsel-Übersicht</string>
+    <string name="dialog_sub_title">Einwechslung – Slot %d</string>
+    <string name="dialog_sub_normal">Normal</string>
+    <string name="dialog_sub_injury">Verletzung</string>
+    <string name="dialog_return_title">Rückwechslung – Slot %d</string>
+    <string name="dialog_return_message">%s zurück ins Spiel?</string>
+    <string name="dialog_injury_title">Verletzung – Slot %d</string>
+    <string name="dialog_no_subs_title">Keine Substitutes verfügbar</string>
+    <string name="dialog_no_subs_message">Alle Substitutes wurden bereits eingesetzt.</string>
+    <string name="dialog_no_players_title">Keine Spieler verfügbar</string>
+    <string name="dialog_no_players_own_message">Keine verfügbaren Substitutes oder ausgewechselten Starter.</string>
+    <string name="dialog_no_players_oppo_message">Keine verfügbaren Bank- oder ausgewechselten Starter.</string>
+    <string name="dialog_pick_player_title">Slot %d – Spieler wählen</string>
+    <string name="dialog_no_more_players">Keine weiteren Spieler verfügbar.</string>
+    <string name="status_out_can_return">Draußen – kann zurückkehren</string>
+    <string name="status_returned">Zurückgekehrt</string>
+    <string name="status_done">Fertig (nicht mehr verfügbar)</string>
+    <string name="status_out">Draußen</string>
+    <string name="status_in_game">Im Spiel</string>
+
+    <!-- ── Gegner-Lineup ──────────────────────────────────────────────────── -->
+    <string name="oppo_lineup_subtitle">Aufstellung</string>
+    <string name="oppo_section_batting_order">Batting Order (1 – 9)</string>
+    <string name="oppo_section_bench">Bank (11 – 20)</string>
+    <string name="dialog_jersey_title">Trikotnummer</string>
+    <string name="dialog_other_number">Andere Nummer…</string>
+
+    <!-- Coach Select -->
+    <string name="coach_select_title">Welches Team möchtest du heute coachen?</string>
+    <string name="coach_select_no_teams">Noch keine Teams angelegt.\nGehe zu Einstellungen → Teams.</string>
+
+    <!-- FAB Labels -->
+    <string name="fab_add_game">Spiel hinzufügen</string>
+    <string name="fab_add_pitcher">Pitcher hinzufügen</string>
+    <string name="fab_add_team">Team hinzufügen</string>
+    <string name="fab_add_player">Spieler hinzufügen</string>
+
+    <!-- ── Einstellungen: Opponents ─────────────────────────────────────── -->
+    <string name="settings_opponents_title">Gegner verwalten</string>
+    <string name="settings_opponents_subtitle">Gegnerische Teams anlegen</string>
+    <string name="dialog_add_opponent_title">Neues gegnerisches Team</string>
+    <string name="dialog_delete_opponent_title">Gegner löschen</string>
+    <string name="dialog_delete_opponent_message">\"%s\" aus der Liste entfernen?</string>
+    <string name="hint_opponent_team_name">Teamname</string>
+    <string name="fab_add_opponent">Gegner hinzufügen</string>
+
+    <!-- ── Empty States ──────────────────────────────────────────────────── -->
+    <string name="empty_games">Noch keine Spiele vorhanden.\nFüge zuerst ein neues Spiel hinzu.</string>
+    <string name="empty_pitchers">Noch keine Pitcher vorhanden.\nFüge zuerst einen neuen Pitcher hinzu.</string>
+    <string name="empty_teams">Noch keine Teams vorhanden. Füge zuerst ein neues Team hinzu oder importiere eins</string>
+    <string name="empty_players">Noch keine Spieler vorhanden.\nFüge zuerst einen neuen Spieler hinzu.</string>
+    <string name="empty_opponents">Noch keine Gegner angelegt.\nFüge zuerst ein gegnerisches Team hinzu.</string>
+
+</resources>

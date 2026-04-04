@@ -75,7 +75,7 @@ class PitchTrackActivity : ComponentActivity() {
                     title = { Text(pitcherName) },
                     navigationIcon = {
                         IconButton(onClick = { finish() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(

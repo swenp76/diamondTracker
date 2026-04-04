@@ -95,7 +95,7 @@ private fun ManageOpponentsScreen(
                 title = { Text(stringResource(R.string.settings_opponents_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -226,7 +226,7 @@ private fun OpponentItem(
             )
 
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = DeleteRed)
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.content_desc_delete), tint = DeleteRed)
             }
         }
     }
