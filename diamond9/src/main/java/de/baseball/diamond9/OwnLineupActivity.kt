@@ -115,11 +115,12 @@ private fun OwnLineupScreen(
     var returnStarterDialogState by remember { mutableStateOf<SlotState?>(null) }
 
     val refresh = {
-        lineup = db.getOwnLineup(gameId)
+        val lineupData = db.getOwnLineup(gameId)
+        lineup = lineupData
         substitutions = db.getSubstitutionsForGame(gameId)
 
         val computedSlots = (1..10).map { slot ->
-            val original = lineup[slot]
+            val original = lineupData[slot]
             if (original == null) {
                 SlotState(slot, null, null, SwapType.NONE)
             } else {
@@ -139,7 +140,7 @@ private fun OwnLineupScreen(
 
         val computedSubStatuses = mutableMapOf<Long, SubStatus>()
         for (slot in 11..20) {
-            val player = lineup[slot] ?: continue
+            val player = lineupData[slot] ?: continue
             val timesIn = substitutions.count { it.playerInId == player.id }
             val timesOut = substitutions.count { it.playerOutId == player.id }
             computedSubStatuses[player.id] = when {
@@ -149,9 +150,10 @@ private fun OwnLineupScreen(
             }
         }
         subStatuses = computedSubStatuses
+    }
 
-        // Wechsel Section
-        val entries = mutableListOf<WechselEntry>()
+    val entries = remember(substitutions, slotStates) {
+        val list = mutableListOf<WechselEntry>()
         val seen = mutableSetOf<Long>()
         substitutions.forEach { sub ->
             val playerOut = db.getPlayerById(sub.playerOutId) ?: return@forEach
@@ -159,27 +161,28 @@ private fun OwnLineupScreen(
 
             if (seen.add(playerOut.id)) {
                 val timesIn = substitutions.count { it.playerInId == playerOut.id }
-                val isStarter = (1..10).any { lineup[it]?.id == playerOut.id }
+                val isStarter = slotStates.any { it.originalPlayer?.id == playerOut.id }
                 val (label, color) = when {
-                    isStarter && timesIn == 0 -> "Draußen – kann zurückkehren" to Color(0xFFe67e22)
-                    isStarter && timesIn >= 1 -> "Zurückgekehrt" to Color(0xFF27ae60)
-                    else -> "Draußen" to Color(0xFFc0392b)
+                    isStarter && timesIn == 0 -> "OUT_CAN_RETURN" to Color(0xFFe67e22)
+                    isStarter && timesIn >= 1 -> "RETURNED" to Color(0xFF27ae60)
+                    else -> "OUT" to Color(0xFFc0392b)
                 }
-                entries.add(WechselEntry(playerOut, label, color))
+                list.add(WechselEntry(playerOut, label, color))
             }
 
             if (seen.add(playerIn.id)) {
                 val timesOut = substitutions.count { it.playerOutId == playerIn.id }
-                val isOnField = computedSlots.any { it.currentPlayer?.id == playerIn.id }
+                val isOnField = slotStates.any { it.currentPlayer?.id == playerIn.id }
                 val (label, color) = when {
-                    isOnField && timesOut == 0 -> "Im Spiel" to Color(0xFF27ae60)
-                    else -> "Fertig (nicht mehr verfügbar)" to Color(0xFFc0392b)
+                    isOnField && timesOut == 0 -> "IN_GAME" to Color(0xFF27ae60)
+                    else -> "DONE" to Color(0xFFc0392b)
                 }
-                entries.add(WechselEntry(playerIn, label, color))
+                list.add(WechselEntry(playerIn, label, color))
             }
         }
-        wechselEntries = entries
+        list
     }
+    wechselEntries = entries
 
     LaunchedEffect(Unit) {
         refresh()
@@ -196,7 +199,7 @@ private fun OwnLineupScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -285,7 +288,7 @@ private fun OwnLineupScreen(
                     LazyColumn {
                         items(unassigned) { player ->
                             Text(
-                                text = "#${player.number}  ${player.name}  (${BaseballPositions.shortLabel(player.primaryPosition)})",
+                                text = "#${player.number}  ${player.name}  (${stringResource(BaseballPositions.shortLabelRes(player.primaryPosition))})",
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
@@ -398,7 +401,7 @@ private fun OwnLineupScreen(
                     db.addSubstitution(gameId, state.slot, state.currentPlayer!!.id, original.id)
                     refresh()
                     returnStarterDialogState = null
-                }) { Text("Zurück") }
+                }) { Text(stringResource(R.string.btn_back_to_game)) }
             },
             dismissButton = { TextButton(onClick = { returnStarterDialogState = null }) { Text(stringResource(R.string.btn_cancel)) } }
         )
@@ -487,7 +490,7 @@ private fun StarterRow(
             Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                 if (state.currentPlayer != null && !hasSubs) {
                     IconButton(onClick = onClearClick) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color.Gray)
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.content_desc_clear), tint = Color.Gray)
                     }
                 }
             }
@@ -521,7 +524,7 @@ private fun SubstituteRow(
             Column(modifier = Modifier.weight(1f)) {
                 if (player != null) {
                     Text(
-                        text = "#${player.number}  ${player.name}  (${BaseballPositions.shortLabel(player.primaryPosition)})",
+                        text = "#${player.number}  ${player.name}  (${stringResource(BaseballPositions.shortLabelRes(player.primaryPosition))})",
                         fontSize = 16.sp,
                         color = if (status == SubStatus.DONE) Color(0xFF999999) else Color(0xFF222222)
                     )
@@ -551,7 +554,7 @@ private fun SubstituteRow(
             Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                 if (player != null && !isInvolved) {
                     IconButton(onClick = onClearClick) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color.Gray)
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.content_desc_clear), tint = Color.Gray)
                     }
                 }
             }
@@ -561,6 +564,14 @@ private fun SubstituteRow(
 
 @Composable
 private fun ChangeRow(entry: WechselEntry) {
+    val statusText = when (entry.statusLabel) {
+        "OUT_CAN_RETURN" -> stringResource(R.string.status_out_can_return)
+        "RETURNED" -> stringResource(R.string.status_returned)
+        "OUT" -> stringResource(R.string.status_out)
+        "IN_GAME" -> stringResource(R.string.status_in_game)
+        "DONE" -> stringResource(R.string.status_done)
+        else -> entry.statusLabel
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -574,7 +585,7 @@ private fun ChangeRow(entry: WechselEntry) {
             modifier = Modifier.weight(1f)
         )
         Text(
-            text = entry.statusLabel,
+            text = statusText,
             fontSize = 13.sp,
             color = entry.statusColor,
             textAlign = TextAlign.End

@@ -9,37 +9,37 @@ import org.junit.runner.RunWith
 class BaseballPositionsTest {
 
     @Test
-    fun label_returnsCorrectNameForAllPositions() {
-        assertEquals("1 – Pitcher", BaseballPositions.label(1))
-        assertEquals("2 – Catcher", BaseballPositions.label(2))
-        assertEquals("3 – First Base", BaseballPositions.label(3))
-        assertEquals("4 – Second Base", BaseballPositions.label(4))
-        assertEquals("5 – Third Base", BaseballPositions.label(5))
-        assertEquals("6 – Shortstop", BaseballPositions.label(6))
-        assertEquals("7 – Left Field", BaseballPositions.label(7))
-        assertEquals("8 – Center Field", BaseballPositions.label(8))
-        assertEquals("9 – Right Field", BaseballPositions.label(9))
-        assertEquals("DH – Designated Hitter", BaseballPositions.label(10))
+    fun labelRes_returnsCorrectResForAllPositions() {
+        assertEquals(R.string.pos_1, BaseballPositions.labelRes(1))
+        assertEquals(R.string.pos_2, BaseballPositions.labelRes(2))
+        assertEquals(R.string.pos_3, BaseballPositions.labelRes(3))
+        assertEquals(R.string.pos_4, BaseballPositions.labelRes(4))
+        assertEquals(R.string.pos_5, BaseballPositions.labelRes(5))
+        assertEquals(R.string.pos_6, BaseballPositions.labelRes(6))
+        assertEquals(R.string.pos_7, BaseballPositions.labelRes(7))
+        assertEquals(R.string.pos_8, BaseballPositions.labelRes(8))
+        assertEquals(R.string.pos_9, BaseballPositions.labelRes(9))
+        assertEquals(R.string.pos_10, BaseballPositions.labelRes(10))
     }
 
     @Test
-    fun label_unknownPosition_returnsQuestionMark() {
-        assertEquals("?", BaseballPositions.label(0))
-        assertEquals("?", BaseballPositions.label(99))
+    fun labelRes_unknownPosition_returnsUnknownRes() {
+        assertEquals(R.string.pos_short_unknown, BaseballPositions.labelRes(0))
+        assertEquals(R.string.pos_short_unknown, BaseballPositions.labelRes(99))
     }
 
     @Test
-    fun shortLabel_returnsCorrectAbbreviations() {
-        assertEquals("P", BaseballPositions.shortLabel(1))
-        assertEquals("C", BaseballPositions.shortLabel(2))
-        assertEquals("1B", BaseballPositions.shortLabel(3))
-        assertEquals("2B", BaseballPositions.shortLabel(4))
-        assertEquals("3B", BaseballPositions.shortLabel(5))
-        assertEquals("SS", BaseballPositions.shortLabel(6))
-        assertEquals("LF", BaseballPositions.shortLabel(7))
-        assertEquals("CF", BaseballPositions.shortLabel(8))
-        assertEquals("RF", BaseballPositions.shortLabel(9))
-        assertEquals("DH", BaseballPositions.shortLabel(10))
-        assertEquals("?", BaseballPositions.shortLabel(99))
+    fun shortLabelRes_returnsCorrectRes() {
+        assertEquals(R.string.pos_short_1, BaseballPositions.shortLabelRes(1))
+        assertEquals(R.string.pos_short_2, BaseballPositions.shortLabelRes(2))
+        assertEquals(R.string.pos_short_3, BaseballPositions.shortLabelRes(3))
+        assertEquals(R.string.pos_short_4, BaseballPositions.shortLabelRes(4))
+        assertEquals(R.string.pos_short_5, BaseballPositions.shortLabelRes(5))
+        assertEquals(R.string.pos_short_6, BaseballPositions.shortLabelRes(6))
+        assertEquals(R.string.pos_short_7, BaseballPositions.shortLabelRes(7))
+        assertEquals(R.string.pos_short_8, BaseballPositions.shortLabelRes(8))
+        assertEquals(R.string.pos_short_9, BaseballPositions.shortLabelRes(9))
+        assertEquals(R.string.pos_short_10, BaseballPositions.shortLabelRes(10))
+        assertEquals(R.string.pos_short_unknown, BaseballPositions.shortLabelRes(99))
     }
 }

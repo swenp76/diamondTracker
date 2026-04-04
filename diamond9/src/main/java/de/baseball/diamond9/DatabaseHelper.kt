@@ -107,22 +107,44 @@ data class OppSubstitution(
 
 object BaseballPositions {
     val ALL = listOf(
-        1 to "1 – Pitcher",
-        2 to "2 – Catcher",
-        3 to "3 – First Base",
-        4 to "4 – Second Base",
-        5 to "5 – Third Base",
-        6 to "6 – Shortstop",
-        7 to "7 – Left Field",
-        8 to "8 – Center Field",
-        9 to "9 – Right Field",
-        10 to "DH – Designated Hitter"
+        1 to R.string.pos_1,
+        2 to R.string.pos_2,
+        3 to R.string.pos_3,
+        4 to R.string.pos_4,
+        5 to R.string.pos_5,
+        6 to R.string.pos_6,
+        7 to R.string.pos_7,
+        8 to R.string.pos_8,
+        9 to R.string.pos_9,
+        10 to R.string.pos_10
     )
-    fun label(pos: Int) = ALL.firstOrNull { it.first == pos }?.second ?: "?"
-    fun shortLabel(pos: Int) = when (pos) {
-        1 -> "P"; 2 -> "C"; 3 -> "1B"; 4 -> "2B"; 5 -> "3B"
-        6 -> "SS"; 7 -> "LF"; 8 -> "CF"; 9 -> "RF"; 10 -> "DH"
-        else -> "?"
+
+    fun shortLabelRes(pos: Int): Int = when (pos) {
+        1 -> R.string.pos_short_1
+        2 -> R.string.pos_short_2
+        3 -> R.string.pos_short_3
+        4 -> R.string.pos_short_4
+        5 -> R.string.pos_short_5
+        6 -> R.string.pos_short_6
+        7 -> R.string.pos_short_7
+        8 -> R.string.pos_short_8
+        9 -> R.string.pos_short_9
+        10 -> R.string.pos_short_10
+        else -> R.string.pos_short_unknown
+    }
+
+    fun labelRes(pos: Int): Int = when (pos) {
+        1 -> R.string.pos_1
+        2 -> R.string.pos_2
+        3 -> R.string.pos_3
+        4 -> R.string.pos_4
+        5 -> R.string.pos_5
+        6 -> R.string.pos_6
+        7 -> R.string.pos_7
+        8 -> R.string.pos_8
+        9 -> R.string.pos_9
+        10 -> R.string.pos_10
+        else -> R.string.pos_short_unknown
     }
 }
 
