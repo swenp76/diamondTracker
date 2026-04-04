@@ -3,21 +3,34 @@ package de.baseball.diamond9
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
-import android.view.*
-import android.widget.*
+import android.widget.EditText
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.json.JSONObject
 
-class TeamListActivity : AppCompatActivity() {
+class TeamListActivity : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
-    private lateinit var recycler: RecyclerView
-    private lateinit var tvEmpty: android.widget.TextView
 
     private val importLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -35,76 +48,41 @@ class TeamListActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_team_list)
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-
         db = DatabaseHelper(this)
-        supportActionBar?.title = getString(R.string.teams_title)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        recycler = findViewById(R.id.recyclerTeams)
-        tvEmpty = findViewById(R.id.tvEmptyTeams)
-        recycler.layoutManager = LinearLayoutManager(this)
+        setContent {
+            var teams by remember { mutableStateOf(db.getAllTeams()) }
 
-        findViewById<com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton>(R.id.fabAddTeam)
-            .setOnClickListener { showAddTeamDialog() }
+            fun refreshTeams() {
+                teams = db.getAllTeams()
+            }
 
-        loadTeams()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        loadTeams()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, 1, 0, getString(R.string.menu_import_team)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            1 -> { importLauncher.launch(arrayOf("application/json", "*/*")); true }
-            else -> super.onOptionsItemSelected(item)
+            TeamListScreen(
+                teams = teams,
+                onTeamClick = { team ->
+                    val intent = Intent(this, TeamDetailActivity::class.java)
+                    intent.putExtra("teamId", team.id)
+                    startActivity(intent)
+                },
+                onDeleteTeam = { team ->
+                    AlertDialog.Builder(this)
+                        .setTitle(getString(R.string.dialog_delete_team_title))
+                        .setMessage(getString(R.string.dialog_delete_team_message, team.name))
+                        .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
+                            db.deleteTeam(team.id)
+                            refreshTeams()
+                        }
+                        .setNegativeButton(getString(R.string.btn_cancel), null)
+                        .show()
+                },
+                onAddTeamClick = { showAddTeamDialog { refreshTeams() } },
+                onImportClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
+                onBackClick = { finish() }
+            )
         }
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
-    }
-
-    private fun loadTeams() {
-        val teams = db.getAllTeams()
-        tvEmpty.visibility = if (teams.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
-        recycler.visibility = if (teams.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
-        recycler.adapter = TeamAdapter(
-            teams,
-            onClick = { team ->
-                val intent = Intent(this, TeamDetailActivity::class.java)
-                intent.putExtra("teamId", team.id)
-                startActivity(intent)
-            },
-            onDelete = { team ->
-                AlertDialog.Builder(this)
-                    .setTitle(getString(R.string.dialog_delete_team_title))
-                    .setMessage(getString(R.string.dialog_delete_team_message, team.name))
-                    .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
-                        db.deleteTeam(team.id)
-                        loadTeams()
-                    }
-                    .setNegativeButton(getString(R.string.btn_cancel), null)
-                    .show()
-            }
-        )
-    }
-
-    private fun showAddTeamDialog() {
+    private fun showAddTeamDialog(onSuccess: () -> Unit) {
         val et = EditText(this).apply {
             hint = getString(R.string.hint_team_name)
             setPadding(48, 24, 48, 24)
@@ -116,7 +94,7 @@ class TeamListActivity : AppCompatActivity() {
                 val name = et.text.toString().trim()
                 if (name.isNotEmpty()) {
                     db.insertTeam(name)
-                    loadTeams()
+                    onSuccess()
                 }
             }
             .setNegativeButton(getString(R.string.btn_cancel), null)
@@ -137,7 +115,10 @@ class TeamListActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.dialog_import_team_title))
             .setMessage(getString(R.string.dialog_import_team_message, teamName))
-            .setPositiveButton(getString(R.string.btn_import)) { _, _ -> importTeam(root) }
+            .setPositiveButton(getString(R.string.btn_import)) { _, _ -> 
+                importTeam(root)
+                recreate() 
+            }
             .setNegativeButton(getString(R.string.btn_cancel), null)
             .show()
     }
@@ -146,7 +127,6 @@ class TeamListActivity : AppCompatActivity() {
         try {
             val teamId = db.insertTeam(root.getString("name"))
 
-            // Standardpositionen von insertTeam() durch exportierte ersetzen
             db.getEnabledPositions(teamId).forEach { db.setPositionEnabled(teamId, it, false) }
             val posArray = root.optJSONArray("positions")
             if (posArray != null) {
@@ -171,7 +151,6 @@ class TeamListActivity : AppCompatActivity() {
                 }
             }
 
-            loadTeams()
             Toast.makeText(this, getString(R.string.toast_team_imported, root.getString("name")), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, getString(R.string.toast_import_failed, e.message), Toast.LENGTH_LONG).show()
@@ -179,28 +158,122 @@ class TeamListActivity : AppCompatActivity() {
     }
 }
 
-class TeamAdapter(
-    private val teams: List<Team>,
-    private val onClick: (Team) -> Unit,
-    private val onDelete: (Team) -> Unit
-) : RecyclerView.Adapter<TeamAdapter.VH>() {
-
-    inner class VH(view: View) : RecyclerView.ViewHolder(view) {
-        val tvName: TextView = view.findViewById(R.id.tvTeamName)
-        val tvSub: TextView = view.findViewById(R.id.tvTeamSub)
-        val btnDelete: ImageButton = view.findViewById(R.id.btnDeleteTeam)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TeamListScreen(
+    teams: List<Team>,
+    onTeamClick: (Team) -> Unit,
+    onDeleteTeam: (Team) -> Unit,
+    onAddTeamClick: () -> Unit,
+    onImportClick: () -> Unit,
+    onBackClick: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.teams_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    TextButton(onClick = onImportClick) {
+                        Text(stringResource(R.string.menu_import_team))
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onAddTeamClick,
+                containerColor = Color(0xFF1A5FA8),
+                contentColor = Color.White,
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.fab_add_team)) }
+            )
+        }
+    ) { padding ->
+        if (teams.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.empty_teams),
+                    fontSize = 15.sp,
+                    color = Color(0xFF888888),
+                    modifier = Modifier.padding(32.dp)
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(teams) { team ->
+                    TeamItem(
+                        team = team,
+                        onClick = { onTeamClick(team) },
+                        onDelete = { onDeleteTeam(team) }
+                    )
+                }
+            }
+        }
     }
+}
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-        VH(LayoutInflater.from(parent.context).inflate(R.layout.item_team, parent, false))
-
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        val team = teams[position]
-        holder.tvName.text = team.name
-        holder.tvSub.text = holder.itemView.context.getString(R.string.team_tap_to_edit)
-        holder.itemView.setOnClickListener { onClick(team) }
-        holder.btnDelete.setOnClickListener { onDelete(team) }
+@Composable
+fun TeamItem(
+    team: Team,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = null,
+                modifier = Modifier.size(36.dp),
+                tint = Color(0xFF1A5FA8)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = team.name,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF333333)
+                )
+                Text(
+                    text = stringResource(R.string.team_tap_to_edit),
+                    fontSize = 13.sp,
+                    color = Color(0xFF888888)
+                )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = Color(0xFFC0392B)
+                )
+            }
+        }
     }
-
-    override fun getItemCount() = teams.size
 }
