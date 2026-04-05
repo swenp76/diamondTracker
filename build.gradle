@@ -6,12 +6,14 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        gradlePluginPortal()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:9.1.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.kotlin:compose-compiler-gradle-plugin:$kotlin_version"
         classpath "com.google.devtools.ksp:symbol-processing-gradle-plugin:$ksp_version"
+        classpath "com.mikepenz.aboutlibraries.plugin:aboutlibraries-plugin:11.2.3"
     }
 }
 

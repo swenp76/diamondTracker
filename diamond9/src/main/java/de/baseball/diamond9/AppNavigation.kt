@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -21,6 +22,7 @@ sealed class NavItem(val titleRes: Int, val icon: ImageVector, val activityClass
     object Teams : NavItem(R.string.nav_teams, Icons.Default.Group, TeamListActivity::class.java)
     object Opponents : NavItem(R.string.nav_opponents, Icons.Default.Group, ManageOpponentsActivity::class.java)
     object Settings : NavItem(R.string.nav_settings, Icons.Default.Settings, SettingsActivity::class.java)
+    object About : NavItem(R.string.nav_about, Icons.Default.Info, AboutActivity::class.java)
 }
 
 @Composable
@@ -31,7 +33,7 @@ fun AppDrawer(
     context: Context,
     content: @Composable () -> Unit
 ) {
-    val items = listOf(NavItem.Home, NavItem.Teams, NavItem.Opponents, NavItem.Settings)
+    val items = listOf(NavItem.Home, NavItem.Teams, NavItem.Opponents, NavItem.Settings, NavItem.About)
 
     ModalNavigationDrawer(
         drawerState = drawerState,

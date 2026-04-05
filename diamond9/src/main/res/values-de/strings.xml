@@ -225,5 +225,14 @@
     <string name="nav_teams">Teams</string>
     <string name="nav_opponents">Gegner</string>
     <string name="nav_settings">Einstellungen</string>
+    <string name="nav_about">Über</string>
+
+    <!-- ── Über Screen ──────────────────────────────────────────────────── -->
+    <string name="about_title">Über</string>
+    <string name="about_legal_title">Rechtliches</string>
+    <string name="about_gpl_license">Diese App ist unter der GNU General Public License v3.0 lizenziert.</string>
+    <string name="about_libraries_button">Open-Source-Lizenzen öffnen</string>
+    <string name="about_github_button">Auf GitHub ansehen</string>
+
 
 </resources>
