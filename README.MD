@@ -6,6 +6,8 @@
 
 diamond9 helps baseball coaches manage their team during a game — track pitchers, build lineups, and log pitches in real time, all without internet access.
 
+This project is built with AI-assisted development (vibe coding) using [Claude Code](https://claude.ai/code).
+
 ---
 
 ## Features
