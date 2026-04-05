@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-diamondTracker is currently in **public beta**. Security updates are applied to the latest version only.
+diamondTracker aka diamond9 is currently in **public beta**. Security updates are applied to the latest version only.
 
 | Version | Supported          |
 |---------|--------------------|
