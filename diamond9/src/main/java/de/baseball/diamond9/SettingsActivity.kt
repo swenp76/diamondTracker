@@ -20,18 +20,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,11 +42,21 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            SettingsScreen(
-                onBackClick = { finish() },
-                onTeamsClick = { startActivity(Intent(this, TeamListActivity::class.java)) },
-                onOpponentsClick = { startActivity(Intent(this, ManageOpponentsActivity::class.java)) }
-            )
+            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+            val scope = rememberCoroutineScope()
+
+            AppDrawer(
+                drawerState = drawerState,
+                scope = scope,
+                currentActivity = SettingsActivity::class.java,
+                context = this
+            ) {
+                SettingsScreen(
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    onTeamsClick = { startActivity(Intent(this, TeamListActivity::class.java)) },
+                    onOpponentsClick = { startActivity(Intent(this, ManageOpponentsActivity::class.java)) }
+                )
+            }
         }
     }
 }
@@ -62,7 +64,7 @@ class SettingsActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScreen(
-    onBackClick: () -> Unit,
+    onMenuClick: () -> Unit,
     onTeamsClick: () -> Unit,
     onOpponentsClick: () -> Unit
 ) {
@@ -71,10 +73,10 @@ private fun SettingsScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = onMenuClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.content_desc_back)
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = null
                         )
                     }
                 },

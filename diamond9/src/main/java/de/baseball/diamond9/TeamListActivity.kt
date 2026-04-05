@@ -16,9 +16,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,34 +53,43 @@ class TeamListActivity : ComponentActivity() {
         db = DatabaseHelper(this)
 
         setContent {
+            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+            val scope = rememberCoroutineScope()
             var teams by remember { mutableStateOf(db.getAllTeams()) }
 
             fun refreshTeams() {
                 teams = db.getAllTeams()
             }
 
-            TeamListScreen(
-                teams = teams,
-                onTeamClick = { team ->
-                    val intent = Intent(this, TeamDetailActivity::class.java)
-                    intent.putExtra("teamId", team.id)
-                    startActivity(intent)
-                },
-                onDeleteTeam = { team ->
-                    AlertDialog.Builder(this)
-                        .setTitle(getString(R.string.dialog_delete_team_title))
-                        .setMessage(getString(R.string.dialog_delete_team_message, team.name))
-                        .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
-                            db.deleteTeam(team.id)
-                            refreshTeams()
-                        }
-                        .setNegativeButton(getString(R.string.btn_cancel), null)
-                        .show()
-                },
-                onAddTeamClick = { showAddTeamDialog { refreshTeams() } },
-                onImportClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
-                onBackClick = { finish() }
-            )
+            AppDrawer(
+                drawerState = drawerState,
+                scope = scope,
+                currentActivity = TeamListActivity::class.java,
+                context = this
+            ) {
+                TeamListScreen(
+                    teams = teams,
+                    onTeamClick = { team ->
+                        val intent = Intent(this, TeamDetailActivity::class.java)
+                        intent.putExtra("teamId", team.id)
+                        startActivity(intent)
+                    },
+                    onDeleteTeam = { team ->
+                        AlertDialog.Builder(this)
+                            .setTitle(getString(R.string.dialog_delete_team_title))
+                            .setMessage(getString(R.string.dialog_delete_team_message, team.name))
+                            .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
+                                db.deleteTeam(team.id)
+                                refreshTeams()
+                            }
+                            .setNegativeButton(getString(R.string.btn_cancel), null)
+                            .show()
+                    },
+                    onAddTeamClick = { showAddTeamDialog { refreshTeams() } },
+                    onImportClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
+                    onMenuClick = { scope.launch { drawerState.open() } }
+                )
+            }
         }
     }
 
@@ -166,15 +177,15 @@ fun TeamListScreen(
     onDeleteTeam: (Team) -> Unit,
     onAddTeamClick: () -> Unit,
     onImportClick: () -> Unit,
-    onBackClick: () -> Unit
+    onMenuClick: () -> Unit
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.teams_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
+                    IconButton(onClick = onMenuClick) {
+                        Icon(Icons.Default.Menu, contentDescription = null)
                     }
                 },
                 actions = {

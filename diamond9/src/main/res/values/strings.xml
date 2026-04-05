@@ -220,4 +220,10 @@
     <string name="empty_players">No players yet.\nAdd a new player first.</string>
     <string name="empty_opponents">No opponents created yet.\nAdd an opponent team first.</string>
 
+    <!-- ── Navigation Drawer ────────────────────────────────────────────── -->
+    <string name="nav_home">Home</string>
+    <string name="nav_teams">Teams</string>
+    <string name="nav_opponents">Opponents</string>
+    <string name="nav_settings">Settings</string>
+
 </resources>

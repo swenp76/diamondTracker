@@ -24,35 +24,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -82,20 +58,29 @@ class GameListActivity : ComponentActivity() {
         val teamName = intent.getStringExtra("teamName") ?: ""
 
         setContent {
-            GameListScreen(
-                teamId = teamId,
-                teamName = teamName,
-                db = db,
-                onBackClick = { finish() },
-                onSettingsClick = { startActivity(Intent(this, SettingsActivity::class.java)) },
-                onGameClick = { game ->
-                    startActivity(Intent(this, GameHubActivity::class.java).apply {
-                        putExtra("gameId", game.id)
-                        putExtra("gameOpponent", game.opponent)
-                        putExtra("gameDate", game.date)
-                    })
-                }
-            )
+            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+            val scope = rememberCoroutineScope()
+
+            AppDrawer(
+                drawerState = drawerState,
+                scope = scope,
+                currentActivity = GameListActivity::class.java,
+                context = this
+            ) {
+                GameListScreen(
+                    teamId = teamId,
+                    teamName = teamName,
+                    db = db,
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    onGameClick = { game ->
+                        startActivity(Intent(this, GameHubActivity::class.java).apply {
+                            putExtra("gameId", game.id)
+                            putExtra("gameOpponent", game.opponent)
+                            putExtra("gameDate", game.date)
+                        })
+                    }
+                )
+            }
         }
     }
 }
@@ -106,8 +91,7 @@ private fun GameListScreen(
     teamId: Long,
     teamName: String,
     db: DatabaseHelper,
-    onBackClick: () -> Unit,
-    onSettingsClick: () -> Unit,
+    onMenuClick: () -> Unit,
     onGameClick: (Game) -> Unit
 ) {
     var games by remember { mutableStateOf(emptyList<Game>()) }
@@ -129,13 +113,8 @@ private fun GameListScreen(
             TopAppBar(
                 title = { Text(teamName) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.content_desc_back))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, stringResource(R.string.menu_settings))
+                    IconButton(onClick = onMenuClick) {
+                        Icon(Icons.Default.Menu, null)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)

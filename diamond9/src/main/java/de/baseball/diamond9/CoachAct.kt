@@ -19,19 +19,23 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.launch
 
 private val Primary = Color(0xFF1a5fa8)
 
@@ -56,20 +61,30 @@ class CoachAct : ComponentActivity() {
         enableEdgeToEdge()
         db = DatabaseHelper(this)
         setContent {
-            CoachSelectScreen(
-                loadTeams = { db.getAllTeams() },
-                onTeamClick = { team ->
-                    startActivity(
-                        Intent(this, GameListActivity::class.java).apply {
-                            putExtra("teamId", team.id)
-                            putExtra("teamName", team.name)
-                        }
-                    )
-                },
-                onSettingsClick = {
-                    startActivity(Intent(this, SettingsActivity::class.java))
-                }
-            )
+            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+            val scope = rememberCoroutineScope()
+
+            AppDrawer(
+                drawerState = drawerState,
+                scope = scope,
+                currentActivity = CoachAct::class.java,
+                context = this
+            ) {
+                CoachSelectScreen(
+                    loadTeams = { db.getAllTeams() },
+                    onTeamClick = { team ->
+                        startActivity(
+                            Intent(this, GameListActivity::class.java).apply {
+                                putExtra("teamId", team.id)
+                                putExtra("teamName", team.name)
+                            }
+                        )
+                    },
+                    onMenuClick = {
+                        scope.launch { drawerState.open() }
+                    }
+                )
+            }
         }
     }
 }
@@ -78,7 +93,7 @@ class CoachAct : ComponentActivity() {
 private fun CoachSelectScreen(
     loadTeams: () -> List<Team>,
     onTeamClick: (Team) -> Unit,
-    onSettingsClick: () -> Unit
+    onMenuClick: () -> Unit
 ) {
     var teams by remember { mutableStateOf(loadTeams()) }
 
@@ -144,16 +159,16 @@ private fun CoachSelectScreen(
             }
 
             IconButton(
-                onClick = onSettingsClick,
+                onClick = onMenuClick,
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
+                    .align(Alignment.TopStart)
                     .statusBarsPadding()
-                    .padding(top = 8.dp, end = 8.dp)
+                    .padding(top = 8.dp, start = 8.dp)
                     .size(48.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = stringResource(R.string.menu_settings),
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = null,
                     tint = Primary
                 )
             }

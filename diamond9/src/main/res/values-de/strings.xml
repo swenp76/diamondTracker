@@ -220,4 +220,10 @@
     <string name="empty_players">Noch keine Spieler vorhanden.\nFüge zuerst einen neuen Spieler hinzu.</string>
     <string name="empty_opponents">Noch keine Gegner angelegt.\nFüge zuerst ein gegnerisches Team hinzu.</string>
 
+    <!-- ── Navigation Drawer ────────────────────────────────────────────── -->
+    <string name="nav_home">Start</string>
+    <string name="nav_teams">Teams</string>
+    <string name="nav_opponents">Gegner</string>
+    <string name="nav_settings">Einstellungen</string>
+
 </resources>
