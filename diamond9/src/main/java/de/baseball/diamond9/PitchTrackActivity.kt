@@ -164,7 +164,7 @@ class PitchTrackActivity : ComponentActivity() {
                 StatItem(stringResource(R.string.stat_strikes), stats.strikes.toString(), Color(0xFFC0392B))
                 StatItem(stringResource(R.string.stat_walks), stats.walks.toString(), Color(0xFFD35400))
                 StatItem(stringResource(R.string.stat_hbp), stats.hbp.toString(), Color(0xFF8E44AD))
-                StatItem(stringResource(R.string.stat_pitch), "#${stats.totalPitches + 1}", Color(0xFF333333))
+                StatItem(stringResource(R.string.stat_pitch), (stats.totalPitches + 1).toString(), Color(0xFF333333))
                 StatItem(stringResource(R.string.stat_count), "$atBatBalls-$atBatStrikes", Color(0xFF1A5FA8))
             }
         }
@@ -174,7 +174,7 @@ class PitchTrackActivity : ComponentActivity() {
     fun StatItem(label: String, value: String, color: Color) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(label, fontSize = 11.sp, color = Color(0xFF888888))
-            Text(value, fontSize = if (label == stringResource(R.string.stat_pitch)) 18.sp else 28.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = color)
         }
     }
 
