@@ -28,10 +28,21 @@ data class Pitcher(
 @Entity(tableName = "pitches")
 data class Pitch(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "pitcher_id") val pitcherId: Long,
+    @ColumnInfo(name = "pitcher_id") val pitcherId: Long = 0,
+    @ColumnInfo(name = "at_bat_id") val atBatId: Long = 0,
     val type: String,
     @ColumnInfo(name = "sequence_nr") val sequenceNr: Int,
     @ColumnInfo(name = "inning", defaultValue = "1") val inning: Int = 1
+)
+
+@Entity(tableName = "at_bats")
+data class AtBat(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "game_id") val gameId: Long,
+    @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "slot") val slot: Int,
+    @ColumnInfo(name = "inning") val inning: Int,
+    @ColumnInfo(name = "result") val result: String? = null // e.g., "K", "BB", "H", "HBP", "OUT"
 )
 // type: "B" = Ball, "S" = Strike, "BF" = Batter Faced
 
@@ -172,6 +183,7 @@ class DatabaseHelper(context: Context) {
     private val db = AppDatabase.getDatabase(context)
     private val gameDao = db.gameDao()
     private val pitcherDao = db.pitcherDao()
+    private val atBatDao = db.atBatDao()
     private val teamDao = db.teamDao()
     private val playerDao = db.playerDao()
     private val lineupDao = db.lineupDao()
@@ -420,4 +432,30 @@ class DatabaseHelper(context: Context) {
 
     fun getSubstitutionsForGame(gameId: Long): List<Substitution> =
         lineupDao.getSubstitutionsForGame(gameId)
+
+    // ── At-Bats (Offense) ──────────────────────────────────────────────────────
+
+    fun insertAtBat(gameId: Long, playerId: Long, slot: Int, inning: Int): Long =
+        atBatDao.insertAtBat(AtBat(gameId = gameId, playerId = playerId, slot = slot, inning = inning))
+
+    fun getAtBatsForGame(gameId: Long): List<AtBat> = atBatDao.getAtBatsForGame(gameId)
+
+    fun updateAtBatResult(atBatId: Long, result: String?) {
+        val ab = atBatDao.getAtBatById(atBatId) ?: return
+        atBatDao.updateAtBat(ab.copy(result = result))
+    }
+
+    fun deleteAtBat(atBatId: Long) {
+        atBatDao.deletePitchesForAtBat(atBatId)
+        atBatDao.deleteAtBat(atBatId)
+    }
+
+    fun insertPitchForAtBat(atBatId: Long, type: String, inning: Int): Long {
+        val next = atBatDao.getNextSequenceNr(atBatId)
+        return atBatDao.insertPitch(Pitch(atBatId = atBatId, type = type, sequenceNr = next, inning = inning))
+    }
+
+    fun undoLastPitchForAtBat(atBatId: Long) = atBatDao.undoLastPitch(atBatId)
+
+    fun getPitchesForAtBat(atBatId: Long): List<Pitch> = atBatDao.getPitchesForAtBat(atBatId)
 }

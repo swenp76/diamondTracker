@@ -1,0 +1,45 @@
+package de.baseball.diamond9.db
+
+import androidx.room.*
+import de.baseball.diamond9.*
+
+@Dao
+abstract class AtBatDao {
+    @Insert
+    abstract fun insertAtBat(atBat: AtBat): Long
+
+    @Query("SELECT * FROM at_bats WHERE game_id = :gameId ORDER BY id ASC")
+    abstract fun getAtBatsForGame(gameId: Long): List<AtBat>
+
+    @Query("SELECT * FROM at_bats WHERE id = :atBatId")
+    abstract fun getAtBatById(atBatId: Long): AtBat?
+
+    @Update
+    abstract fun updateAtBat(atBat: AtBat)
+
+    @Query("DELETE FROM at_bats WHERE id = :atBatId")
+    abstract fun deleteAtBat(atBatId: Long)
+
+    @Query("SELECT * FROM pitches WHERE at_bat_id = :atBatId ORDER BY sequence_nr ASC")
+    abstract fun getPitchesForAtBat(atBatId: Long): List<Pitch>
+
+    @Insert
+    abstract fun insertPitch(pitch: Pitch): Long
+
+    @Query("SELECT COALESCE(MAX(sequence_nr), 0) + 1 FROM pitches WHERE at_bat_id = :atBatId")
+    abstract fun getNextSequenceNr(atBatId: Long): Int
+
+    @Transaction
+    open fun undoLastPitch(atBatId: Long) {
+        getLastPitchId(atBatId)?.let { deletePitchById(it) }
+    }
+
+    @Query("SELECT id FROM pitches WHERE at_bat_id = :atBatId ORDER BY sequence_nr DESC LIMIT 1")
+    abstract fun getLastPitchId(atBatId: Long): Long?
+
+    @Query("DELETE FROM pitches WHERE id = :pitchId")
+    abstract fun deletePitchById(pitchId: Long)
+
+    @Query("DELETE FROM pitches WHERE at_bat_id = :atBatId")
+    abstract fun deletePitchesForAtBat(atBatId: Long)
+}

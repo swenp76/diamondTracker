@@ -52,7 +52,12 @@ class GameHubActivity : ComponentActivity() {
                 gameDate = gameDate,
                 onBackClick = { finish() },
                 onOffenseClick = {
-                    Toast.makeText(this, getString(R.string.toast_offense_coming_soon), Toast.LENGTH_SHORT).show()
+                    val intent = Intent(this, BattingTrackActivity::class.java).apply {
+                        putExtra("gameId", gameId)
+                        putExtra("gameOpponent", gameOpponent)
+                        putExtra("gameDate", gameDate)
+                    }
+                    startActivity(intent)
                 },
                 onDefenseClick = {
                     val intent = Intent(this, PitcherListActivity::class.java).apply {

@@ -13,6 +13,7 @@ import de.baseball.diamond9.*
         Game::class,
         Pitcher::class,
         Pitch::class,
+        AtBat::class,
         Team::class,
         TeamPosition::class,
         Player::class,
@@ -24,13 +25,14 @@ import de.baseball.diamond9.*
         OppSubstitution::class,
         OpponentTeam::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun gameDao(): GameDao
     abstract fun pitcherDao(): PitcherDao
+    abstract fun atBatDao(): AtBatDao
     abstract fun teamDao(): TeamDao
     abstract fun playerDao(): PlayerDao
     abstract fun lineupDao(): LineupDao
@@ -63,6 +65,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE pitches ADD COLUMN at_bat_id INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS at_bats " +
+                    "(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "game_id INTEGER NOT NULL, " +
+                    "player_id INTEGER NOT NULL, " +
+                    "slot INTEGER NOT NULL, " +
+                    "inning INTEGER NOT NULL, " +
+                    "result TEXT)"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -71,7 +88,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "pitcher.db"
                 )
                     .allowMainThreadQueries()
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build().also { INSTANCE = it }
             }
         }

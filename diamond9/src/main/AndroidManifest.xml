@@ -30,6 +30,7 @@
         <activity android:name=".GameHubActivity" android:exported="false" />
         <activity android:name=".OwnLineupActivity" android:exported="false" />
         <activity android:name=".ManageOpponentsActivity" android:exported="false" />
+        <activity android:name=".BattingTrackActivity" android:exported="false" />
         <activity android:name=".AboutActivity" android:exported="false" />
 
     </application>
