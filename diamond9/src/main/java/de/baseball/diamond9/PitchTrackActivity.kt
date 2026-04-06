@@ -57,16 +57,10 @@ class PitchTrackActivity : ComponentActivity() {
     @Composable
     fun PitchTrackScreen(pitcherName: String) {
         var stats by remember { mutableStateOf(db.getStatsForPitcher(pitcherId)) }
-        val scope = rememberCoroutineScope()
         val listState = rememberLazyListState()
 
         fun refresh() {
             stats = db.getStatsForPitcher(pitcherId)
-            scope.launch {
-                if (stats.pitches.isNotEmpty()) {
-                    listState.animateScrollToItem(stats.pitches.size - 1)
-                }
-            }
         }
 
         Scaffold(
@@ -226,9 +220,15 @@ class PitchTrackActivity : ComponentActivity() {
     @Composable
     fun PitchLog(stats: PitcherStats, listState: androidx.compose.foundation.lazy.LazyListState) {
         val gameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
-        val bfOffset = gameBF - stats.bf
-        var bfCount = bfOffset
-        var pitchNumber = 0
+        
+        // Count total pitches to maintain correct numbering even when reversed
+        val totalPitchesCount = stats.pitches.count { it.type == "B" || it.type == "S" || it.type == "F" }
+        
+        // Reverse order for display
+        val displayItems = stats.pitches.reversed()
+        
+        var bfCount = gameBF
+        var pitchNumber = totalPitchesCount
 
         LazyColumn(
             state = listState,
@@ -237,26 +237,28 @@ class PitchTrackActivity : ComponentActivity() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(stats.pitches) { pitch ->
+            items(displayItems) { pitch ->
                 when (pitch.type) {
                     "BF" -> {
-                        bfCount++
-                        val nextBattingOrder = (bfCount % 9) + 1
-                        val nextJersey = getBatterJersey(nextBattingOrder)
+                        val battingOrder = (bfCount % 9) + 1
+                        val nextJersey = getBatterJersey(battingOrder)
                         val batterLabel = if (nextJersey.isNotEmpty())
-                            stringResource(R.string.pitch_label_slot_with_jersey, nextJersey, nextBattingOrder)
+                            stringResource(R.string.pitch_label_slot_with_jersey, nextJersey, battingOrder)
                         else
-                            stringResource(R.string.pitch_label_slot, nextBattingOrder)
+                            stringResource(R.string.pitch_label_slot, battingOrder)
+                        
                         Text(batterLabel, color = Color(0xFF888888), fontSize = 11.sp)
+                        bfCount--
                     }
                     "HBP" -> Text(stringResource(R.string.pitch_label_hbp), color = Color(0xFF8E44AD), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "H" -> Text(stringResource(R.string.pitch_label_hit), color = Color(0xFFE74C3C), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "W" -> Text(stringResource(R.string.pitch_label_walk), color = Color(0xFFD35400), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "SO" -> Text(stringResource(R.string.pitch_label_strikeout), color = Color(0xFF27AE60), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "B", "S", "F" -> {
-                        pitchNumber++
+                        val currentNum = pitchNumber
+                        pitchNumber--
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("$pitchNumber.", fontSize = 12.sp, color = Color(0xFF666666), modifier = Modifier.width(32.dp))
+                            Text("$currentNum.", fontSize = 12.sp, color = Color(0xFF666666), modifier = Modifier.width(32.dp))
                             val label = when (pitch.type) {
                                 "B" -> stringResource(R.string.pitch_label_ball)
                                 "F" -> stringResource(R.string.pitch_label_foul)
