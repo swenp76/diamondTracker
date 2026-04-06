@@ -29,6 +29,7 @@
     <string name="stat_hbp">HBP</string>
     <string name="stat_hits">H</string>
     <string name="stat_total_pitches">Total Pitches</string>
+    <string name="stat_strikeouts">K</string>
     <string name="stat_strike_percent">Strike%</string>
     <string name="stat_pitch">Pitch</string>
     <string name="stat_count">Count</string>

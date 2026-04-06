@@ -78,6 +78,7 @@ fun StatsScreen(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatCard(label = stringResource(R.string.stat_walks), value = stats.walks.toString(), valueColor = Color(0xFFD35400), modifier = Modifier.weight(1f))
                 StatCard(label = stringResource(R.string.stat_hbp), value = stats.hbp.toString(), valueColor = Color(0xFF8E44AD), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_strikeouts), value = stats.strikeouts.toString(), valueColor = Color(0xFF27AE60), modifier = Modifier.weight(1f))
                 StatCard(label = stringResource(R.string.stat_total_pitches), value = stats.totalPitches.toString(), modifier = Modifier.weight(1f))
             }
 
@@ -130,8 +131,8 @@ fun StatCard(
 
 @Composable
 fun PitchGrid(pitches: List<Pitch>) {
-    // Show B, S, F, W, H, and HBP in the sequence they occurred
-    val pitchesOnly = pitches.filter { it.type == "B" || it.type == "S" || it.type == "F" || it.type == "W" || it.type == "HBP" || it.type == "H" }
+    // Show B, S, F, W, H, HBP, and K in the sequence they occurred
+    val pitchesOnly = pitches.filter { it.type == "B" || it.type == "S" || it.type == "F" || it.type == "W" || it.type == "HBP" || it.type == "H" || it.type == "K" }
     val rows = 35
     val groups = 3
 
@@ -158,16 +159,18 @@ fun PitchGrid(pitches: List<Pitch>) {
                     val pitchIdx = startIdx + i
                     val actual = if (pitchIdx < pitchesOnly.size) pitchesOnly[pitchIdx] else null
                     
-                    if (actual != null && (actual.type == "W" || actual.type == "HBP" || actual.type == "H")) {
-                        // Merged cell for Walk, HBP or Hit
+                    if (actual != null && (actual.type == "W" || actual.type == "HBP" || actual.type == "H" || actual.type == "K")) {
+                        // Merged cell for Walk, HBP, Hit or StrikeOut
                         val bgColor = when(actual.type) {
                             "W" -> Color(0xFFFFF7E6)
                             "HBP" -> Color(0xFFF3E5F5)
+                            "K" -> Color(0xFFE8F5E9)
                             else -> Color(0xFFFFEBEE)
                         }
                         val textColor = when(actual.type) {
                             "W" -> Color(0xFFD35400)
                             "HBP" -> Color(0xFF8E44AD)
+                            "K" -> Color(0xFF27AE60)
                             else -> Color(0xFFE74C3C)
                         }
                         Box(
