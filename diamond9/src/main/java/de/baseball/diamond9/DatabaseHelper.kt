@@ -11,7 +11,9 @@ data class Game(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val date: String,
     val opponent: String,
-    @ColumnInfo(name = "team_id") val teamId: Long = 0
+    @ColumnInfo(name = "team_id") val teamId: Long = 0,
+    @ColumnInfo(name = "inning", defaultValue = "1") val inning: Int = 1,
+    @ColumnInfo(name = "outs", defaultValue = "0") val outs: Int = 0
 )
 
 @Entity(tableName = "pitchers")
@@ -188,6 +190,14 @@ class DatabaseHelper(context: Context) {
         gameDao.updateGame(gameId, date, opponent)
 
     fun deleteGame(gameId: Long) = gameDao.deleteGameWithCascade(gameId)
+
+    fun getGameState(gameId: Long): Pair<Int, Int> {
+        val game = gameDao.getGame(gameId)
+        return Pair(game?.inning ?: 1, game?.outs ?: 0)
+    }
+
+    fun updateGameState(gameId: Long, inning: Int, outs: Int) =
+        gameDao.updateGameState(gameId, inning, outs)
 
     fun copyGame(sourceGameId: Long, newOpponent: String): Long {
         val source = getGame(sourceGameId) ?: return -1

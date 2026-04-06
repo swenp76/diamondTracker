@@ -207,6 +207,12 @@
     <string name="dialog_load_demo_title">Load Demo Team</string>
     <string name="dialog_load_demo_message">Load \"Cologne Cardinals U12 LL\" as a demo team? This will add a sample roster so you can try out the app right away.</string>
 
+    <!-- ── Innings & Outs ────────────────────────────────────────────────────── -->
+    <string name="btn_out">OUT</string>
+    <string name="label_inning">Inning %d</string>
+    <string name="label_outs">Outs: </string>
+    <string name="snackbar_inning_starts">Inning %d starts</string>
+
     <!-- FAB Labels -->
     <string name="fab_add_game">Add Game</string>
     <string name="fab_add_pitcher">Add Pitcher</string>

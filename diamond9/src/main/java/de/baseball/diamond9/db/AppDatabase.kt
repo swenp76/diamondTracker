@@ -24,7 +24,7 @@ import de.baseball.diamond9.*
         OppSubstitution::class,
         OpponentTeam::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -49,6 +49,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE games ADD COLUMN inning INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE games ADD COLUMN outs INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -57,7 +64,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "pitcher.db"
                 )
                     .allowMainThreadQueries()
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build().also { INSTANCE = it }
             }
         }

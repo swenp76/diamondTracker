@@ -5,11 +5,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -58,12 +60,47 @@ class PitchTrackActivity : ComponentActivity() {
     fun PitchTrackScreen(pitcherName: String) {
         var stats by remember { mutableStateOf(db.getStatsForPitcher(pitcherId)) }
         val listState = rememberLazyListState()
+        var inning by remember { mutableStateOf(1) }
+        var outs by remember { mutableStateOf(0) }
+        var showInningSnackbar by remember { mutableStateOf(false) }
+        val snackbarHostState = remember { SnackbarHostState() }
+        val scope = rememberCoroutineScope()
 
         fun refresh() {
             stats = db.getStatsForPitcher(pitcherId)
         }
 
+        LaunchedEffect(Unit) {
+            if (gameId != -1L) {
+                val (i, o) = db.getGameState(gameId)
+                inning = i
+                outs = o
+            }
+        }
+
+        fun addOut() {
+            val newOuts = outs + 1
+            if (newOuts >= 3) {
+                inning++
+                outs = 0
+                showInningSnackbar = true
+            } else {
+                outs = newOuts
+            }
+            if (gameId != -1L) db.updateGameState(gameId, inning, outs)
+        }
+
+        LaunchedEffect(showInningSnackbar) {
+            if (showInningSnackbar) {
+                snackbarHostState.showSnackbar(
+                    message = getString(R.string.snackbar_inning_starts, inning)
+                )
+                showInningSnackbar = false
+            }
+        }
+
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
                     title = { Text(pitcherName) },
@@ -86,7 +123,7 @@ class PitchTrackActivity : ComponentActivity() {
                     .fillMaxSize()
                     .background(Color(0xFFF5F5F5))
             ) {
-                StatsBar(stats)
+                StatsBar(stats, inning, outs)
                 BatterStrip(stats)
                 Box(modifier = Modifier.weight(1f)) {
                     PitchLog(stats, listState)
@@ -107,6 +144,7 @@ class PitchTrackActivity : ComponentActivity() {
                         if (strikesBefore >= 2) {
                             db.insertPitch(pitcherId, "SO")
                             db.insertPitch(pitcherId, "BF")
+                            addOut()
                         }
                         refresh()
                     },
@@ -131,14 +169,15 @@ class PitchTrackActivity : ComponentActivity() {
                     onUndo = {
                         db.undoLastPitch(pitcherId)
                         refresh()
-                    }
+                    },
+                    onOut = { addOut() }
                 )
             }
         }
     }
 
     @Composable
-    fun StatsBar(stats: PitcherStats) {
+    fun StatsBar(stats: PitcherStats, inning: Int, outs: Int) {
         val date = if (gameId != -1L) db.getGame(gameId)?.date ?: "" else ""
         val totalBF = if (stats.pitcher.playerId > 0 && date.isNotEmpty())
             db.getTotalBFForPlayerOnDate(stats.pitcher.playerId, date)
@@ -166,6 +205,39 @@ class PitchTrackActivity : ComponentActivity() {
                 StatItem(stringResource(R.string.stat_hbp), stats.hbp.toString(), Color(0xFF8E44AD))
                 StatItem(stringResource(R.string.stat_pitch), (stats.totalPitches + 1).toString(), Color(0xFF333333))
                 StatItem(stringResource(R.string.stat_count), "$atBatBalls-$atBatStrikes", Color(0xFF1A5FA8))
+            }
+            HorizontalDivider(color = Color(0xFFEEEEEE))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.label_inning, inning),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF333333)
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.label_outs),
+                        fontSize = 14.sp,
+                        color = Color(0xFF888888)
+                    )
+                    repeat(3) { index ->
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 3.dp)
+                                .size(14.dp)
+                                .background(
+                                    color = if (index < outs) Color(0xFFC0392B) else Color(0xFFDDDDDD),
+                                    shape = CircleShape
+                                )
+                        )
+                    }
+                }
             }
         }
     }
@@ -296,7 +368,8 @@ class PitchTrackActivity : ComponentActivity() {
         onFoul: () -> Unit,
         onHbp: () -> Unit,
         onBf: () -> Unit,
-        onUndo: () -> Unit
+        onUndo: () -> Unit,
+        onOut: () -> Unit
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -362,6 +435,15 @@ class PitchTrackActivity : ComponentActivity() {
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_add_batter), fontSize = 16.sp)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onOut,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC0392B)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(stringResource(R.string.btn_out), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
