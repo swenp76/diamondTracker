@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -130,72 +131,130 @@ fun StatCard(
 }
 
 @Composable
-fun PitchGrid(pitches: List<Pitch>) {
-    // Show B, S, F, W, H, HBP, and K in the sequence they occurred
-    val pitchesOnly = pitches.filter { it.type == "B" || it.type == "S" || it.type == "F" || it.type == "W" || it.type == "HBP" || it.type == "H" || it.type == "K" }
-    val rows = 35
-    val groups = 3
+fun PitchGrid(pitches: List<Pitch>, jerseyMap: Map<Int, String> = emptyMap()) {
+    val groups = remember(pitches) {
+        groupPitchesByBatter(pitches).map { g ->
+            g.copy(jerseyNumber = jerseyMap[g.battingSlot] ?: "")
+        }
+    }
 
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        for (grp in 0 until groups) {
-            val startIdx = grp * rows
-            val startNum = startIdx + 1
-            val endNum = startIdx + rows
+    if (groups.isEmpty()) {
+        Text(
+            text = "–",
+            color = Color(0xFF888888),
+            fontSize = 13.sp,
+            modifier = Modifier.padding(8.dp)
+        )
+        return
+    }
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "$startNum–$endNum",
-                    fontSize = 10.sp,
-                    color = Color(0xFF888888),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Text(text = "B", modifier = Modifier.weight(1f), fontSize = 11.sp, color = Color(0xFF1A5FA8), textAlign = TextAlign.Center)
-                    Text(text = "S", modifier = Modifier.weight(1f), fontSize = 11.sp, color = Color(0xFFC0392B), textAlign = TextAlign.Center)
+    val byInning = groups.groupBy { it.inning }.toSortedMap()
+
+    byInning.forEach { (inningNr, inningGroups) ->
+
+        // Inning-Trennbalken
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFF1A5FA8), thickness = 1.dp)
+            Text(
+                text = "  Inning $inningNr  ",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1A5FA8)
+            )
+            HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFF1A5FA8), thickness = 1.dp)
+        }
+
+        val chunked = inningGroups.chunked(3)
+
+        // Spalten-Header (B / S) für jede Spalte
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            repeat(minOf(inningGroups.size, 3)) {
+                Row(modifier = Modifier.weight(1f)) {
+                    Text("B", modifier = Modifier.weight(1f), fontSize = 10.sp, color = Color(0xFF1A5FA8), textAlign = TextAlign.Center)
+                    Text("S", modifier = Modifier.weight(1f), fontSize = 10.sp, color = Color(0xFFC0392B), textAlign = TextAlign.Center)
                 }
+            }
+            repeat(3 - minOf(inningGroups.size, 3)) {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
 
-                for (i in 0 until rows) {
-                    val pitchIdx = startIdx + i
-                    val actual = if (pitchIdx < pitchesOnly.size) pitchesOnly[pitchIdx] else null
-                    
-                    if (actual != null && (actual.type == "W" || actual.type == "HBP" || actual.type == "H" || actual.type == "K")) {
-                        // Merged cell for Walk, HBP, Hit or StrikeOut
-                        val bgColor = when(actual.type) {
-                            "W" -> Color(0xFFFFF7E6)
-                            "HBP" -> Color(0xFFF3E5F5)
-                            "K" -> Color(0xFFE8F5E9)
-                            else -> Color(0xFFFFEBEE)
-                        }
-                        val textColor = when(actual.type) {
-                            "W" -> Color(0xFFD35400)
-                            "HBP" -> Color(0xFF8E44AD)
-                            "K" -> Color(0xFF27AE60)
-                            else -> Color(0xFFE74C3C)
-                        }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(24.dp)
-                                .border(0.5.dp, Color(0xFFDDDDDD))
-                                .background(bgColor)
-                                .padding(2.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = actual.type,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textColor
-                            )
-                        }
-                    } else {
-                        // Normal two-column layout for B/S/F
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            PitchCell(actual, listOf("B"), Color(0xFF1A5FA8), Modifier.weight(1f))
-                            PitchCell(actual, listOf("S", "F"), Color(0xFFC0392B), Modifier.weight(1f))
-                        }
+        chunked.forEach { rowGroups ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                rowGroups.forEach { group ->
+                    Column(modifier = Modifier.weight(1f)) {
+                        BatterBlock(group)
                     }
+                }
+                repeat(3 - rowGroups.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BatterBlock(group: BatterGroup) {
+    val headerText = if (group.jerseyNumber.isNotEmpty()) "#${group.jerseyNumber}" else "B${group.batterNr}"
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp)
+            .background(Color(0xFFE8EFF8))
+            .padding(horizontal = 2.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = headerText,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF1A5FA8),
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
+    }
+
+    val relevantPitches = group.pitches.filter {
+        it.type in listOf("B", "S", "F", "W", "HBP", "H", "SO")
+    }
+
+    relevantPitches.forEach { pitch ->
+        when (pitch.type) {
+            "W", "HBP", "H", "SO" -> {
+                val bgColor = when (pitch.type) {
+                    "W"   -> Color(0xFFFFF7E6)
+                    "HBP" -> Color(0xFFF3E5F5)
+                    "SO"  -> Color(0xFFE8F5E9)
+                    else  -> Color(0xFFFFEBEE)
+                }
+                val textColor = when (pitch.type) {
+                    "W"   -> Color(0xFFD35400)
+                    "HBP" -> Color(0xFF8E44AD)
+                    "SO"  -> Color(0xFF27AE60)
+                    else  -> Color(0xFFE74C3C)
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(18.dp)
+                        .border(0.5.dp, Color(0xFFDDDDDD))
+                        .background(bgColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = pitch.type, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = textColor)
+                }
+            }
+            "B", "S", "F" -> {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    PitchCell(pitch, listOf("B"), Color(0xFF1A5FA8), Modifier.weight(1f))
+                    PitchCell(pitch, listOf("S", "F"), Color(0xFFC0392B), Modifier.weight(1f))
                 }
             }
         }
@@ -206,17 +265,16 @@ fun PitchGrid(pitches: List<Pitch>) {
 fun PitchCell(pitch: Pitch?, types: List<String>, activeColor: Color, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .height(24.dp)
+            .height(18.dp)
             .border(0.5.dp, Color(0xFFDDDDDD))
             .padding(2.dp),
         contentAlignment = Alignment.Center
     ) {
         val isMatch = pitch != null && pitch.type in types
         val displayColor = when (pitch?.type) {
-            "F" -> Color(0xFFF39C12) // Foul color
+            "F" -> Color(0xFFF39C12)
             else -> activeColor
         }
-        
         Text(
             text = if (pitch == null) "" else if (isMatch) "✓" else "·",
             fontSize = 11.sp,

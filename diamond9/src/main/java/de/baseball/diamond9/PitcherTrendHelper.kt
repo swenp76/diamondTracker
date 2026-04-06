@@ -62,3 +62,54 @@ fun getTrendLevel(batters: List<BatterStats>): TrendLevel {
         else -> TrendLevel.CHANGE
     }
 }
+
+// ── Batter-Gruppen für PitchGrid ──────────────────────────────────────────────
+
+data class BatterGroup(
+    val batterNr: Int,
+    val battingSlot: Int,
+    val jerseyNumber: String,
+    val pitches: List<Pitch>,
+    val inning: Int = 1
+)
+
+fun groupPitchesByBatter(pitches: List<Pitch>): List<BatterGroup> {
+    val groups = mutableListOf<BatterGroup>()
+    var current = mutableListOf<Pitch>()
+    var batterNr = 1
+
+    pitches.forEach { pitch ->
+        when (pitch.type) {
+            "B", "S", "F", "W", "HBP", "H", "SO" -> current.add(pitch)
+            "BF" -> {
+                if (current.isNotEmpty()) {
+                    val groupInning = current.firstOrNull()?.inning ?: 1
+                    groups.add(
+                        BatterGroup(
+                            batterNr = batterNr++,
+                            battingSlot = ((batterNr - 2) % 9) + 1,
+                            jerseyNumber = "",
+                            pitches = current.toList(),
+                            inning = groupInning
+                        )
+                    )
+                    current = mutableListOf()
+                }
+            }
+        }
+    }
+    // Letzter offener At-Bat
+    if (current.isNotEmpty()) {
+        val groupInning = current.firstOrNull()?.inning ?: 1
+        groups.add(
+            BatterGroup(
+                batterNr = batterNr,
+                battingSlot = ((batterNr - 1) % 9) + 1,
+                jerseyNumber = "",
+                pitches = current.toList(),
+                inning = groupInning
+            )
+        )
+    }
+    return groups
+}

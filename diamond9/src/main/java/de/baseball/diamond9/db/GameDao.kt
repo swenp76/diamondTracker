@@ -24,6 +24,9 @@ abstract class GameDao {
     @Query("UPDATE games SET inning = :inning, outs = :outs WHERE id = :gameId")
     abstract fun updateGameState(gameId: Long, inning: Int, outs: Int)
 
+    @Query("UPDATE games SET leadoff_slot = :slot WHERE id = :gameId")
+    abstract fun updateLeadoffSlot(gameId: Long, slot: Int)
+
     @Transaction
     open fun deleteGameWithCascade(gameId: Long) {
         val pitcherIds = getPitcherIdsForGame(gameId)

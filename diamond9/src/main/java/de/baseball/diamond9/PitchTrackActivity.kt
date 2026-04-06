@@ -85,6 +85,11 @@ class PitchTrackActivity : ComponentActivity() {
         fun addOut() {
             val newOuts = outs + 1
             if (newOuts >= 3) {
+                if (gameId != -1L) {
+                    val gameBF = db.getTotalBFForGame(gameId)
+                    val currentSlot = (gameBF % 9) + 1
+                    db.updateLeadoffSlot(gameId, currentSlot)
+                }
                 inning++
                 outs = 0
                 showInningSnackbar = true
@@ -135,39 +140,39 @@ class PitchTrackActivity : ComponentActivity() {
                 ActionButtons(
                     onBall = {
                         val (ballsBefore, _) = currentAtBatCount(stats.pitches)
-                        db.insertPitch(pitcherId, "B")
+                        db.insertPitch(pitcherId, "B", inning)
                         if (ballsBefore >= 3) {
-                            db.insertPitch(pitcherId, "W")
-                            db.insertPitch(pitcherId, "BF")
+                            db.insertPitch(pitcherId, "W", inning)
+                            db.insertPitch(pitcherId, "BF", inning)
                         }
                         refresh()
                     },
                     onStrike = {
                         val (_, strikesBefore) = currentAtBatCount(stats.pitches)
-                        db.insertPitch(pitcherId, "S")
+                        db.insertPitch(pitcherId, "S", inning)
                         if (strikesBefore >= 2) {
-                            db.insertPitch(pitcherId, "SO")
-                            db.insertPitch(pitcherId, "BF")
+                            db.insertPitch(pitcherId, "SO", inning)
+                            db.insertPitch(pitcherId, "BF", inning)
                             addOut()
                         }
                         refresh()
                     },
                     onHit = {
-                        db.insertPitch(pitcherId, "H")
-                        db.insertPitch(pitcherId, "BF")
+                        db.insertPitch(pitcherId, "H", inning)
+                        db.insertPitch(pitcherId, "BF", inning)
                         refresh()
                     },
                     onFoul = {
-                        db.insertPitch(pitcherId, "F")
+                        db.insertPitch(pitcherId, "F", inning)
                         refresh()
                     },
                     onHbp = {
-                        db.insertPitch(pitcherId, "HBP")
-                        db.insertPitch(pitcherId, "BF")
+                        db.insertPitch(pitcherId, "HBP", inning)
+                        db.insertPitch(pitcherId, "BF", inning)
                         refresh()
                     },
                     onBf = {
-                        db.insertPitch(pitcherId, "BF")
+                        db.insertPitch(pitcherId, "BF", inning)
                         refresh()
                     },
                     onUndo = {

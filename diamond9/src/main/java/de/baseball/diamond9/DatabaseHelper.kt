@@ -13,7 +13,8 @@ data class Game(
     val opponent: String,
     @ColumnInfo(name = "team_id") val teamId: Long = 0,
     @ColumnInfo(name = "inning", defaultValue = "1") val inning: Int = 1,
-    @ColumnInfo(name = "outs", defaultValue = "0") val outs: Int = 0
+    @ColumnInfo(name = "outs", defaultValue = "0") val outs: Int = 0,
+    @ColumnInfo(name = "leadoff_slot", defaultValue = "1") val leadoffSlot: Int = 1
 )
 
 @Entity(tableName = "pitchers")
@@ -29,7 +30,8 @@ data class Pitch(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "pitcher_id") val pitcherId: Long,
     val type: String,
-    @ColumnInfo(name = "sequence_nr") val sequenceNr: Int
+    @ColumnInfo(name = "sequence_nr") val sequenceNr: Int,
+    @ColumnInfo(name = "inning", defaultValue = "1") val inning: Int = 1
 )
 // type: "B" = Ball, "S" = Strike, "BF" = Batter Faced
 
@@ -199,6 +201,12 @@ class DatabaseHelper(context: Context) {
     fun updateGameState(gameId: Long, inning: Int, outs: Int) =
         gameDao.updateGameState(gameId, inning, outs)
 
+    fun getLeadoffSlot(gameId: Long): Int =
+        gameDao.getGame(gameId)?.leadoffSlot ?: 1
+
+    fun updateLeadoffSlot(gameId: Long, slot: Int) =
+        gameDao.updateLeadoffSlot(gameId, slot)
+
     fun copyGame(sourceGameId: Long, newOpponent: String): Long {
         val source = getGame(sourceGameId) ?: return -1
         return insertGame(source.date, newOpponent, source.teamId)
@@ -216,9 +224,9 @@ class DatabaseHelper(context: Context) {
 
     // ── Pitches ────────────────────────────────────────────────────────────────
 
-    fun insertPitch(pitcherId: Long, type: String): Long {
+    fun insertPitch(pitcherId: Long, type: String, inning: Int = 1): Long {
         val next = pitcherDao.getNextSequenceNr(pitcherId)
-        return pitcherDao.insertPitch(Pitch(pitcherId = pitcherId, type = type, sequenceNr = next))
+        return pitcherDao.insertPitch(Pitch(pitcherId = pitcherId, type = type, sequenceNr = next, inning = inning))
     }
 
     fun undoLastPitch(pitcherId: Long) = pitcherDao.undoLastPitch(pitcherId)
