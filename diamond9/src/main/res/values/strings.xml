@@ -207,6 +207,17 @@
     <string name="dialog_load_demo_title">Load Demo Team</string>
     <string name="dialog_load_demo_message">Load \"Cologne Cardinals U12 LL\" as a demo team? This will add a sample roster so you can try out the app right away.</string>
 
+    <!-- ── Trend Bottom Sheet ───────────────────────────────────────────────── -->
+    <string name="trend_title">Pitcher Trend</string>
+    <string name="trend_no_data">No data yet – at least 1 batter needed</string>
+    <string name="trend_good">Pitcher in form</string>
+    <string name="trend_watch">Watch – Strike% dropping</string>
+    <string name="trend_change">Consider a change</string>
+    <string name="trend_last_bf">Last batter: %1$d%% %2$s</string>
+    <string name="trend_per_batter">Strike%% per batter</string>
+    <string name="trend_batter_nr">Batter %d</string>
+    <string name="content_desc_trend">Show trend</string>
+
     <!-- ── Innings & Outs ────────────────────────────────────────────────────── -->
     <string name="btn_out">OUT</string>
     <string name="label_inning">Inning %d</string>

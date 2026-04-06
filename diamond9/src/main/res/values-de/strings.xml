@@ -207,6 +207,17 @@
     <string name="dialog_load_demo_title">Demo-Team laden</string>
     <string name="dialog_load_demo_message">„Cologne Cardinals U12 LL" als Demo-Team laden? Damit kannst du die App sofort mit einem Beispiel-Roster ausprobieren.</string>
 
+    <!-- ── Trend Bottom Sheet ───────────────────────────────────────────────── -->
+    <string name="trend_title">Pitcher Trend</string>
+    <string name="trend_no_data">Noch keine Daten – mindestens 1 Batter nötig</string>
+    <string name="trend_good">Pitcher in Form</string>
+    <string name="trend_watch">Beobachten – Strike%% sinkt</string>
+    <string name="trend_change">Wechsel erwägen</string>
+    <string name="trend_last_bf">Letzter Batter: %1$d%% %2$s</string>
+    <string name="trend_per_batter">Strike%% pro Batter</string>
+    <string name="trend_batter_nr">Batter %d</string>
+    <string name="content_desc_trend">Trend anzeigen</string>
+
     <!-- ── Innings & Outs ────────────────────────────────────────────────────── -->
     <string name="btn_out">OUT</string>
     <string name="label_inning">Inning %d</string>

@@ -7,6 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -63,6 +66,7 @@ class PitchTrackActivity : ComponentActivity() {
         var inning by remember { mutableStateOf(1) }
         var outs by remember { mutableStateOf(0) }
         var showInningSnackbar by remember { mutableStateOf(false) }
+        var showTrendSheet by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
 
@@ -170,8 +174,18 @@ class PitchTrackActivity : ComponentActivity() {
                         db.undoLastPitch(pitcherId)
                         refresh()
                     },
-                    onOut = { addOut() }
+                    onOut = { addOut() },
+                    onShowTrend = { showTrendSheet = true }
                 )
+            }
+        }
+
+        if (showTrendSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showTrendSheet = false },
+                containerColor = Color.White
+            ) {
+                PitcherTrendSheet(stats)
             }
         }
     }
@@ -369,7 +383,8 @@ class PitchTrackActivity : ComponentActivity() {
         onHbp: () -> Unit,
         onBf: () -> Unit,
         onUndo: () -> Unit,
-        onOut: () -> Unit
+        onOut: () -> Unit,
+        onShowTrend: () -> Unit
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -378,6 +393,18 @@ class PitchTrackActivity : ComponentActivity() {
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    IconButton(onClick = onShowTrend) {
+                        Icon(
+                            imageVector = Icons.Default.ShowChart,
+                            contentDescription = stringResource(R.string.content_desc_trend),
+                            tint = Color(0xFF1A5FA8)
+                        )
+                    }
+                }
                 Row(modifier = Modifier.height(80.dp)) {
                     Button(
                         onClick = onBall,
@@ -477,5 +504,205 @@ class PitchTrackActivity : ComponentActivity() {
     private fun getBatterJersey(battingOrder: Int): String {
         if (gameId == -1L) return ""
         return db.getJerseyAtBattingOrder(gameId, battingOrder)
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun PitcherTrendSheet(stats: PitcherStats) {
+        val batters = remember(stats.pitches) { buildBatterStats(stats.pitches) }
+        val rolling = remember(batters) { rollingAverage(batters) }
+        val trendLevel = remember(batters) { getTrendLevel(batters) }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.trend_title),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF333333),
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
+
+            if (batters.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.trend_no_data),
+                        color = Color(0xFF888888),
+                        fontSize = 14.sp
+                    )
+                }
+            } else {
+                AndroidView(
+                    factory = { ctx ->
+                        com.github.mikephil.charting.charts.LineChart(ctx).apply {
+                            description.isEnabled = false
+                            legend.isEnabled = false
+                            setTouchEnabled(false)
+                            setDrawGridBackground(false)
+                            axisRight.isEnabled = false
+
+                            xAxis.apply {
+                                position = com.github.mikephil.charting.components.XAxis.XAxisPosition.BOTTOM
+                                granularity = 1f
+                                textColor = android.graphics.Color.parseColor("#888888")
+                                textSize = 10f
+                                setDrawGridLines(false)
+                            }
+
+                            axisLeft.apply {
+                                axisMinimum = 0f
+                                axisMaximum = 1f
+                                valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
+                                    override fun getFormattedValue(value: Float) = "${(value * 100).toInt()}%"
+                                }
+                                textColor = android.graphics.Color.parseColor("#888888")
+                                textSize = 10f
+                                addLimitLine(
+                                    com.github.mikephil.charting.components.LimitLine(0.6f, "60%").apply {
+                                        lineColor = android.graphics.Color.parseColor("#27AE60")
+                                        lineWidth = 1f
+                                        textColor = android.graphics.Color.parseColor("#27AE60")
+                                        textSize = 9f
+                                        labelPosition = com.github.mikephil.charting.components.LimitLine.LimitLabelPosition.RIGHT_TOP
+                                    }
+                                )
+                                addLimitLine(
+                                    com.github.mikephil.charting.components.LimitLine(0.4f, "40%").apply {
+                                        lineColor = android.graphics.Color.parseColor("#E67E22")
+                                        lineWidth = 1f
+                                        textColor = android.graphics.Color.parseColor("#E67E22")
+                                        textSize = 9f
+                                        labelPosition = com.github.mikephil.charting.components.LimitLine.LimitLabelPosition.RIGHT_BOTTOM
+                                    }
+                                )
+                            }
+                        }
+                    },
+                    update = { chart ->
+                        val rawEntries = batters.mapIndexed { i, b ->
+                            com.github.mikephil.charting.data.Entry(i.toFloat(), b.strikePercent)
+                        }
+                        val rawSet = com.github.mikephil.charting.data.LineDataSet(rawEntries, "Strike%").apply {
+                            color = android.graphics.Color.parseColor("#1A5FA8")
+                            setCircleColor(android.graphics.Color.parseColor("#1A5FA8"))
+                            circleRadius = 4f
+                            lineWidth = 2f
+                            setDrawValues(false)
+                            mode = com.github.mikephil.charting.data.LineDataSet.Mode.CUBIC_BEZIER
+                        }
+
+                        val rollingEntries = rolling.mapIndexed { i, v ->
+                            com.github.mikephil.charting.data.Entry(i.toFloat(), v)
+                        }
+                        val rollingSet = com.github.mikephil.charting.data.LineDataSet(rollingEntries, "Trend").apply {
+                            color = android.graphics.Color.parseColor("#888888")
+                            lineWidth = 1.5f
+                            setDrawCircles(false)
+                            setDrawValues(false)
+                            enableDashedLine(10f, 5f, 0f)
+                        }
+
+                        chart.data = com.github.mikephil.charting.data.LineData(rawSet, rollingSet)
+                        chart.invalidate()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                val (bgColor, emoji, message) = when (trendLevel) {
+                    TrendLevel.GOOD   -> Triple(Color(0xFF27AE60), "🟢", stringResource(R.string.trend_good))
+                    TrendLevel.WATCH  -> Triple(Color(0xFFE67E22), "🟡", stringResource(R.string.trend_watch))
+                    TrendLevel.CHANGE -> Triple(Color(0xFFC0392B), "🔴", stringResource(R.string.trend_change))
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    color = bgColor.copy(alpha = 0.12f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(emoji, fontSize = 20.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = message,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = bgColor
+                            )
+                            if (batters.size >= 2) {
+                                val last = batters.last().strikePercent
+                                val prev = batters[batters.size - 2].strikePercent
+                                val diff = last - prev
+                                val arrow = when {
+                                    diff > 0.05f -> "↑"
+                                    diff < -0.05f -> "↓"
+                                    else -> "→"
+                                }
+                                Text(
+                                    text = stringResource(R.string.trend_last_bf, (last * 100).toInt(), arrow),
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF666666)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = stringResource(R.string.trend_per_batter),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF555555),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                batters.forEach { b ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(R.string.trend_batter_nr, b.batterNr),
+                            fontSize = 12.sp,
+                            color = Color(0xFF666666)
+                        )
+                        Text(
+                            text = "${b.balls}B ${b.strikes}S ${b.fouls}F",
+                            fontSize = 12.sp,
+                            color = Color(0xFF666666)
+                        )
+                        Text(
+                            text = "${(b.strikePercent * 100).toInt()}%",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = when {
+                                b.strikePercent >= 0.6f -> Color(0xFF27AE60)
+                                b.strikePercent >= 0.4f -> Color(0xFFE67E22)
+                                else -> Color(0xFFC0392B)
+                            }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
