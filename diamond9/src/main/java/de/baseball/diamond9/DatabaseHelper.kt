@@ -153,6 +153,9 @@ data class PitcherStats(
     val bf: Int,
     val balls: Int,
     val strikes: Int,
+    val walks: Int,
+    val hbp: Int,
+    val hits: Int,
     val totalPitches: Int,
     val pitches: List<Pitch>
 )
@@ -241,7 +244,10 @@ class DatabaseHelper(context: Context) {
             bf = pitches.count { it.type == "BF" },
             balls = pitches.count { it.type == "B" },
             strikes = strikes,
-            totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "F" || it.type == "HBP" },
+            walks = pitches.count { it.type == "W" },
+            hbp = pitches.count { it.type == "HBP" },
+            hits = pitches.count { it.type == "H" },
+            totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "F" || it.type == "HBP" || it.type == "H" },
             pitches = pitches
         )
     }

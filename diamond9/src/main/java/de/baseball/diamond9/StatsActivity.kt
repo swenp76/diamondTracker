@@ -66,9 +66,9 @@ fun StatsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Summary cards
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatCard(label = stringResource(R.string.stat_bf), value = stats.bf.toString(), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_hits), value = stats.hits.toString(), valueColor = Color(0xFFE74C3C), modifier = Modifier.weight(1f))
                 StatCard(label = stringResource(R.string.stat_balls), value = stats.balls.toString(), valueColor = Color(0xFF1A5FA8), modifier = Modifier.weight(1f))
                 StatCard(label = stringResource(R.string.stat_strikes), value = stats.strikes.toString(), valueColor = Color(0xFFC0392B), modifier = Modifier.weight(1f))
             }
@@ -76,9 +76,17 @@ fun StatsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatCard(label = stringResource(R.string.stat_walks), value = stats.walks.toString(), valueColor = Color(0xFFD35400), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_hbp), value = stats.hbp.toString(), valueColor = Color(0xFF8E44AD), modifier = Modifier.weight(1f))
                 StatCard(label = stringResource(R.string.stat_total_pitches), value = stats.totalPitches.toString(), modifier = Modifier.weight(1f))
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val strikePercent = if (stats.totalPitches > 0) (stats.strikes * 100.0 / stats.totalPitches).toInt() else 0
                 StatCard(label = stringResource(R.string.stat_strike_percent), value = "$strikePercent%", valueColor = Color(0xFF3B6D11), modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.weight(2f))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -122,7 +130,8 @@ fun StatCard(
 
 @Composable
 fun PitchGrid(pitches: List<Pitch>) {
-    val pitchesOnly = pitches.filter { it.type == "B" || it.type == "S" }
+    // Show B, S, F, W, H, and HBP in the sequence they occurred
+    val pitchesOnly = pitches.filter { it.type == "B" || it.type == "S" || it.type == "F" || it.type == "W" || it.type == "HBP" || it.type == "H" }
     val rows = 35
     val groups = 3
 
@@ -149,9 +158,40 @@ fun PitchGrid(pitches: List<Pitch>) {
                     val pitchIdx = startIdx + i
                     val actual = if (pitchIdx < pitchesOnly.size) pitchesOnly[pitchIdx] else null
                     
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        PitchCell(actual, "B", Color(0xFF1A5FA8), Modifier.weight(1f))
-                        PitchCell(actual, "S", Color(0xFFC0392B), Modifier.weight(1f))
+                    if (actual != null && (actual.type == "W" || actual.type == "HBP" || actual.type == "H")) {
+                        // Merged cell for Walk, HBP or Hit
+                        val bgColor = when(actual.type) {
+                            "W" -> Color(0xFFFFF7E6)
+                            "HBP" -> Color(0xFFF3E5F5)
+                            else -> Color(0xFFFFEBEE)
+                        }
+                        val textColor = when(actual.type) {
+                            "W" -> Color(0xFFD35400)
+                            "HBP" -> Color(0xFF8E44AD)
+                            else -> Color(0xFFE74C3C)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(24.dp)
+                                .border(0.5.dp, Color(0xFFDDDDDD))
+                                .background(bgColor)
+                                .padding(2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = actual.type,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor
+                            )
+                        }
+                    } else {
+                        // Normal two-column layout for B/S/F
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            PitchCell(actual, listOf("B"), Color(0xFF1A5FA8), Modifier.weight(1f))
+                            PitchCell(actual, listOf("S", "F"), Color(0xFFC0392B), Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -160,7 +200,7 @@ fun PitchGrid(pitches: List<Pitch>) {
 }
 
 @Composable
-fun PitchCell(pitch: Pitch?, type: String, activeColor: Color, modifier: Modifier = Modifier) {
+fun PitchCell(pitch: Pitch?, types: List<String>, activeColor: Color, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .height(24.dp)
@@ -168,11 +208,16 @@ fun PitchCell(pitch: Pitch?, type: String, activeColor: Color, modifier: Modifie
             .padding(2.dp),
         contentAlignment = Alignment.Center
     ) {
-        val isMatch = pitch?.type == type
+        val isMatch = pitch != null && pitch.type in types
+        val displayColor = when (pitch?.type) {
+            "F" -> Color(0xFFF39C12) // Foul color
+            else -> activeColor
+        }
+        
         Text(
             text = if (pitch == null) "" else if (isMatch) "✓" else "·",
             fontSize = 11.sp,
-            color = if (isMatch) activeColor else if (pitch == null) Color(0xFFDDDDDD) else Color(0xFFCCCCCC)
+            color = if (isMatch) displayColor else if (pitch == null) Color(0xFFDDDDDD) else Color(0xFFCCCCCC)
         )
     }
 }

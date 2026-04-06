@@ -25,6 +25,9 @@
     <string name="stat_bf">BF</string>
     <string name="stat_balls">Balls</string>
     <string name="stat_strikes">Strikes</string>
+    <string name="stat_walks">BB</string>
+    <string name="stat_hbp">HBP</string>
+    <string name="stat_hits">H</string>
     <string name="stat_total_pitches">Total Pitches</string>
     <string name="stat_strike_percent">Strike%</string>
     <string name="stat_pitch">Pitch</string>
@@ -34,6 +37,7 @@
     <!-- ── Pitch Buttons ──────────────────────────────────────────────────── -->
     <string name="btn_ball">BALL</string>
     <string name="btn_strike">STRIKE</string>
+    <string name="btn_hit">HIT</string>
     <string name="btn_hbp">HBP</string>
     <string name="btn_walk">WALK</string>
     <string name="btn_strikeout">K</string>
@@ -45,6 +49,7 @@
     <string name="pitch_label_ball">Ball</string>
     <string name="pitch_label_strike">Strike</string>
     <string name="pitch_label_foul">Foul</string>
+    <string name="pitch_label_hit">── Hit ──────────────────────────</string>
     <string name="pitch_label_hbp">── Hit by Pitch ─────────────────</string>
     <string name="pitch_label_walk">── Walk ─────────────────────────</string>
     <string name="pitch_label_strikeout">── Strike-Out (K) ───────────────</string>

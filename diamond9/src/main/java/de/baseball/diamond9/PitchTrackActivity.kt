@@ -116,6 +116,11 @@ class PitchTrackActivity : ComponentActivity() {
                         }
                         refresh()
                     },
+                    onHit = {
+                        db.insertPitch(pitcherId, "H")
+                        db.insertPitch(pitcherId, "BF")
+                        refresh()
+                    },
                     onFoul = {
                         db.insertPitch(pitcherId, "F")
                         refresh()
@@ -163,6 +168,8 @@ class PitchTrackActivity : ComponentActivity() {
                 StatItem(stringResource(R.string.stat_bf), totalBF.toString(), Color(0xFF333333))
                 StatItem(stringResource(R.string.stat_balls), stats.balls.toString(), Color(0xFF1A5FA8))
                 StatItem(stringResource(R.string.stat_strikes), stats.strikes.toString(), Color(0xFFC0392B))
+                StatItem(stringResource(R.string.stat_walks), stats.walks.toString(), Color(0xFFD35400))
+                StatItem(stringResource(R.string.stat_hbp), stats.hbp.toString(), Color(0xFF8E44AD))
                 StatItem(stringResource(R.string.stat_pitch), "#${stats.totalPitches + 1}", Color(0xFF333333))
                 StatItem(stringResource(R.string.stat_count), "$atBatBalls-$atBatStrikes", Color(0xFF1A5FA8))
             }
@@ -243,6 +250,7 @@ class PitchTrackActivity : ComponentActivity() {
                         Text(batterLabel, color = Color(0xFF888888), fontSize = 11.sp)
                     }
                     "HBP" -> Text(stringResource(R.string.pitch_label_hbp), color = Color(0xFF8E44AD), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "H" -> Text(stringResource(R.string.pitch_label_hit), color = Color(0xFFE74C3C), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "W" -> Text(stringResource(R.string.pitch_label_walk), color = Color(0xFFD35400), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "SO" -> Text(stringResource(R.string.pitch_label_strikeout), color = Color(0xFF27AE60), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "B", "S", "F" -> {
@@ -282,6 +290,7 @@ class PitchTrackActivity : ComponentActivity() {
     fun ActionButtons(
         onBall: () -> Unit,
         onStrike: () -> Unit,
+        onHit: () -> Unit,
         onFoul: () -> Unit,
         onHbp: () -> Unit,
         onBf: () -> Unit,
@@ -315,6 +324,15 @@ class PitchTrackActivity : ComponentActivity() {
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.height(64.dp)) {
+                    Button(
+                        onClick = onHit,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE74C3C)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(stringResource(R.string.btn_hit), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = onHbp,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
