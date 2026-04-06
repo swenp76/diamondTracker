@@ -1,7 +1,9 @@
 package de.baseball.diamond9
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -21,6 +23,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DrawerValue
@@ -30,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
+import org.json.JSONObject
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -82,9 +87,56 @@ class CoachAct : ComponentActivity() {
                     },
                     onMenuClick = {
                         scope.launch { drawerState.open() }
-                    }
+                    },
+                    onLoadDemoTeam = { showLoadDemoTeamDialog() }
                 )
             }
+        }
+    }
+
+    private fun showLoadDemoTeamDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.dialog_load_demo_title))
+            .setMessage(getString(R.string.dialog_load_demo_message))
+            .setPositiveButton(getString(R.string.btn_import)) { _, _ -> importDemoTeam() }
+            .setNegativeButton(getString(R.string.btn_cancel), null)
+            .show()
+    }
+
+    private fun importDemoTeam() {
+        try {
+            val json = resources.openRawResource(R.raw.demo_team).use {
+                it.readBytes().toString(Charsets.UTF_8)
+            }
+            val root = JSONObject(json)
+            val teamId = db.insertTeam(root.getString("name"))
+
+            db.getEnabledPositions(teamId).forEach { db.setPositionEnabled(teamId, it, false) }
+            val posArray = root.optJSONArray("positions")
+            if (posArray != null) {
+                for (p in 0 until posArray.length()) db.setPositionEnabled(teamId, posArray.getInt(p), true)
+            }
+
+            val playersArray = root.optJSONArray("players")
+            if (playersArray != null) {
+                for (p in 0 until playersArray.length()) {
+                    val pl = playersArray.getJSONObject(p)
+                    db.insertPlayer(
+                        teamId,
+                        pl.getString("name"),
+                        pl.optString("number", ""),
+                        pl.optInt("primary_position", 0),
+                        pl.optInt("secondary_position", 0),
+                        pl.optBoolean("is_pitcher", false),
+                        pl.optInt("birth_year", 0)
+                    )
+                }
+            }
+
+            Toast.makeText(this, getString(R.string.toast_team_imported, root.getString("name")), Toast.LENGTH_SHORT).show()
+            recreate()
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.toast_import_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
 }
@@ -93,7 +145,8 @@ class CoachAct : ComponentActivity() {
 private fun CoachSelectScreen(
     loadTeams: () -> List<Team>,
     onTeamClick: (Team) -> Unit,
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    onLoadDemoTeam: () -> Unit
 ) {
     var teams by remember { mutableStateOf(loadTeams()) }
 
@@ -145,6 +198,18 @@ private fun CoachSelectScreen(
                             .fillMaxWidth()
                             .padding(24.dp)
                     )
+                    Button(
+                        onClick = onLoadDemoTeam,
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(top = 8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.btn_load_demo_team),
+                            fontSize = 15.sp
+                        )
+                    }
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),

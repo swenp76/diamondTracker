@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "name": "Cologne Cardinals U12 LL",
+  "positions": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+  "players": [
+    {
+      "name": "Tobias Brenner",
+      "number": "",
+      "primary_position": 3,
+      "secondary_position": 1,
+      "is_pitcher": true,
+      "birth_year": 2015
+    },
+    {
+      "name": "Elias Vogel",
+      "number": "",
+      "primary_position": 0,
+      "secondary_position": 0,
+      "is_pitcher": false,
+      "birth_year": 2015
+    },
+    {
+      "name": "Finn Hartmann",
+      "number": "",
+      "primary_position": 9,
+      "secondary_position": 0,
+      "is_pitcher": false,
+      "birth_year": 2015
+    },
+    {
+      "name": "Leon Schwarz",
+      "number": "",
+      "primary_position": 4,
+      "secondary_position": 6,
+      "is_pitcher": true,
+      "birth_year": 2015
+    },
+    {
+      "name": "Moritz Becker",
+      "number": "",
+      "primary_position": 7,
+      "secondary_position": 9,
+      "is_pitcher": false,
+      "birth_year": 2015
+    },
+    {
+      "name": "Paul Kessler",
+      "number": "",
+      "primary_position": 6,
+      "secondary_position": 8,
+      "is_pitcher": true,
+      "birth_year": 2015
+    },
+    {
+      "name": "Tim Richter",
+      "number": "",
+      "primary_position": 1,
+      "secondary_position": 3,
+      "is_pitcher": true,
+      "birth_year": 2015
+    },
+    {
+      "name": "Sofia Lange",
+      "number": "",
+      "primary_position": 9,
+      "secondary_position": 7,
+      "is_pitcher": false,
+      "birth_year": 2015
+    },
+    {
+      "name": "Lena Hoffmann",
+      "number": "",
+      "primary_position": 8,
+      "secondary_position": 5,
+      "is_pitcher": false,
+      "birth_year": 2015
+    },
+    {
+      "name": "Ben Krause",
+      "number": "",
+      "primary_position": 0,
+      "secondary_position": 0,
+      "is_pitcher": false,
+      "birth_year": 2016
+    },
+    {
+      "name": "Niklas Werner",
+      "number": "",
+      "primary_position": 8,
+      "secondary_position": 2,
+      "is_pitcher": false,
+      "birth_year": 2015
+    },
+    {
+      "name": "Jonas Falk",
+      "number": "",
+      "primary_position": 4,
+      "secondary_position": 6,
+      "is_pitcher": false,
+      "birth_year": 2015
+    },
+    {
+      "name": "Max Stein",
+      "number": "",
+      "primary_position": 6,
+      "secondary_position": 3,
+      "is_pitcher": true,
+      "birth_year": 2015
+    },
+    {
+      "name": "Lukas Graf",
+      "number": "",
+      "primary_position": 7,
+      "secondary_position": 9,
+      "is_pitcher": false,
+      "birth_year": 2015
+    },
+    {
+      "name": "Felix Baum",
+      "number": "",
+      "primary_position": 7,
+      "secondary_position": 9,
+      "is_pitcher": false,
+      "birth_year": 2015
+    },
+    {
+      "name": "David Müller",
+      "number": "",
+      "primary_position": 8,
+      "secondary_position": 7,
+      "is_pitcher": false,
+      "birth_year": 2015
+    },
+    {
+      "name": "Noah Braun",
+      "number": "24",
+      "primary_position": 4,
+      "secondary_position": 6,
+      "is_pitcher": true,
+      "birth_year": 2015
+    },
+    {
+      "name": "Simon Koch",
+      "number": "36",
+      "primary_position": 4,
+      "secondary_position": 9,
+      "is_pitcher": false,
+      "birth_year": 2015
+    },
+    {
+      "name": "Jan Weber",
+      "number": "44",
+      "primary_position": 2,
+      "secondary_position": 5,
+      "is_pitcher": false,
+      "birth_year": 2015
+    }
+  ]
+}

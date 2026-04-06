@@ -202,6 +202,9 @@
     <!-- Coach Select -->
     <string name="coach_select_title">Which team do you want to coach today?</string>
     <string name="coach_select_no_teams">No teams created yet.\nGo to Settings → Teams.</string>
+    <string name="btn_load_demo_team">Load Demo Team</string>
+    <string name="dialog_load_demo_title">Load Demo Team</string>
+    <string name="dialog_load_demo_message">Load \"Cologne Cardinals U12 LL\" as a demo team? This will add a sample roster so you can try out the app right away.</string>
 
     <!-- FAB Labels -->
     <string name="fab_add_game">Add Game</string>
