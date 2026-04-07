@@ -106,3 +106,16 @@ CoachAct  →  GameListActivity (gefiltert nach Team)
 - Die App soll **einfach während eines Spiels bedienbar** sein → große Buttons, wenig Tipp-Aufwand
 - Kein Internet erforderlich, alles lokal auf dem Gerät
 - Zielgruppe: Baseball Coaches (nicht zwingend technikaffin)
+
+## Entwicklungsregeln
+
+### Backup-Migration (PFLICHT)
+Jede neue Room-Migration (`MIGRATION_X_Y` in `AppDatabase.kt`) zieht
+immer auch eine entsprechende Backup-Migration in `BackupManager` nach
+sich. Beide müssen in demselben Commit landen.
+
+Checkliste bei neuer DB-Version:
+- [ ] Neue Migration in `AppDatabase.kt` angelegt
+- [ ] Entsprechende Backup-Migration in `BackupManager` ergänzt
+- [ ] `dbVersion` im Backup-Export aktualisiert
+- [ ] Restore-Logik für die neue Version getestet
