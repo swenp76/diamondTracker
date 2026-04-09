@@ -18,11 +18,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 sealed class NavItem(val titleRes: Int, val icon: ImageVector, val activityClass: Class<*>) {
-    object Home : NavItem(R.string.nav_home, Icons.Default.Home, CoachAct::class.java)
-    object Teams : NavItem(R.string.nav_teams, Icons.Default.Group, TeamListActivity::class.java)
-    object Opponents : NavItem(R.string.nav_opponents, Icons.Default.Group, ManageOpponentsActivity::class.java)
-    object Settings : NavItem(R.string.nav_settings, Icons.Default.Settings, SettingsActivity::class.java)
-    object About : NavItem(R.string.nav_about, Icons.Default.Info, AboutActivity::class.java)
+    object Home      : NavItem(R.string.nav_home,      Icons.Default.Home,     CoachAct::class.java)
+    object Teams     : NavItem(R.string.nav_teams,     Icons.Default.Group,    TeamListActivity::class.java)
+    object Opponents : NavItem(R.string.nav_opponents, Icons.Default.Group,    ManageOpponentsActivity::class.java)
+    object Settings  : NavItem(R.string.nav_settings,  Icons.Default.Settings, SettingsActivity::class.java)
+    object About     : NavItem(R.string.nav_about,     Icons.Default.Info,     AboutActivity::class.java)
 }
 
 @Composable
@@ -31,9 +31,16 @@ fun AppDrawer(
     scope: CoroutineScope,
     currentActivity: Class<*>,
     context: Context,
+    teamId: Long = 0L,
     content: @Composable () -> Unit
 ) {
-    val items = listOf(NavItem.Home, NavItem.Teams, NavItem.Opponents, NavItem.Settings, NavItem.About)
+    val items = buildList {
+        add(NavItem.Home)
+        add(NavItem.Teams)
+        if (teamId > 0L) add(NavItem.Opponents)
+        add(NavItem.Settings)
+        add(NavItem.About)
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -55,7 +62,12 @@ fun AppDrawer(
                             scope.launch { drawerState.close() }
                             if (currentActivity != item.activityClass) {
                                 val intent = Intent(context, item.activityClass)
-                                intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                                if (item == NavItem.Opponents) {
+                                    // Team-specific: pass teamId, no activity reuse
+                                    intent.putExtra("teamId", teamId)
+                                } else {
+                                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                                }
                                 context.startActivity(intent)
                             }
                         },

@@ -66,7 +66,8 @@ class GameListActivity : ComponentActivity() {
                 drawerState = drawerState,
                 scope = scope,
                 currentActivity = GameListActivity::class.java,
-                context = this
+                context = this,
+                teamId = teamId
             ) {
                 GameListScreen(
                     teamId = teamId,
@@ -183,10 +184,10 @@ private fun GameListScreen(
         GameDialog(
             title = stringResource(R.string.dialog_add_game_title),
             confirmLabel = stringResource(R.string.btn_create),
-            opponents = db.getAllOpponentTeams(),
+            opponents = db.getOpponentTeamsForTeam(teamId),
             onDismiss = { showAddDialog = false },
             onConfirm = { date, opponent ->
-                db.insertOpponentTeamIfNew(opponent)
+                db.insertOpponentTeamForTeam(opponent, teamId)
                 db.insertGame(date, opponent, teamId)
                 refresh()
                 showAddDialog = false
@@ -200,10 +201,10 @@ private fun GameListScreen(
             confirmLabel = stringResource(R.string.btn_save),
             initialDate = game.date,
             initialOpponent = game.opponent,
-            opponents = db.getAllOpponentTeams(),
+            opponents = db.getOpponentTeamsForTeam(teamId),
             onDismiss = { gameToEdit = null },
             onConfirm = { date, opponent ->
-                db.insertOpponentTeamIfNew(opponent)
+                db.insertOpponentTeamForTeam(opponent, teamId)
                 db.updateGame(game.id, date, opponent)
                 refresh()
                 gameToEdit = null

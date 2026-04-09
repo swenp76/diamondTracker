@@ -43,6 +43,8 @@ class ManageOpponentsActivity : ComponentActivity() {
         enableEdgeToEdge()
         db = DatabaseHelper(this)
 
+        val teamId = intent.getLongExtra("teamId", 0L)
+
         setContent {
             val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
             val scope = rememberCoroutineScope()
@@ -51,10 +53,12 @@ class ManageOpponentsActivity : ComponentActivity() {
                 drawerState = drawerState,
                 scope = scope,
                 currentActivity = ManageOpponentsActivity::class.java,
-                context = this
+                context = this,
+                teamId = teamId
             ) {
                 ManageOpponentsScreen(
                     db = db,
+                    teamId = teamId,
                     onMenuClick = { scope.launch { drawerState.open() } }
                 )
             }
@@ -66,6 +70,7 @@ class ManageOpponentsActivity : ComponentActivity() {
 @Composable
 private fun ManageOpponentsScreen(
     db: DatabaseHelper,
+    teamId: Long,
     onMenuClick: () -> Unit
 ) {
     var opponents by remember { mutableStateOf(emptyList<OpponentTeam>()) }
@@ -73,7 +78,7 @@ private fun ManageOpponentsScreen(
     var opponentToDelete by remember { mutableStateOf<OpponentTeam?>(null) }
 
     fun refresh() {
-        opponents = db.getAllOpponentTeams()
+        opponents = db.getOpponentTeamsForTeam(teamId)
     }
 
     LaunchedEffect(Unit) {
@@ -155,7 +160,7 @@ private fun ManageOpponentsScreen(
             confirmButton = {
                 Button(onClick = {
                     if (newName.isNotBlank()) {
-                        db.insertOpponentTeamIfNew(newName.trim())
+                        db.insertOpponentTeamForTeam(newName.trim(), teamId)
                         refresh()
                         showAddDialog = false
                     } else {

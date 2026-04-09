@@ -104,10 +104,11 @@ data class Substitution(
     @ColumnInfo(name = "player_in_id") val playerInId: Long
 )
 
-@Entity(tableName = "opponent_teams", indices = [Index(value = ["name"], unique = true)])
+@Entity(tableName = "opponent_teams", indices = [Index(value = ["name", "team_id"], unique = true)])
 data class OpponentTeam(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String
+    val name: String,
+    @ColumnInfo(name = "team_id", defaultValue = "0") val teamId: Long = 0L
 )
 
 @Entity(tableName = "scoreboard_runs")
@@ -456,8 +457,14 @@ class DatabaseHelper(context: Context) {
 
     fun getAllOpponentTeams(): List<OpponentTeam> = opponentTeamDao.getAll()
 
+    fun getOpponentTeamsForTeam(teamId: Long): List<OpponentTeam> =
+        opponentTeamDao.getForTeam(teamId)
+
     fun insertOpponentTeamIfNew(name: String): Long =
         opponentTeamDao.insert(OpponentTeam(name = name))
+
+    fun insertOpponentTeamForTeam(name: String, teamId: Long): Long =
+        opponentTeamDao.insert(OpponentTeam(name = name, teamId = teamId))
 
     fun deleteOpponentTeam(id: Long) = opponentTeamDao.delete(id)
 

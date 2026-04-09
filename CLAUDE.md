@@ -17,7 +17,7 @@ Sie hilft beim Verwalten von Teams, Erstellen von Aufstellungen und Tracken von 
 ```
 diamond9/src/main/java/de/baseball/diamond9/
 ├── db/
-│   ├── AppDatabase.kt        ← Room-Datenbank, Migrations, Version 7
+│   ├── AppDatabase.kt        ← Room-Datenbank, Migrations, Version 8
 │   ├── AtBatDao.kt
 │   ├── GameDao.kt
 │   ├── LineupDao.kt
@@ -27,7 +27,7 @@ diamond9/src/main/java/de/baseball/diamond9/
 │   ├── ScoreboardDao.kt      ← neu: scoreboard_runs
 │   └── TeamDao.kt
 ├── AppNavigation.kt          ← NavDrawer (AppDrawer Composable)
-├── BackupManager.kt          ← Backup/Restore (JSON, dbVersion 7)
+├── BackupManager.kt          ← Backup/Restore (JSON, dbVersion 8)
 ├── BattingTrackActivity.kt   ← Offense / Batting
 ├── CoachAct.kt               ← Startseite
 ├── DatabaseHelper.kt         ← Wrapper über alle DAOs + Entities
@@ -110,6 +110,7 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ **#7** Spielübergreifende Statistiken (SeasonStatsActivity): Batter-Tab (AB/H/AVG/BB/K) + Pitcher-Tab (BF/P/S%/BB/K)
 - ✅ **#9** Scoreboard im GameHub (scoreboard_runs-Tabelle, 9 Innings, Away/Home, klickbare Zellen)
 - ✅ **#10** Spieluhr im GameHub (start_time in games, aufwärts zählend, überlebt App-Neustart)
+- ✅ **#2** Gegner teamabhängig (opponent_teams.team_id, DB v8, NavDrawer zeigt Opponents nur bei aktivem Team)
 
 ---
 
@@ -160,15 +161,6 @@ In `PitcherStats` neues Feld `ip: String` ergänzen und in `StatsActivity` anzei
 #### #1 – Design: Farbkonsistenz
 Alle hardcodierten Hex-Farben in allen Composables durch `colorResource(R.color.X)` ersetzen.
 Farben in `colors.xml` zentralisieren (siehe Farbdefinitionen oben).
-
----
-
-#### #2 – Bug: Gegner teamabhängig
-**Datei:** `AppNavigation.kt`, `DatabaseHelper.kt`
-
-- `NavItem.Opponents` im Drawer nur anzeigen wenn ein Team aktiv ausgewählt ist
-- `opponent_teams`-Tabelle um `team_id`-Spalte erweitern (DB-Migration)
-- `ManageOpponentsActivity` filtert Gegner nach aktivem Team
 
 ---
 
@@ -267,7 +259,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 
 ---
 
-## Datenbankschema (Version 7)
+## Datenbankschema (Version 8)
 
 | Tabelle | Wichtige Felder |
 |---------|----------------|
@@ -284,7 +276,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | `own_lineup` | game_id, slot, player_id |
 | `substitutions` | id, game_id, slot, player_out_id, player_in_id |
 | `opponent_substitutions` | id, game_id, slot, jersey_out, jersey_in |
-| `opponent_teams` | id, name |
+| `opponent_teams` | id, name, **team_id** |
 | **`scoreboard_runs`** | **id, game_id, inning, is_home, runs** |
 
 **Pitch-Typen:** `B` = Ball, `S` = Strike, `F` = Foul, `BF` = Batter Faced,
@@ -304,7 +296,8 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | 4 → 5 | `at_bat_id` in `pitches`, `at_bats`-Tabelle | ✅ |
 | 5 → 6 | `scoreboard_runs`-Tabelle | ✅ |
 | 6 → 7 | `start_time` in `games` | ✅ |
-| 7 → 8 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
-| 8 → 9 | `innings`, `sport_type`, `max_substitutes` in `teams`; `team_id` in `opponent_teams` (#2, #11, #12) | geplant |
+| 7 → 8 | `team_id` in `opponent_teams` (#2) | ✅ |
+| 8 → 9 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
+| 9 → 10 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
 
 **Hinweis:** Jede Migration hier eintragen und gleichzeitig `BackupManager` aktualisieren.

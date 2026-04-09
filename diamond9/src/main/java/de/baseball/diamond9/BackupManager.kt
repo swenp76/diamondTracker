@@ -12,13 +12,14 @@ import org.json.JSONObject
  *      at_bats, lineups, substitutions, opponent_teams)
  *  6 → added scoreboard_runs table
  *  7 → added start_time column to games table
+ *  8 → opponent_teams now scoped per team (team_id column added)
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
 class BackupManager(private val context: Context) {
 
     companion object {
-        const val DB_VERSION = 7
+        const val DB_VERSION = 8
     }
 
     private val db = DatabaseHelper(context)
@@ -67,10 +68,23 @@ class BackupManager(private val context: Context) {
         }
         root.put("scoreboard_runs", allScoreboardRuns)
 
+        // opponent_teams (scoped per team since DB version 8)
+        val allOpponentTeams = JSONArray()
+        db.getAllTeams().forEach { team ->
+            db.getOpponentTeamsForTeam(team.id).forEach { opp ->
+                allOpponentTeams.put(JSONObject().apply {
+                    put("id", opp.id)
+                    put("name", opp.name)
+                    put("team_id", opp.teamId)
+                })
+            }
+        }
+        root.put("opponent_teams", allOpponentTeams)
+
         // TODO: add remaining tables in a future commit (issue #18-#20):
         //  players, team_positions, pitchers, pitches, at_bats,
         //  own_lineup, substitutions, opponent_lineup, opponent_bench,
-        //  opponent_substitutions, opponent_teams, pitcher_appearances
+        //  opponent_substitutions, pitcher_appearances
 
         return root
     }
@@ -88,6 +102,7 @@ class BackupManager(private val context: Context) {
         val migrated = applyBackupMigrations(json, fromVersion = backupVersion, toVersion = DB_VERSION)
 
         restoreScoreboardRuns(migrated)
+        restoreOpponentTeams(migrated)
         // TODO: restore remaining tables (issue #18-#20)
     }
 
@@ -120,6 +135,18 @@ class BackupManager(private val context: Context) {
             v = 7
         }
 
+        // Migration 7 → 8: opponent_teams now have a team_id column – default 0 for older backups.
+        if (v < 8 && toVersion >= 8) {
+            val opps = current.optJSONArray("opponent_teams")
+            if (opps != null) {
+                for (i in 0 until opps.length()) {
+                    val o = opps.getJSONObject(i)
+                    if (!o.has("team_id")) o.put("team_id", 0L)
+                }
+            }
+            v = 8
+        }
+
         return current
     }
 
@@ -132,6 +159,17 @@ class BackupManager(private val context: Context) {
                 inning = obj.getInt("inning"),
                 isHome = obj.getInt("is_home"),
                 runs = obj.getInt("runs")
+            )
+        }
+    }
+
+    private fun restoreOpponentTeams(json: JSONObject) {
+        val arr = json.optJSONArray("opponent_teams") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.insertOpponentTeamForTeam(
+                name = obj.getString("name"),
+                teamId = obj.optLong("team_id", 0L)
             )
         }
     }
