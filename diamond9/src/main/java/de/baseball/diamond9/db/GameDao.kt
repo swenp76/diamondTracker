@@ -37,6 +37,7 @@ abstract class GameDao {
         deleteOwnLineup(gameId)
         deleteSubstitutions(gameId)
         deleteOppSubstitutions(gameId)
+        deleteScoreboardRuns(gameId)
         deleteGameById(gameId)
     }
 
@@ -63,6 +64,9 @@ abstract class GameDao {
 
     @Query("DELETE FROM opponent_substitutions WHERE game_id = :gameId")
     abstract fun deleteOppSubstitutions(gameId: Long)
+
+    @Query("DELETE FROM scoreboard_runs WHERE game_id = :gameId")
+    abstract fun deleteScoreboardRuns(gameId: Long)
 
     @Query("DELETE FROM games WHERE id = :gameId")
     abstract fun deleteGameById(gameId: Long)

@@ -239,6 +239,13 @@
     <string name="hint_opponent_team_name">Team Name</string>
     <string name="fab_add_opponent">Add Opponent</string>
 
+    <!-- ── Scoreboard ───────────────────────────────────────────────────── -->
+    <string name="scoreboard_away">Away</string>
+    <string name="scoreboard_home">Home</string>
+    <string name="scoreboard_total_label">R</string>
+    <string name="scoreboard_runs_label">Runs</string>
+    <string name="scoreboard_dialog_title">Inning %1$d – %2$s</string>
+
     <!-- ── Empty States ──────────────────────────────────────────────────── -->
     <string name="empty_games">No games yet.\nAdd a new game first.</string>
     <string name="empty_pitchers">No pitchers yet.\nAdd a new pitcher first.</string>

@@ -109,6 +109,15 @@ data class OpponentTeam(
     val name: String
 )
 
+@Entity(tableName = "scoreboard_runs")
+data class ScoreboardRun(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "game_id") val gameId: Long,
+    @ColumnInfo(name = "inning") val inning: Int,
+    @ColumnInfo(name = "is_home") val isHome: Int, // 0 = away, 1 = home
+    @ColumnInfo(name = "runs") val runs: Int = 0
+)
+
 @Entity(tableName = "opponent_substitutions")
 data class OppSubstitution(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -188,6 +197,7 @@ class DatabaseHelper(context: Context) {
     private val playerDao = db.playerDao()
     private val lineupDao = db.lineupDao()
     private val opponentTeamDao = db.opponentTeamDao()
+    private val scoreboardDao = db.scoreboardDao()
 
     // ── Games ──────────────────────────────────────────────────────────────────
 
@@ -458,4 +468,19 @@ class DatabaseHelper(context: Context) {
     fun undoLastPitchForAtBat(atBatId: Long) = atBatDao.undoLastPitch(atBatId)
 
     fun getPitchesForAtBat(atBatId: Long): List<Pitch> = atBatDao.getPitchesForAtBat(atBatId)
+
+    // ── Scoreboard ─────────────────────────────────────────────────────────────
+
+    fun getScoreboard(gameId: Long): List<ScoreboardRun> = scoreboardDao.getScoreboard(gameId)
+
+    fun upsertScoreboardRun(gameId: Long, inning: Int, isHome: Int, runs: Int) {
+        val existing = scoreboardDao.getRun(gameId, inning, isHome)
+        if (existing != null) {
+            scoreboardDao.update(existing.copy(runs = runs))
+        } else {
+            scoreboardDao.insert(ScoreboardRun(gameId = gameId, inning = inning, isHome = isHome, runs = runs))
+        }
+    }
+
+    fun getTeamById(teamId: Long): Team? = teamDao.getAllTeams().find { it.id == teamId }
 }
