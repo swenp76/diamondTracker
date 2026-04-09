@@ -116,7 +116,7 @@ class BattingTrackActivity : ComponentActivity() {
             startNewAtBat(nextSlot)
         }
 
-        fun addOut(abId: Long, isStrikeout: Boolean = false) {
+        fun incrementOuts() {
             val newOuts = outs + 1
             if (newOuts >= 3) {
                 inning++
@@ -125,9 +125,12 @@ class BattingTrackActivity : ComponentActivity() {
                 outs = newOuts
             }
             db.updateGameState(gameId, inning, outs)
-            
+        }
+
+        fun strikeOut(abId: Long) {
+            incrementOuts()
             if (abId != -1L) {
-                db.updateAtBatResult(abId, if (isStrikeout) "K" else "OUT")
+                db.updateAtBatResult(abId, "K")
             }
             nextBatter()
         }
@@ -180,7 +183,7 @@ class BattingTrackActivity : ComponentActivity() {
                         val updatedPitches = db.getPitchesForAtBat(abId)
                         val (_, strikes) = currentAtBatCount(updatedPitches)
                         if (strikes >= 3) {
-                            addOut(abId, isStrikeout = true)
+                            strikeOut(abId)
                         } else {
                             refreshAtBat(abId)
                         }
@@ -237,8 +240,7 @@ class BattingTrackActivity : ComponentActivity() {
                         }
                     },
                     onOut = {
-                        val abId = ensureAtBat()
-                        addOut(abId)
+                        incrementOuts()
                     }
                 )
             }
