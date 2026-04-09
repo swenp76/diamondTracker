@@ -173,6 +173,27 @@ object BaseballPositions {
     }
 }
 
+data class SeasonBatterRow(
+    @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "ab") val ab: Int,
+    @ColumnInfo(name = "hits") val hits: Int,
+    @ColumnInfo(name = "walks") val walks: Int,
+    @ColumnInfo(name = "strikeouts") val strikeouts: Int,
+    @ColumnInfo(name = "hbp") val hbp: Int
+)
+
+data class SeasonPitcherRow(
+    @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "total_pitches") val totalPitches: Int,
+    @ColumnInfo(name = "bf") val bf: Int,
+    @ColumnInfo(name = "balls") val balls: Int,
+    @ColumnInfo(name = "strikes") val strikes: Int,
+    @ColumnInfo(name = "fouls") val fouls: Int,
+    @ColumnInfo(name = "walks") val walks: Int,
+    @ColumnInfo(name = "hits") val hits: Int,
+    @ColumnInfo(name = "ks") val ks: Int
+)
+
 data class PitcherStats(
     val pitcher: Pitcher,
     val bf: Int,
@@ -475,6 +496,14 @@ class DatabaseHelper(context: Context) {
     fun undoLastPitchForAtBat(atBatId: Long) = atBatDao.undoLastPitch(atBatId)
 
     fun getPitchesForAtBat(atBatId: Long): List<Pitch> = atBatDao.getPitchesForAtBat(atBatId)
+
+    // ── Season Stats ───────────────────────────────────────────────────────────
+
+    fun getSeasonBatterStats(teamId: Long): List<SeasonBatterRow> =
+        atBatDao.getSeasonBatterStats(teamId)
+
+    fun getSeasonPitcherStats(teamId: Long): List<SeasonPitcherRow> =
+        pitcherDao.getSeasonPitcherStats(teamId)
 
     // ── Scoreboard ─────────────────────────────────────────────────────────────
 

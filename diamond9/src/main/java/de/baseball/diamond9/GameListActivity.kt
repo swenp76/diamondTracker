@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -78,6 +79,12 @@ class GameListActivity : ComponentActivity() {
                             putExtra("gameOpponent", game.opponent)
                             putExtra("gameDate", game.date)
                         })
+                    },
+                    onSeasonStatsClick = {
+                        startActivity(Intent(this, SeasonStatsActivity::class.java).apply {
+                            putExtra("teamId", teamId)
+                            putExtra("teamName", teamName)
+                        })
                     }
                 )
             }
@@ -92,7 +99,8 @@ private fun GameListScreen(
     teamName: String,
     db: DatabaseHelper,
     onMenuClick: () -> Unit,
-    onGameClick: (Game) -> Unit
+    onGameClick: (Game) -> Unit,
+    onSeasonStatsClick: () -> Unit = {}
 ) {
     var games by remember { mutableStateOf(emptyList<Game>()) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -115,6 +123,11 @@ private fun GameListScreen(
                 navigationIcon = {
                     IconButton(onClick = onMenuClick) {
                         Icon(Icons.Default.Menu, null)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSeasonStatsClick) {
+                        Icon(Icons.Default.Leaderboard, contentDescription = stringResource(R.string.season_stats_btn))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)

@@ -239,6 +239,24 @@
     <string name="hint_opponent_team_name">Team Name</string>
     <string name="fab_add_opponent">Add Opponent</string>
 
+    <!-- ── Season Stats ─────────────────────────────────────────────────── -->
+    <string name="season_stats_title">Season Stats</string>
+    <string name="season_stats_tab_batter">Batter</string>
+    <string name="season_stats_tab_pitcher">Pitcher</string>
+    <string name="season_stats_col_name">Name</string>
+    <string name="season_stats_col_ab">AB</string>
+    <string name="season_stats_col_h">H</string>
+    <string name="season_stats_col_avg">AVG</string>
+    <string name="season_stats_col_bb">BB</string>
+    <string name="season_stats_col_k">K</string>
+    <string name="season_stats_col_bf">BF</string>
+    <string name="season_stats_col_p">P</string>
+    <string name="season_stats_col_strike_pct">S%</string>
+    <string name="season_stats_empty_batter">No batting data yet.</string>
+    <string name="season_stats_empty_pitcher">No pitching data yet.</string>
+    <string name="season_stats_unknown_player">Unknown</string>
+    <string name="season_stats_btn">Season Stats</string>
+
     <!-- ── Game Timer ───────────────────────────────────────────────────── -->
     <string name="timer_btn_start">Start</string>
     <string name="timer_label_running">running</string>
