@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 class GameHubActivity : ComponentActivity() {
 
@@ -129,6 +131,7 @@ private fun GameHubScreen(
                     homeTeam = teamName,
                     db = db
                 )
+                GameTimer(gameId = gameId, db = db)
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -267,6 +270,69 @@ private fun Scoreboard(
                 ScoreCell(text = stringResource(R.string.scoreboard_total_label), isHeader = true, width = 36.dp, fontWeight = FontWeight.Bold)
                 ScoreCell(text = totalFor(0).toString(), width = 36.dp, fontWeight = FontWeight.Bold, bgColor = Color(0xFFF0F0F0))
                 ScoreCell(text = totalFor(1).toString(), width = 36.dp, fontWeight = FontWeight.Bold, bgColor = Color(0xFFF0F0F0))
+            }
+        }
+    }
+}
+
+@Composable
+private fun GameTimer(gameId: Long, db: DatabaseHelper) {
+    var startTime by remember { mutableStateOf(db.getStartTime(gameId)) }
+    var elapsedMs by remember { mutableStateOf(if (startTime > 0L) System.currentTimeMillis() - startTime else 0L) }
+
+    LaunchedEffect(startTime) {
+        if (startTime > 0L) {
+            while (true) {
+                elapsedMs = System.currentTimeMillis() - startTime
+                delay(1000L)
+            }
+        }
+    }
+
+    val hours = elapsedMs / 3_600_000L
+    val minutes = (elapsedMs % 3_600_000L) / 60_000L
+    val seconds = (elapsedMs % 60_000L) / 1_000L
+    val timeString = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = timeString,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (startTime > 0L) Color(0xFF1A5FA8) else Color(0xFF888888)
+            )
+            if (startTime == 0L) {
+                Button(
+                    onClick = {
+                        val now = System.currentTimeMillis()
+                        db.setStartTime(gameId, now)
+                        startTime = now
+                        elapsedMs = 0L
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2c7a2c)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(stringResource(R.string.timer_btn_start), fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Text(
+                    text = stringResource(R.string.timer_label_running),
+                    fontSize = 13.sp,
+                    color = Color(0xFF888888)
+                )
             }
         }
     }

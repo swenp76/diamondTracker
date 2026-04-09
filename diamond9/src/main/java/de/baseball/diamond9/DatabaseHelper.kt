@@ -14,7 +14,8 @@ data class Game(
     @ColumnInfo(name = "team_id") val teamId: Long = 0,
     @ColumnInfo(name = "inning", defaultValue = "1") val inning: Int = 1,
     @ColumnInfo(name = "outs", defaultValue = "0") val outs: Int = 0,
-    @ColumnInfo(name = "leadoff_slot", defaultValue = "1") val leadoffSlot: Int = 1
+    @ColumnInfo(name = "leadoff_slot", defaultValue = "1") val leadoffSlot: Int = 1,
+    @ColumnInfo(name = "start_time", defaultValue = "0") val startTime: Long = 0L
 )
 
 @Entity(tableName = "pitchers")
@@ -228,6 +229,12 @@ class DatabaseHelper(context: Context) {
 
     fun updateLeadoffSlot(gameId: Long, slot: Int) =
         gameDao.updateLeadoffSlot(gameId, slot)
+
+    fun getStartTime(gameId: Long): Long =
+        gameDao.getGame(gameId)?.startTime ?: 0L
+
+    fun setStartTime(gameId: Long, timestamp: Long) =
+        gameDao.updateStartTime(gameId, timestamp)
 
     fun copyGame(sourceGameId: Long, newOpponent: String): Long {
         val source = getGame(sourceGameId) ?: return -1

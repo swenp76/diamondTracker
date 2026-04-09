@@ -239,6 +239,10 @@
     <string name="hint_opponent_team_name">Team Name</string>
     <string name="fab_add_opponent">Add Opponent</string>
 
+    <!-- ── Game Timer ───────────────────────────────────────────────────── -->
+    <string name="timer_btn_start">Start</string>
+    <string name="timer_label_running">running</string>
+
     <!-- ── Scoreboard ───────────────────────────────────────────────────── -->
     <string name="scoreboard_away">Away</string>
     <string name="scoreboard_home">Home</string>

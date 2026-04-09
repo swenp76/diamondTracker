@@ -11,13 +11,14 @@ import org.json.JSONObject
  *  5 → initial backup support (teams, players, games, pitchers, pitches,
  *      at_bats, lineups, substitutions, opponent_teams)
  *  6 → added scoreboard_runs table
+ *  7 → added start_time column to games table
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
 class BackupManager(private val context: Context) {
 
     companion object {
-        const val DB_VERSION = 6
+        const val DB_VERSION = 7
     }
 
     private val db = DatabaseHelper(context)
@@ -47,6 +48,7 @@ class BackupManager(private val context: Context) {
                 put("inning", g.inning)
                 put("outs", g.outs)
                 put("leadoff_slot", g.leadoffSlot)
+                put("start_time", g.startTime)
             }
         }))
 
@@ -104,6 +106,18 @@ class BackupManager(private val context: Context) {
                 current.put("scoreboard_runs", JSONArray())
             }
             v = 6
+        }
+
+        // Migration 6 → 7: start_time added to games – default 0 for older backups.
+        if (v < 7 && toVersion >= 7) {
+            val games = current.optJSONArray("games")
+            if (games != null) {
+                for (i in 0 until games.length()) {
+                    val g = games.getJSONObject(i)
+                    if (!g.has("start_time")) g.put("start_time", 0L)
+                }
+            }
+            v = 7
         }
 
         return current
