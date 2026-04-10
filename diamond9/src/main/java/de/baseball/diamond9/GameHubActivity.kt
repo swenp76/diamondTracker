@@ -50,25 +50,25 @@ class GameHubActivity : ComponentActivity() {
                 onBack = { finish() },
                 onOffense = {
                     val intent = Intent(this, BattingTrackActivity::class.java).apply {
-                        putExtra("game_id", gameId)
+                        putExtra("gameId", gameId)
                     }
                     startActivity(intent)
                 },
                 onDefense = {
                     val intent = Intent(this, PitchTrackActivity::class.java).apply {
-                        putExtra("game_id", gameId)
+                        putExtra("gameId", gameId)
                     }
                     startActivity(intent)
                 },
                 onLineup = {
                     val intent = Intent(this, OwnLineupActivity::class.java).apply {
-                        putExtra("game_id", gameId)
+                        putExtra("gameId", gameId)
                     }
                     startActivity(intent)
                 },
                 onOpponentLineup = {
                     val intent = Intent(this, OpponentLineupActivity::class.java).apply {
-                        putExtra("game_id", gameId)
+                        putExtra("gameId", gameId)
                     }
                     startActivity(intent)
                 },
