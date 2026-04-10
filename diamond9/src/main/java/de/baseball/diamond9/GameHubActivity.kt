@@ -74,9 +74,18 @@ class GameHubActivity : ComponentActivity() {
                     }
                     startActivity(intent)
                 },
+                onBatterStats = {
+                    startActivity(Intent(this, BatterStatsActivity::class.java).apply {
+                        putExtra("gameId", gameId)
+                        putExtra("gameOpponent", opponent)
+                        putExtra("gameDate", date)
+                    })
+                },
                 onSeasonStats = {
-                    val intent = Intent(this, SeasonStatsActivity::class.java)
-                    startActivity(intent)
+                    startActivity(Intent(this, SeasonStatsActivity::class.java).apply {
+                        putExtra("teamId", ownTeamId)
+                        putExtra("teamName", ownTeam)
+                    })
                 }
             )
         }
@@ -98,6 +107,7 @@ private fun GameHubScreen(
     onDefense: () -> Unit,
     onLineup: () -> Unit,
     onOpponentLineup: () -> Unit,
+    onBatterStats: () -> Unit,
     onSeasonStats: () -> Unit
 ) {
     Scaffold(
@@ -136,6 +146,7 @@ private fun GameHubScreen(
             HubButton(stringResource(R.string.gamehub_defense), colorResource(R.color.color_primary), onDefense)
             HubButton(stringResource(R.string.gamehub_lineup), colorResource(R.color.color_primary), onLineup)
             HubButton(stringResource(R.string.gamehub_oppo_lineup), colorResource(R.color.color_primary), onOpponentLineup)
+            HubButton(stringResource(R.string.gamehub_batter_stats), colorResource(R.color.color_primary), onBatterStats)
             HubButton(stringResource(R.string.season_stats_btn), colorResource(R.color.color_primary), onSeasonStats)
 
             Spacer(modifier = Modifier.height(16.dp))
