@@ -79,6 +79,7 @@ class BattingTrackActivity : ComponentActivity() {
                 val existingAtBats = db.getAtBatsForGame(gameId)
                 if (existingAtBats.isEmpty()) {
                     val leadoff = db.getLeadoffSlot(gameId)
+                    currentSlot = leadoff
                     startNewAtBat(leadoff)
                 } else {
                     val lastAb = existingAtBats.last()
