@@ -452,6 +452,14 @@ class DatabaseHelper(context: Context) {
     fun clearOwnLineupSlot(gameId: Long, slot: Int) =
         lineupDao.clearOwnLineupSlot(gameId, slot)
 
+    fun clearLineupForGame(gameId: Long) {
+        lineupDao.clearOwnLineup(gameId)
+        lineupDao.clearSubstitutions(gameId)
+        lineupDao.clearOpponentLineup(gameId)
+        lineupDao.clearOpponentBench(gameId)
+        lineupDao.clearOpponentSubstitutions(gameId)
+    }
+
     fun getOwnLineup(gameId: Long): Map<Int, Player> =
         lineupDao.getOwnLineupRaw(gameId).associate { row ->
             row.slot to Player(

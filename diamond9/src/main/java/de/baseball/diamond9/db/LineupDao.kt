@@ -77,6 +77,21 @@ interface LineupDao {
     @Query("DELETE FROM own_lineup WHERE game_id = :gameId AND slot = :slot")
     fun clearOwnLineupSlot(gameId: Long, slot: Int)
 
+    @Query("DELETE FROM own_lineup WHERE game_id = :gameId")
+    fun clearOwnLineup(gameId: Long)
+
+    @Query("DELETE FROM opponent_lineup WHERE game_id = :gameId")
+    fun clearOpponentLineup(gameId: Long)
+
+    @Query("DELETE FROM opponent_bench WHERE game_id = :gameId")
+    fun clearOpponentBench(gameId: Long)
+
+    @Query("DELETE FROM substitutions WHERE game_id = :gameId")
+    fun clearSubstitutions(gameId: Long)
+
+    @Query("DELETE FROM opponent_substitutions WHERE game_id = :gameId")
+    fun clearOpponentSubstitutions(gameId: Long)
+
     @Query("""
         SELECT ol.slot, pl.id AS player_id, pl.team_id, pl.name, pl.number,
                pl.primary_position, pl.secondary_position, pl.is_pitcher, pl.birth_year

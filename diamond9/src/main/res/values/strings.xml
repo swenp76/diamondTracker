@@ -17,6 +17,12 @@
     <!-- ── Content Descriptions ─────────────────────────────────────────── -->
     <string name="content_desc_back">Back</string>
     <string name="content_desc_share_lineup">Share Lineup</string>
+    <string name="menu_export_lineup">Export Lineup</string>
+    <string name="menu_import_lineup">Import Lineup</string>
+    <string name="toast_lineup_exported">Lineup exported</string>
+    <string name="toast_lineup_imported">Lineup imported (%d slots filled)</string>
+    <string name="toast_lineup_import_failed">Import failed: %s</string>
+    <string name="toast_lineup_invalid_format">Invalid format – not a lineup export file</string>
     <string name="content_desc_more">More</string>
     <string name="content_desc_delete">Delete</string>
     <string name="content_desc_add">Add</string>
