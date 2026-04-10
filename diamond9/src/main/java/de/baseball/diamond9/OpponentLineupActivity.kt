@@ -1,9 +1,13 @@
 package de.baseball.diamond9
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -89,7 +93,7 @@ class OpponentLineupActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun OpponentLineupScreen(
     gameId: Long,
@@ -148,6 +152,8 @@ fun OpponentLineupScreen(
         refresh()
     }
 
+    var jumpToSlotDialogState by remember { mutableStateOf<OppSlotState?>(null) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -161,6 +167,9 @@ fun OpponentLineupScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
                     }
+                },
+                actions = {
+                    // Optional: Action items if needed
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
@@ -191,6 +200,9 @@ fun OpponentLineupScreen(
                                     refresh()
                                 }
                             }
+                        },
+                        onLongClick = {
+                            jumpToSlotDialogState = state
                         },
                         onSwapClick = {
                             when (state.swapType) {
@@ -390,6 +402,27 @@ fun OpponentLineupScreen(
             confirmButton = { Button(onClick = { noPlayersDialogState = false }) { Text("OK") } }
         )
     }
+
+    jumpToSlotDialogState?.let { state ->
+        AlertDialog(
+            onDismissRequest = { jumpToSlotDialogState = null },
+            title = { Text(stringResource(R.string.dialog_jump_to_slot_title, state.slot)) },
+            text = { Text(stringResource(R.string.dialog_jump_to_slot_message, state.slot)) },
+            confirmButton = {
+                Button(onClick = {
+                    val resultIntent = Intent().apply {
+                        putExtra("jumpToSlot", state.slot)
+                    }
+                    (onBackClick as? Activity)?.setResult(Activity.RESULT_OK, resultIntent)
+                    onBackClick()
+                    jumpToSlotDialogState = null
+                }) { Text(stringResource(R.string.btn_jump)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { jumpToSlotDialogState = null }) { Text(stringResource(R.string.btn_cancel)) }
+            }
+        )
+    }
 }
 
 private fun computeState(db: DatabaseHelper, gameId: Long): Pair<List<OppSlotState>, Map<String, OppSubStatus>> {
@@ -447,11 +480,15 @@ private fun OpponentStarterRow(
     state: OppSlotState,
     hasSubs: Boolean,
     onRowClick: () -> Unit,
+    onLongClick: () -> Unit,
     onSwapClick: () -> Unit,
     onClearClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onRowClick),
+        modifier = Modifier.fillMaxWidth().combinedClickable(
+            onClick = onRowClick,
+            onLongClick = onLongClick
+        ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Row(

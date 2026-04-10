@@ -1,6 +1,10 @@
 package de.baseball.diamond9
 
+import android.app.Activity
 import android.content.Intent
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ManagedActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -75,14 +79,6 @@ class PitchTrackActivity : ComponentActivity() {
             stats = db.getStatsForPitcher(pitcherId)
         }
 
-        LaunchedEffect(Unit) {
-            if (gameId != -1L) {
-                val (i, o) = db.getGameState(gameId)
-                inning = i
-                outs = o
-            }
-        }
-
         fun addOut() {
             val newOuts = outs + 1
             if (newOuts >= 3) {
@@ -97,6 +93,43 @@ class PitchTrackActivity : ComponentActivity() {
                 outs = newOuts
             }
             if (gameId != -1L) db.updateGameState(gameId, inning, outs)
+        }
+
+        val opponentLineupLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val jumpToSlot = result.data?.getIntExtra("jumpToSlot", -1) ?: -1
+                if (jumpToSlot != -1) {
+                    val gameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
+                    val currentSlot = (gameBF % 9) + 1
+
+                    if (currentSlot != jumpToSlot) {
+                        val lastPitches = stats.pitches.takeLastWhile { it.type != "BF" }
+                        if (lastPitches.isNotEmpty()) {
+                            db.insertPitch(pitcherId, "BF", inning)
+                            addOut()
+                        }
+
+                        var newGameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
+                        var nextSlot = (newGameBF % 9) + 1
+                        while (nextSlot != jumpToSlot) {
+                            db.insertPitch(pitcherId, "BF", inning)
+                            newGameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
+                            nextSlot = (newGameBF % 9) + 1
+                        }
+                    }
+                }
+                refresh()
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            if (gameId != -1L) {
+                val (i, o) = db.getGameState(gameId)
+                inning = i
+                outs = o
+            }
         }
 
         LaunchedEffect(showInningSnackbar) {
@@ -133,7 +166,7 @@ class PitchTrackActivity : ComponentActivity() {
                     .background(colorResource(R.color.color_background))
             ) {
                 StatsBar(stats, inning, outs)
-                BatterStrip(stats)
+                BatterStrip(stats, opponentLineupLauncher)
                 Box(modifier = Modifier.weight(1f)) {
                     PitchLog(stats, listState)
                 }
@@ -270,7 +303,7 @@ class PitchTrackActivity : ComponentActivity() {
     }
 
     @Composable
-    fun BatterStrip(stats: PitcherStats) {
+    fun BatterStrip(stats: PitcherStats, opponentLineupLauncher: ManagedActivityResultLauncher<Intent, ActivityResult>) {
         val context = LocalContext.current
         val gameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
         val currentBattingOrder = (gameBF % 9) + 1
@@ -300,7 +333,7 @@ class PitchTrackActivity : ComponentActivity() {
                             val i = Intent(context, OpponentLineupActivity::class.java)
                             i.putExtra("gameId", gameId)
                             i.putExtra("opponentName", stats.pitcher.name)
-                            context.startActivity(i)
+                            opponentLineupLauncher.launch(i)
                         }
                     }
                     .padding(8.dp)
