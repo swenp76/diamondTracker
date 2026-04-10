@@ -7,12 +7,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -186,9 +188,9 @@ private fun GameListScreen(
             confirmLabel = stringResource(R.string.btn_create),
             opponents = db.getOpponentTeamsForTeam(teamId),
             onDismiss = { showAddDialog = false },
-            onConfirm = { date, time, opponent ->
+            onConfirm = { date, time, opponent, isHome ->
                 db.insertOpponentTeamForTeam(opponent, teamId)
-                db.insertGame(date, opponent, teamId, time)
+                db.insertGame(date, opponent, teamId, time, isHome)
                 refresh()
                 showAddDialog = false
             }
@@ -202,11 +204,12 @@ private fun GameListScreen(
             initialDate = game.date,
             initialTime = game.gameTime,
             initialOpponent = game.opponent,
+            initialIsHome = game.isHome,
             opponents = db.getOpponentTeamsForTeam(teamId),
             onDismiss = { gameToEdit = null },
-            onConfirm = { date, time, opponent ->
+            onConfirm = { date, time, opponent, isHome ->
                 db.insertOpponentTeamForTeam(opponent, teamId)
-                db.updateGame(game.id, date, opponent, time)
+                db.updateGame(game.id, date, opponent, time, isHome)
                 refresh()
                 gameToEdit = null
             }
@@ -292,12 +295,24 @@ private fun GameItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = game.opponent,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = game.opponent,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    val badgeLabel = if (game.isHome == 1) stringResource(R.string.location_home) else stringResource(R.string.location_away)
+                    val badgeColor = if (game.isHome == 1) colorResource(R.color.color_green) else colorResource(R.color.color_orange)
+                    Box(
+                        modifier = Modifier
+                            .background(badgeColor, shape = MaterialTheme.shapes.small)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(badgeLabel, fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
                 val dateLabel = if (game.gameTime.isNotEmpty()) "${game.date}  ${game.gameTime}" else game.date
                 Text(
                     text = dateLabel,
@@ -327,9 +342,10 @@ private fun GameDialog(
     initialDate: String = "",
     initialTime: String = "",
     initialOpponent: String = "",
+    initialIsHome: Int = 1,
     opponents: List<OpponentTeam>,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, String) -> Unit   // date, time, opponent
+    onConfirm: (String, String, String, Int) -> Unit   // date, time, opponent, isHome
 ) {
     val context = LocalContext.current
     val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.US)
@@ -350,6 +366,7 @@ private fun GameDialog(
 
     var date by remember { mutableStateOf(if (initialDate.isNotEmpty()) initialDate else sdf.format(calendar.time)) }
     var time by remember { mutableStateOf(initialTime) }
+    var isHome by remember { mutableStateOf(initialIsHome) }
     var opponentText by remember { mutableStateOf(if (initialOpponent.isNotEmpty() && opponents.none { it.name == initialOpponent }) initialOpponent else "") }
     var selectedOpponent by remember { mutableStateOf(opponents.find { it.name == initialOpponent }) }
     var dateError by remember { mutableStateOf(false) }
@@ -417,6 +434,28 @@ private fun GameDialog(
                     )
                 )
 
+                Column {
+                    Text(
+                        text = stringResource(R.string.label_location),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(1 to R.string.location_home, 0 to R.string.location_away).forEach { (value, labelRes) ->
+                            val selected = isHome == value
+                            val bgColor = if (selected) colorResource(R.color.color_primary) else Color.Transparent
+                            val textColor = if (selected) Color.White else colorResource(R.color.color_text_primary)
+                            OutlinedButton(
+                                onClick = { isHome = value },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.outlinedButtonColors(containerColor = bgColor)
+                            ) {
+                                Text(stringResource(labelRes), color = textColor, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                            }
+                        }
+                    }
+                }
+
                 if (opponents.isNotEmpty()) {
                     ExposedDropdownMenuBox(
                         expanded = expanded,
@@ -473,7 +512,7 @@ private fun GameDialog(
             Button(onClick = {
                 val finalOpponent = opponentText.trim().ifEmpty { selectedOpponent?.name ?: "" }
                 if (date.isNotBlank() && finalOpponent.isNotBlank()) {
-                    onConfirm(date, time, finalOpponent)
+                    onConfirm(date, time, finalOpponent, isHome)
                 } else {
                     if (date.isBlank()) dateError = true
                     if (finalOpponent.isBlank()) opponentError = true

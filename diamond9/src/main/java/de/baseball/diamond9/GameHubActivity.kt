@@ -45,7 +45,9 @@ class GameHubActivity : ComponentActivity() {
         val gameTime = intent.getStringExtra("gameTime") ?: ""
 
         val db = DatabaseHelper(this)
-        val teamName = db.getGame(gameId)?.teamId?.let { db.getTeamById(it)?.name } ?: ""
+        val game = db.getGame(gameId)
+        val teamName = game?.teamId?.let { db.getTeamById(it)?.name } ?: ""
+        val isHome = game?.isHome ?: 1
 
         setContent {
             GameHubScreen(
@@ -54,6 +56,7 @@ class GameHubActivity : ComponentActivity() {
                 gameDate = gameDate,
                 gameTime = gameTime,
                 teamName = teamName,
+                isHome = isHome,
                 db = db,
                 onBackClick = { finish() },
                 onOffenseClick = {
@@ -108,6 +111,7 @@ private fun GameHubScreen(
     gameDate: String,
     gameTime: String,
     teamName: String,
+    isHome: Int,
     db: DatabaseHelper,
     onBackClick: () -> Unit,
     onOffenseClick: () -> Unit,
@@ -144,8 +148,9 @@ private fun GameHubScreen(
             Column(modifier = Modifier.fillMaxSize()) {
                 Scoreboard(
                     gameId = gameId,
-                    awayTeam = gameOpponent,
-                    homeTeam = teamName,
+                    ownTeam = teamName,
+                    opponentTeam = gameOpponent,
+                    ownIsHome = isHome,
                     db = db
                 )
                 GameTimer(gameId = gameId, db = db)
@@ -190,10 +195,17 @@ private fun GameHubScreen(
 @Composable
 private fun Scoreboard(
     gameId: Long,
-    awayTeam: String,
-    homeTeam: String,
+    ownTeam: String,
+    opponentTeam: String,
+    ownIsHome: Int,   // 1 = own team is home, 0 = own team is away
     db: DatabaseHelper
 ) {
+    // isHome=0 row = away team, isHome=1 row = home team
+    // If ownIsHome==1: row0 (away) = opponent, row1 (home) = own team
+    // If ownIsHome==0: row0 (away) = own team, row1 (home) = opponent
+    val awayTeam = if (ownIsHome == 1) opponentTeam else ownTeam
+    val homeTeam = if (ownIsHome == 1) ownTeam else opponentTeam
+
     var scoreboardRuns by remember { mutableStateOf(db.getScoreboard(gameId)) }
     var editTarget by remember { mutableStateOf<Pair<Int, Int>?>(null) } // (inning, isHome)
     var inputValue by remember { mutableStateOf("") }

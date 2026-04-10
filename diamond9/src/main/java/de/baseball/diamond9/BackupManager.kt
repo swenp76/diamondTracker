@@ -14,13 +14,14 @@ import org.json.JSONObject
  *  7 → added start_time column to games table
  *  8 → opponent_teams now scoped per team (team_id column added)
  *  9 → game_time column added to games
+ *  10 → is_home column added to games (1 = home, 0 = away)
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
 class BackupManager(private val context: Context) {
 
     companion object {
-        const val DB_VERSION = 9
+        const val DB_VERSION = 10
     }
 
     private val db = DatabaseHelper(context)
@@ -52,6 +53,7 @@ class BackupManager(private val context: Context) {
                 put("leadoff_slot", g.leadoffSlot)
                 put("start_time", g.startTime)
                 put("game_time", g.gameTime)
+                put("is_home", g.isHome)
             }
         }))
 
@@ -159,6 +161,18 @@ class BackupManager(private val context: Context) {
                 }
             }
             v = 9
+        }
+
+        // Migration 9 → 10: is_home added to games – default 1 (home) for older backups.
+        if (v < 10 && toVersion >= 10) {
+            val games = current.optJSONArray("games")
+            if (games != null) {
+                for (i in 0 until games.length()) {
+                    val g = games.getJSONObject(i)
+                    if (!g.has("is_home")) g.put("is_home", 1)
+                }
+            }
+            v = 10
         }
 
         return current

@@ -16,7 +16,8 @@ data class Game(
     @ColumnInfo(name = "outs", defaultValue = "0") val outs: Int = 0,
     @ColumnInfo(name = "leadoff_slot", defaultValue = "1") val leadoffSlot: Int = 1,
     @ColumnInfo(name = "start_time", defaultValue = "0") val startTime: Long = 0L,
-    @ColumnInfo(name = "game_time", defaultValue = "") val gameTime: String = ""
+    @ColumnInfo(name = "game_time", defaultValue = "") val gameTime: String = "",
+    @ColumnInfo(name = "is_home", defaultValue = "1") val isHome: Int = 1  // 1 = home, 0 = away
 )
 
 @Entity(tableName = "pitchers")
@@ -235,8 +236,8 @@ class DatabaseHelper(context: Context) {
 
     // ── Games ──────────────────────────────────────────────────────────────────
 
-    fun insertGame(date: String, opponent: String, teamId: Long, gameTime: String = ""): Long =
-        gameDao.insertGame(Game(date = date, opponent = opponent, teamId = teamId, gameTime = gameTime))
+    fun insertGame(date: String, opponent: String, teamId: Long, gameTime: String = "", isHome: Int = 1): Long =
+        gameDao.insertGame(Game(date = date, opponent = opponent, teamId = teamId, gameTime = gameTime, isHome = isHome))
 
     fun getAllGames(): List<Game> = gameDao.getAllGames()
 
@@ -244,8 +245,8 @@ class DatabaseHelper(context: Context) {
 
     fun getGame(gameId: Long): Game? = gameDao.getGame(gameId)
 
-    fun updateGame(gameId: Long, date: String, opponent: String, gameTime: String = "") =
-        gameDao.updateGame(gameId, date, opponent, gameTime)
+    fun updateGame(gameId: Long, date: String, opponent: String, gameTime: String = "", isHome: Int = 1) =
+        gameDao.updateGame(gameId, date, opponent, gameTime, isHome)
 
     fun deleteGame(gameId: Long) = gameDao.deleteGameWithCascade(gameId)
 
@@ -271,7 +272,7 @@ class DatabaseHelper(context: Context) {
 
     fun copyGame(sourceGameId: Long, newOpponent: String): Long {
         val source = getGame(sourceGameId) ?: return -1
-        return insertGame(source.date, newOpponent, source.teamId)
+        return insertGame(source.date, newOpponent, source.teamId, isHome = source.isHome)
     }
 
     // ── Pitchers ───────────────────────────────────────────────────────────────
