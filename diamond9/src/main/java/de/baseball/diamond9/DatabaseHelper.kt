@@ -16,6 +16,7 @@ data class Game(
     @ColumnInfo(name = "outs", defaultValue = "0") val outs: Int = 0,
     @ColumnInfo(name = "leadoff_slot", defaultValue = "1") val leadoffSlot: Int = 1,
     @ColumnInfo(name = "start_time", defaultValue = "0") val startTime: Long = 0L,
+    @ColumnInfo(name = "elapsed_time_ms", defaultValue = "0") val elapsedTimeMs: Long = 0L,
     @ColumnInfo(name = "game_time", defaultValue = "") val gameTime: String = "",
     @ColumnInfo(name = "is_home", defaultValue = "1") val isHome: Int = 1  // 1 = home, 0 = away
 )
@@ -269,6 +270,12 @@ class DatabaseHelper(context: Context) {
 
     fun setStartTime(gameId: Long, timestamp: Long) =
         gameDao.updateStartTime(gameId, timestamp)
+
+    fun getElapsedTime(gameId: Long): Long =
+        gameDao.getGame(gameId)?.elapsedTimeMs ?: 0L
+
+    fun setElapsedTime(gameId: Long, elapsedMs: Long) =
+        gameDao.updateElapsedTime(gameId, elapsedMs)
 
     fun copyGame(sourceGameId: Long, newOpponent: String): Long {
         val source = getGame(sourceGameId) ?: return -1
@@ -544,6 +551,12 @@ class DatabaseHelper(context: Context) {
     // ── Scoreboard ─────────────────────────────────────────────────────────────
 
     fun getScoreboard(gameId: Long): List<ScoreboardRun> = scoreboardDao.getScoreboard(gameId)
+
+    fun getScoreboardRuns(gameId: Long, inning: Int, teamIndex: Int): Int =
+        scoreboardDao.getRun(gameId, inning, teamIndex)?.runs ?: 0
+
+    fun hasScoreboardEntry(gameId: Long, inning: Int, teamIndex: Int): Boolean =
+        scoreboardDao.getRun(gameId, inning, teamIndex) != null
 
     fun upsertScoreboardRun(gameId: Long, inning: Int, isHome: Int, runs: Int) {
         val existing = scoreboardDao.getRun(gameId, inning, isHome)

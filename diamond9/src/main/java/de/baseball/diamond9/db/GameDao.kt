@@ -30,6 +30,9 @@ abstract class GameDao {
     @Query("UPDATE games SET start_time = :timestamp WHERE id = :gameId")
     abstract fun updateStartTime(gameId: Long, timestamp: Long)
 
+    @Query("UPDATE games SET elapsed_time_ms = :elapsedMs WHERE id = :gameId")
+    abstract fun updateElapsedTime(gameId: Long, elapsedMs: Long)
+
     @Transaction
     open fun deleteGameWithCascade(gameId: Long) {
         val pitcherIds = getPitcherIdsForGame(gameId)

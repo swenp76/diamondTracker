@@ -16,13 +16,14 @@ import org.json.JSONObject
  *  8 → opponent_teams now scoped per team (team_id column added)
  *  9 → game_time column added to games
  *  10 → is_home column added to games (1 = home, 0 = away)
+ *  11 → elapsed_time_ms column added to games
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
 class BackupManager(private val context: Context) {
 
     companion object {
-        const val DB_VERSION = 10
+        const val DB_VERSION = 11
     }
 
     private val db = DatabaseHelper(context)
@@ -53,6 +54,7 @@ class BackupManager(private val context: Context) {
                 put("outs", g.outs)
                 put("leadoff_slot", g.leadoffSlot)
                 put("start_time", g.startTime)
+                put("elapsed_time_ms", g.elapsedTimeMs)
                 put("game_time", g.gameTime)
                 put("is_home", g.isHome)
             }
@@ -176,6 +178,18 @@ class BackupManager(private val context: Context) {
             v = 10
         }
 
+        // Migration 10 → 11: elapsed_time_ms added to games – default 0 for older backups.
+        if (v < 11 && toVersion >= 11) {
+            val games = current.optJSONArray("games")
+            if (games != null) {
+                for (i in 0 until games.length()) {
+                    val g = games.getJSONObject(i)
+                    if (!g.has("elapsed_time_ms")) g.put("elapsed_time_ms", 0L)
+                }
+            }
+            v = 11
+        }
+
         return current
     }
 
@@ -219,6 +233,7 @@ class BackupManager(private val context: Context) {
             put("outs", game.outs)
             put("leadoff_slot", game.leadoffSlot)
             put("start_time", game.startTime)
+            put("elapsed_time_ms", game.elapsedTimeMs)
             put("game_time", game.gameTime)
             put("is_home", game.isHome)
         }
@@ -335,6 +350,7 @@ class BackupManager(private val context: Context) {
         db.updateGameState(gameId, gData.optInt("inning", 1), gData.optInt("outs", 0))
         db.updateLeadoffSlot(gameId, gData.optInt("leadoff_slot", 1))
         db.setStartTime(gameId, gData.optLong("start_time", 0L))
+        db.setElapsedTime(gameId, gData.optLong("elapsed_time_ms", 0L))
 
         // Players cache for this team
         val teamPlayers = db.getPlayersForTeam(teamId)

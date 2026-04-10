@@ -4,16 +4,12 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.core.view.WindowCompat
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -24,75 +20,61 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.util.Locale
+import de.baseball.diamond9.DatabaseHelper
 import kotlinx.coroutines.delay
+import java.util.*
 
 class GameHubActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        WindowCompat.getInsetsController(window, window.decorView)
-            .isAppearanceLightStatusBars = true
-
-        val gameId = intent.getLongExtra("gameId", -1)
-        val gameOpponent = intent.getStringExtra("gameOpponent") ?: ""
-        val gameDate = intent.getStringExtra("gameDate") ?: ""
-        val gameTime = intent.getStringExtra("gameTime") ?: ""
-
+        val gameId = intent.getLongExtra("game_id", -1L)
+        val date = intent.getStringExtra("date") ?: ""
+        val opponent = intent.getStringExtra("opponent") ?: ""
+        val ownTeam = intent.getStringExtra("own_team") ?: ""
+        val ownTeamId = intent.getLongExtra("own_team_id", -1L)
+        val isHome = intent.getIntExtra("is_home", 1)
         val db = DatabaseHelper(this)
-        val game = db.getGame(gameId)
-        val teamName = game?.teamId?.let { db.getTeamById(it)?.name } ?: ""
-        val isHome = game?.isHome ?: 1
 
         setContent {
             GameHubScreen(
                 gameId = gameId,
-                gameOpponent = gameOpponent,
-                gameDate = gameDate,
-                gameTime = gameTime,
-                teamName = teamName,
+                date = date,
+                opponent = opponent,
+                ownTeam = ownTeam,
+                ownTeamId = ownTeamId.toString(),
                 isHome = isHome,
                 db = db,
-                onBackClick = { finish() },
-                onOffenseClick = {
-                    startActivity(Intent(this, BattingTrackActivity::class.java).apply {
-                        putExtra("gameId", gameId)
-                        putExtra("gameOpponent", gameOpponent)
-                        putExtra("gameDate", gameDate)
-                    })
+                onBack = { finish() },
+                onOffense = {
+                    val intent = Intent(this, BattingTrackActivity::class.java).apply {
+                        putExtra("game_id", gameId)
+                    }
+                    startActivity(intent)
                 },
-                onDefenseClick = {
-                    startActivity(Intent(this, PitcherListActivity::class.java).apply {
-                        putExtra("gameId", gameId)
-                        putExtra("gameOpponent", gameOpponent)
-                        putExtra("gameDate", gameDate)
-                    })
+                onDefense = {
+                    val intent = Intent(this, PitchTrackActivity::class.java).apply {
+                        putExtra("game_id", gameId)
+                    }
+                    startActivity(intent)
                 },
-                onLineupClick = {
-                    startActivity(Intent(this, OwnLineupActivity::class.java).apply {
-                        putExtra("gameId", gameId)
-                        putExtra("gameOpponent", gameOpponent)
-                        putExtra("gameDate", gameDate)
-                    })
+                onLineup = {
+                    val intent = Intent(this, OwnLineupActivity::class.java).apply {
+                        putExtra("game_id", gameId)
+                    }
+                    startActivity(intent)
                 },
-                onOppoLineupClick = {
-                    startActivity(Intent(this, OpponentLineupActivity::class.java).apply {
-                        putExtra("gameId", gameId)
-                        putExtra("opponentName", gameOpponent)
-                    })
+                onOpponentLineup = {
+                    val intent = Intent(this, OpponentLineupActivity::class.java).apply {
+                        putExtra("game_id", gameId)
+                    }
+                    startActivity(intent)
                 },
-                onBatterStatsClick = {
-                    startActivity(Intent(this, BatterStatsActivity::class.java).apply {
-                        putExtra("gameId", gameId)
-                        putExtra("gameOpponent", gameOpponent)
-                        putExtra("gameDate", gameDate)
-                    })
+                onSeasonStats = {
+                    val intent = Intent(this, SeasonStatsActivity::class.java)
+                    startActivity(intent)
                 }
             )
         }
@@ -103,31 +85,30 @@ class GameHubActivity : ComponentActivity() {
 @Composable
 private fun GameHubScreen(
     gameId: Long,
-    gameOpponent: String,
-    gameDate: String,
-    gameTime: String,
-    teamName: String,
+    date: String,
+    opponent: String,
+    ownTeam: String,
+    ownTeamId: String,
     isHome: Int,
     db: DatabaseHelper,
-    onBackClick: () -> Unit,
-    onOffenseClick: () -> Unit,
-    onDefenseClick: () -> Unit,
-    onLineupClick: () -> Unit,
-    onOppoLineupClick: () -> Unit,
-    onBatterStatsClick: () -> Unit
+    onBack: () -> Unit,
+    onOffense: () -> Unit,
+    onDefense: () -> Unit,
+    onLineup: () -> Unit,
+    onOpponentLineup: () -> Unit,
+    onSeasonStats: () -> Unit
 ) {
-    val dateLabel = if (gameTime.isNotEmpty()) "$gameDate  $gameTime" else gameDate
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text(gameOpponent, style = MaterialTheme.typography.titleLarge)
-                        Text(dateLabel, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                        Text(opponent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(date, fontSize = 14.sp, color = colorResource(R.color.color_text_secondary))
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
                     }
                 },
@@ -135,171 +116,72 @@ private fun GameHubScreen(
             )
         }
     ) { padding ->
-        Surface(
+        Column(
             modifier = Modifier
+                .padding(padding)
                 .fillMaxSize()
-                .padding(padding),
-            color = colorResource(R.color.color_background)
+                .verticalScroll(rememberScrollState())
+                .background(colorResource(R.color.color_background)),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                Scoreboard(
-                    gameId = gameId,
-                    ownTeam = teamName,
-                    opponentTeam = gameOpponent,
-                    ownIsHome = isHome,
-                    db = db
-                )
-                GameTimer(gameId = gameId, db = db)
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 32.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    HubButton(
-                        text = stringResource(R.string.gamehub_offense),
-                        color = colorResource(R.color.color_primary),
-                        onClick = onOffenseClick
-                    )
-                    HubButton(
-                        text = stringResource(R.string.gamehub_defense),
-                        color = colorResource(R.color.color_strike),
-                        onClick = onDefenseClick
-                    )
-                    HubButton(
-                        text = stringResource(R.string.gamehub_lineup),
-                        color = colorResource(R.color.color_green),
-                        onClick = onLineupClick
-                    )
-                    HubButton(
-                        text = stringResource(R.string.gamehub_oppo_lineup),
-                        color = colorResource(R.color.color_purple),
-                        onClick = onOppoLineupClick
-                    )
-                    HubButton(
-                        text = stringResource(R.string.gamehub_batter_stats),
-                        color = colorResource(R.color.color_orange),
-                        onClick = onBatterStatsClick
-                    )
-                }
-            }
+            Scoreboard(gameId, ownTeam, opponent, isHome, db)
+
+            GameTimer(gameId, db)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            HubButton(stringResource(R.string.gamehub_offense), colorResource(R.color.color_primary), onOffense)
+            HubButton(stringResource(R.string.gamehub_defense), colorResource(R.color.color_primary), onDefense)
+            HubButton(stringResource(R.string.gamehub_lineup), colorResource(R.color.color_primary), onLineup)
+            HubButton(stringResource(R.string.gamehub_oppo_lineup), colorResource(R.color.color_primary), onOpponentLineup)
+            HubButton(stringResource(R.string.season_stats_btn), colorResource(R.color.color_primary), onSeasonStats)
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
-private fun Scoreboard(
-    gameId: Long,
-    ownTeam: String,
-    opponentTeam: String,
-    ownIsHome: Int,   // 1 = own team is home, 0 = own team is away
-    db: DatabaseHelper
-) {
-    // isHome=0 row = away team, isHome=1 row = home team
-    // If ownIsHome==1: row0 (away) = opponent, row1 (home) = own team
-    // If ownIsHome==0: row0 (away) = own team, row1 (home) = opponent
-    val awayTeam = if (ownIsHome == 1) opponentTeam else ownTeam
-    val homeTeam = if (ownIsHome == 1) ownTeam else opponentTeam
+private fun Scoreboard(gameId: Long, ownTeam: String, opponent: String, isHome: Int, db: DatabaseHelper) {
+    val guestTeam = if (isHome == 1) opponent else ownTeam
+    val homeTeam = if (isHome == 1) ownTeam else opponent
 
-    var scoreboardRuns by remember { mutableStateOf(db.getScoreboard(gameId)) }
-    var editTarget by remember { mutableStateOf<Pair<Int, Int>?>(null) } // (inning, isHome)
-    var inputValue by remember { mutableStateOf("") }
-
-    val totalInnings = 9
-    val scrollState = rememberScrollState()
-
-    fun runsFor(inning: Int, isHome: Int): Int =
-        scoreboardRuns.find { it.inning == inning && it.isHome == isHome }?.runs ?: 0
-
-    fun hasEntry(inning: Int, isHome: Int): Boolean =
-        scoreboardRuns.any { it.inning == inning && it.isHome == isHome }
-
-    fun totalFor(isHome: Int): Int =
-        (1..totalInnings).sumOf { runsFor(it, isHome) }
-
-    editTarget?.let { (inning, isHome) ->
-        val teamLabel = if (isHome == 1) homeTeam else awayTeam
-        AlertDialog(
-            onDismissRequest = { editTarget = null },
-            title = { Text(stringResource(R.string.scoreboard_dialog_title, inning, teamLabel)) },
-            text = {
-                OutlinedTextField(
-                    value = inputValue,
-                    onValueChange = { v -> inputValue = v.filter { it.isDigit() }.take(2) },
-                    label = { Text(stringResource(R.string.scoreboard_runs_label)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    db.upsertScoreboardRun(gameId, inning, isHome, inputValue.toIntOrNull() ?: 0)
-                    scoreboardRuns = db.getScoreboard(gameId)
-                    editTarget = null
-                }) { Text(stringResource(R.string.btn_save)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { editTarget = null }) { Text(stringResource(R.string.btn_cancel)) }
-            }
-        )
-    }
+    fun runsFor(teamIndex: Int, inning: Int): Int = db.getScoreboardRuns(gameId, inning, teamIndex)
+    fun hasEntry(teamIndex: Int, inning: Int): Boolean = db.hasScoreboardEntry(gameId, inning, teamIndex)
+    fun totalFor(teamIndex: Int): Int = (1..7).sumOf { runsFor(teamIndex, it) }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            // Fixed left column: team names
-            Column {
-                ScoreCell(text = "", width = 90.dp, isHeader = true)
-                ScoreCell(
-                    text = awayTeam.ifBlank { stringResource(R.string.scoreboard_away) },
-                    width = 90.dp,
-                    fontWeight = FontWeight.Bold
-                )
-                ScoreCell(
-                    text = homeTeam.ifBlank { stringResource(R.string.scoreboard_home) },
-                    width = 90.dp,
-                    fontWeight = FontWeight.Bold
-                )
+        Column(modifier = Modifier.padding(bottom = 8.dp)) {
+            // Header Row
+            Row(modifier = Modifier.background(colorResource(R.color.color_primary))) {
+                ScoreCell("", 100.dp, true)
+                (1..7).forEach { ScoreCell(it.toString(), 30.dp, true) }
+                ScoreCell(stringResource(R.string.scoreboard_total_label), 40.dp, true)
             }
-
-            // Scrollable inning columns
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .horizontalScroll(scrollState)
-            ) {
-                for (inning in 1..totalInnings) {
-                    Column {
-                        ScoreCell(text = inning.toString(), isHeader = true)
-                        ScoreCell(
-                            text = if (hasEntry(inning, 0)) runsFor(inning, 0).toString() else "-",
-                            onClick = {
-                                inputValue = runsFor(inning, 0).let { if (it > 0) it.toString() else "" }
-                                editTarget = Pair(inning, 0)
-                            }
-                        )
-                        ScoreCell(
-                            text = if (hasEntry(inning, 1)) runsFor(inning, 1).toString() else "-",
-                            onClick = {
-                                inputValue = runsFor(inning, 1).let { if (it > 0) it.toString() else "" }
-                                editTarget = Pair(inning, 1)
-                            }
-                        )
-                    }
+            // Guest Row
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ScoreCell(guestTeam, 100.dp, false, FontWeight.Bold)
+                (1..7).forEach { inn ->
+                    val r = if (hasEntry(0, inn)) runsFor(0, inn).toString() else "-"
+                    ScoreCell(r, 30.dp, false)
                 }
+                ScoreCell(totalFor(0).toString(), 40.dp, false, FontWeight.Bold)
             }
-
-            // Fixed right column: totals
-            Column {
-                ScoreCell(text = stringResource(R.string.scoreboard_total_label), isHeader = true, width = 36.dp, fontWeight = FontWeight.Bold)
-                ScoreCell(text = totalFor(0).toString(), width = 36.dp, fontWeight = FontWeight.Bold, bgColor = colorResource(R.color.color_divider_light))
-                ScoreCell(text = totalFor(1).toString(), width = 36.dp, fontWeight = FontWeight.Bold, bgColor = colorResource(R.color.color_divider_light))
+            HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
+            // Home Row
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ScoreCell(homeTeam, 100.dp, false, FontWeight.Bold)
+                (1..7).forEach { inn ->
+                    val r = if (hasEntry(1, inn)) runsFor(1, inn).toString() else "-"
+                    ScoreCell(r, 30.dp, false)
+                }
+                ScoreCell(totalFor(1).toString(), 40.dp, false, FontWeight.Bold)
             }
         }
     }
@@ -308,21 +190,53 @@ private fun Scoreboard(
 @Composable
 private fun GameTimer(gameId: Long, db: DatabaseHelper) {
     var startTime by remember { mutableStateOf(db.getStartTime(gameId)) }
-    var elapsedMs by remember { mutableStateOf(if (startTime > 0L) System.currentTimeMillis() - startTime else 0L) }
+    var baseElapsedMs by remember { mutableStateOf(db.getElapsedTime(gameId)) }
+    var currentElapsedMs by remember { mutableStateOf(0L) }
+    var isRunning by remember { mutableStateOf(startTime > 0L) }
+    var showResetDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(startTime) {
-        if (startTime > 0L) {
-            while (true) {
-                elapsedMs = System.currentTimeMillis() - startTime
+    LaunchedEffect(startTime, isRunning) {
+        if (isRunning && startTime > 0L) {
+            while (isRunning) {
+                currentElapsedMs = System.currentTimeMillis() - startTime
                 delay(1000L)
             }
+        } else {
+            currentElapsedMs = 0L
         }
     }
 
-    val hours = elapsedMs / 3_600_000L
-    val minutes = (elapsedMs % 3_600_000L) / 60_000L
-    val seconds = (elapsedMs % 60_000L) / 1_000L
+    val totalElapsedMs = baseElapsedMs + currentElapsedMs
+    val hours = totalElapsedMs / 3_600_000L
+    val minutes = (totalElapsedMs % 3_600_000L) / 60_000L
+    val seconds = (totalElapsedMs % 60_000L) / 1_000L
     val timeString = String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text(stringResource(R.string.dialog_timer_reset_title)) },
+            text = { Text(stringResource(R.string.dialog_timer_reset_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    db.setStartTime(gameId, 0L)
+                    db.setElapsedTime(gameId, 0L)
+                    startTime = 0L
+                    baseElapsedMs = 0L
+                    currentElapsedMs = 0L
+                    isRunning = false
+                    showResetDialog = false
+                }) {
+                    Text(stringResource(R.string.btn_confirm), color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
+            }
+        )
+    }
 
     Card(
         modifier = Modifier
@@ -338,31 +252,72 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = timeString,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (startTime > 0L) colorResource(R.color.color_primary) else colorResource(R.color.color_text_secondary)
-            )
-            if (startTime == 0L) {
-                Button(
-                    onClick = {
-                        val now = System.currentTimeMillis()
-                        db.setStartTime(gameId, now)
-                        startTime = now
-                        elapsedMs = 0L
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(stringResource(R.string.timer_btn_start), fontWeight = FontWeight.Bold)
-                }
-            } else {
+            Column {
                 Text(
-                    text = stringResource(R.string.timer_label_running),
-                    fontSize = 13.sp,
-                    color = colorResource(R.color.color_text_secondary)
+                    text = timeString,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isRunning) colorResource(R.color.color_primary) else colorResource(R.color.color_text_secondary)
                 )
+                if (totalElapsedMs > 0L) {
+                    Text(
+                        text = if (isRunning) stringResource(R.string.timer_label_running) else stringResource(R.string.timer_label_paused),
+                        fontSize = 12.sp,
+                        color = colorResource(R.color.color_text_secondary)
+                    )
+                }
+            }
+
+            Row {
+                if (!isRunning) {
+                    // Start or Resume
+                    Button(
+                        onClick = {
+                            val now = System.currentTimeMillis()
+                            db.setStartTime(gameId, now)
+                            startTime = now
+                            isRunning = true
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = if (totalElapsedMs == 0L) stringResource(R.string.timer_btn_start) else stringResource(R.string.timer_btn_resume),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
+                    // Pause
+                    Button(
+                        onClick = {
+                            val now = System.currentTimeMillis()
+                            val sessionElapsed = now - startTime
+                            val newTotalElapsed = baseElapsedMs + sessionElapsed
+                            db.setElapsedTime(gameId, newTotalElapsed)
+                            db.setStartTime(gameId, 0L)
+                            baseElapsedMs = newTotalElapsed
+                            startTime = 0L
+                            currentElapsedMs = 0L
+                            isRunning = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        Text(stringResource(R.string.timer_btn_pause), fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                if (totalElapsedMs > 0L) {
+                    // Reset
+                    OutlinedButton(
+                        onClick = { showResetDialog = true },
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(stringResource(R.string.timer_btn_reset), color = Color.Red)
+                    }
+                }
             }
         }
     }
@@ -371,56 +326,40 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
 @Composable
 private fun ScoreCell(
     text: String,
-    width: Dp = 36.dp,
-    isHeader: Boolean = false,
+    width: Dp,
+    isHeader: Boolean,
     fontWeight: FontWeight = FontWeight.Normal,
-    bgColor: Color = Color.Transparent,
+    textColor: Color = Color.Unspecified,
     onClick: (() -> Unit)? = null
 ) {
-    val background = if (isHeader) colorResource(R.color.color_primary) else bgColor
-    val textColor = if (isHeader) Color.White else colorResource(R.color.color_text_primary)
-
     Box(
         modifier = Modifier
             .width(width)
-            .height(36.dp)
-            .background(background)
-            .border(0.5.dp, colorResource(R.color.color_gray_medium))
-            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
+            .height(40.dp)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            fontSize = 13.sp,
-            fontWeight = fontWeight,
-            color = textColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 4.dp)
+            fontSize = if (isHeader) 14.sp else 16.sp,
+            fontWeight = if (isHeader) FontWeight.Bold else fontWeight,
+            color = if (isHeader) Color.White else (if (textColor == Color.Unspecified) colorResource(R.color.color_text_primary) else textColor)
         )
     }
 }
 
 @Composable
-private fun HubButton(
-    text: String,
-    color: Color,
-    onClick: () -> Unit
-) {
+private fun HubButton(text: String, color: Color, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(104.dp)
-            .padding(vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .height(56.dp),
         colors = ButtonDefaults.buttonColors(containerColor = color),
-        shape = MaterialTheme.shapes.medium
+        shape = RoundedCornerShape(12.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
     ) {
-        Text(
-            text = text,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
+        Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }

@@ -219,14 +219,14 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 
 ---
 
-## Datenbankschema (Version 9)
+## Datenbankschema (Version 11)
 
 | Tabelle | Wichtige Felder |
 |---------|----------------|
 | `teams` | id, name |
 | `team_positions` | team_id, position |
 | `players` | id, team_id, name, number, primary_position, secondary_position, is_pitcher, birth_year |
-| `games` | id, date, opponent, team_id, inning, outs, leadoff_slot, **start_time**, **game_time** |
+| `games` | id, date, opponent, team_id, inning, outs, leadoff_slot, **start_time**, **elapsed_time_ms**, **game_time** |
 | `pitchers` | id, game_id, name, player_id |
 | `pitches` | id, pitcher_id, at_bat_id, type, sequence_nr, inning |
 | `at_bats` | id, game_id, player_id, slot, inning, result |
@@ -258,7 +258,9 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | 6 → 7 | `start_time` in `games` | ✅ |
 | 7 → 8 | `team_id` in `opponent_teams` (#2) | ✅ |
 | 8 → 9 | `game_time` in `games` (Spieluhrzeit) | ✅ |
-| 9 → 10 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
-| 10 → 11 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
+| 9 → 10 | `is_home` in `games` | ✅ |
+| 10 → 11 | `elapsed_time_ms` in `games` | ✅ |
+| 11 → 12 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
+| 12 → 13 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
 
 **Hinweis:** Jede Migration hier eintragen und gleichzeitig `BackupManager` aktualisieren.

@@ -3,7 +3,7 @@ package de.baseball.diamond9
 import android.app.Activity
 import android.content.Intent
 import androidx.activity.result.ActivityResult
-import androidx.activity.result.ManagedActivityResultLauncher
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import android.os.Bundle
 import androidx.activity.ComponentActivity

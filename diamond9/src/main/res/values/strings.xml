@@ -12,6 +12,7 @@
     <string name="btn_done">Done</string>
     <string name="btn_back_to_game">Back</string>
     <string name="btn_confirm">Confirm</string>
+    <string name="btn_jump">Jump</string>
     <string name="btn_import">Import</string>
     <string name="error_required_field">Required field</string>
 
@@ -278,7 +279,13 @@
 
     <!-- ── Game Timer ───────────────────────────────────────────────────── -->
     <string name="timer_btn_start">Start</string>
+    <string name="timer_btn_pause">Pause</string>
+    <string name="timer_btn_resume">Resume</string>
+    <string name="timer_btn_reset">Reset</string>
     <string name="timer_label_running">running</string>
+    <string name="timer_label_paused">paused</string>
+    <string name="dialog_timer_reset_title">Reset Timer</string>
+    <string name="dialog_timer_reset_message">Do you want to reset the game timer to 00:00:00?</string>
 
     <!-- ── Scoreboard ───────────────────────────────────────────────────── -->
     <string name="scoreboard_away">Away</string>

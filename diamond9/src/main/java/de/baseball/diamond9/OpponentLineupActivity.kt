@@ -475,6 +475,7 @@ private fun SlotNumber(slot: Int, color: Color) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun OpponentStarterRow(
     state: OppSlotState,
