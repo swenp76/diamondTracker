@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -97,9 +98,95 @@ class GameHubActivity : ComponentActivity() {
                         putExtra("gameDate", gameDate)
                     }
                     startActivity(intent)
+                },
+                onShareClick = {
+                    val ownLineup = db.getOwnLineup(gameId)
+                    val opponentLineup = db.getLineup(gameId)
+                    val opponentBench = db.getBenchPlayers(gameId)
+                    val text = buildLineupText(
+                        teamName = teamName,
+                        opponentName = gameOpponent,
+                        date = gameDate,
+                        time = gameTime,
+                        isHome = isHome,
+                        ownLineup = ownLineup,
+                        opponentLineup = opponentLineup,
+                        opponentBench = opponentBench
+                    )
+                    startActivity(Intent.createChooser(
+                        Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, text)
+                        },
+                        null
+                    ))
                 }
             )
         }
+    }
+
+    private fun buildLineupText(
+        teamName: String,
+        opponentName: String,
+        date: String,
+        time: String,
+        isHome: Int,
+        ownLineup: Map<Int, Player>,
+        opponentLineup: List<LineupEntry>,
+        opponentBench: List<BenchPlayer>
+    ): String {
+        val sb = StringBuilder()
+        val location = if (isHome == 1) getString(R.string.location_home) else getString(R.string.location_away)
+        val dateLine = if (time.isNotEmpty()) "$date  $time  •  $location" else "$date  •  $location"
+
+        sb.appendLine("diamond9 – Lineup Sheet")
+        sb.appendLine("=".repeat(32))
+        sb.appendLine("$teamName vs $opponentName")
+        sb.appendLine(dateLine)
+        sb.appendLine()
+
+        // Own lineup
+        sb.appendLine("OWN LINEUP — $teamName")
+        sb.appendLine("─".repeat(32))
+        val starters = (1..10).mapNotNull { slot -> ownLineup[slot]?.let { slot to it } }
+        if (starters.isEmpty()) {
+            sb.appendLine("(empty)")
+        } else {
+            for ((slot, player) in starters) {
+                val pos = getString(BaseballPositions.shortLabelRes(player.primaryPosition))
+                sb.appendLine("%2d   #%-4s %-20s %s".format(slot, player.number, player.name, pos))
+            }
+        }
+        val subs = (11..20).mapNotNull { slot -> ownLineup[slot]?.let { slot to it } }
+        if (subs.isNotEmpty()) {
+            sb.appendLine()
+            sb.appendLine("Substitutes")
+            for ((slot, player) in subs) {
+                val pos = getString(BaseballPositions.shortLabelRes(player.primaryPosition))
+                sb.appendLine("%2d   #%-4s %-20s %s".format(slot, player.number, player.name, pos))
+            }
+        }
+
+        sb.appendLine()
+
+        // Opponent lineup
+        sb.appendLine("OPPONENT LINEUP — $opponentName")
+        sb.appendLine("─".repeat(32))
+        val sortedOpponent = opponentLineup.sortedBy { it.battingOrder }
+        if (sortedOpponent.isEmpty()) {
+            sb.appendLine("(empty)")
+        } else {
+            for (entry in sortedOpponent) {
+                sb.appendLine("%2d   #%s".format(entry.battingOrder, entry.jerseyNumber))
+            }
+        }
+        if (opponentBench.isNotEmpty()) {
+            sb.appendLine()
+            sb.appendLine("Bench")
+            sb.appendLine(opponentBench.joinToString(", ") { "#${it.jerseyNumber}" })
+        }
+
+        return sb.toString().trimEnd()
     }
 }
 
@@ -118,7 +205,8 @@ private fun GameHubScreen(
     onDefenseClick: () -> Unit,
     onLineupClick: () -> Unit,
     onOppoLineupClick: () -> Unit,
-    onBatterStatsClick: () -> Unit
+    onBatterStatsClick: () -> Unit,
+    onShareClick: () -> Unit
 ) {
     val dateLabel = if (gameTime.isNotEmpty()) "$gameDate  $gameTime" else gameDate
     Scaffold(
@@ -133,6 +221,11 @@ private fun GameHubScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onShareClick) {
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.content_desc_share_lineup))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
