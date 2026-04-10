@@ -55,8 +55,10 @@ class GameHubActivity : ComponentActivity() {
                     startActivity(intent)
                 },
                 onDefense = {
-                    val intent = Intent(this, PitchTrackActivity::class.java).apply {
+                    val intent = Intent(this, PitcherListActivity::class.java).apply {
                         putExtra("gameId", gameId)
+                        putExtra("gameOpponent", opponent)
+                        putExtra("gameDate", date)
                     }
                     startActivity(intent)
                 },
