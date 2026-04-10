@@ -11,6 +11,7 @@
     <string name="btn_copy">Copy</string>
     <string name="btn_done">Done</string>
     <string name="btn_back_to_game">Back</string>
+    <string name="btn_confirm">Confirm</string>
     <string name="btn_import">Import</string>
     <string name="error_required_field">Required field</string>
 
@@ -195,6 +196,8 @@
     <string name="dialog_sub_injury">Injury</string>
     <string name="dialog_return_title">Re-entry – Slot %d</string>
     <string name="dialog_return_message">%s back in game?</string>
+    <string name="dialog_jump_to_slot_title">Jump to Slot %d</string>
+    <string name="dialog_jump_to_slot_message">Do you want to jump to Slot %d? (Batting out of order)</string>
     <string name="dialog_injury_title">Injury – Slot %d</string>
     <string name="dialog_no_subs_title">No substitutes available</string>
     <string name="dialog_no_subs_message">All substitutes have already been used.</string>

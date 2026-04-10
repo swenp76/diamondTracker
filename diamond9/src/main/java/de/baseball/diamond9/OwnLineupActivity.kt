@@ -1,10 +1,14 @@
 package de.baseball.diamond9
 
+import android.app.Activity.RESULT_OK
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -82,6 +86,7 @@ class OwnLineupActivity : ComponentActivity() {
         val gameId = intent.getLongExtra("gameId", -1)
         val gameOpponent = intent.getStringExtra("gameOpponent") ?: "Lineup"
         val gameDate = intent.getStringExtra("gameDate") ?: ""
+        val isOffenseMode = intent.getBooleanExtra("isOffenseMode", false)
 
         setContent {
             OwnLineupScreen(
@@ -89,7 +94,10 @@ class OwnLineupActivity : ComponentActivity() {
                 gameId = gameId,
                 gameOpponent = gameOpponent,
                 gameDate = gameDate,
-                onBackClick = { finish() }
+                isOffenseMode = isOffenseMode,
+                onBackClick = { finish() },
+                onResult = { code, data -> setResult(code, data) },
+                onFinish = { finish() }
             )
         }
     }
@@ -102,7 +110,10 @@ private fun OwnLineupScreen(
     gameId: Long,
     gameOpponent: String,
     gameDate: String,
-    onBackClick: () -> Unit
+    isOffenseMode: Boolean = false,
+    onBackClick: () -> Unit,
+    onResult: (Int, Intent) -> Unit = { _, _ -> },
+    onFinish: () -> Unit = {}
 ) {
     var slotStates by remember { mutableStateOf(emptyList<SlotState>()) }
     var subStatuses by remember { mutableStateOf(emptyMap<Long, SubStatus>()) }
@@ -114,6 +125,7 @@ private fun OwnLineupScreen(
     var swapDialogState by remember { mutableStateOf<SlotState?>(null) }
     var subSelectionState by remember { mutableStateOf<Pair<SlotState, Boolean>?>(null) } // state, isInjury
     var returnStarterDialogState by remember { mutableStateOf<SlotState?>(null) }
+    var jumpToSlotDialogState by remember { mutableStateOf<Int?>(null) }
 
     val refresh = {
         val lineupData = db.getOwnLineup(gameId)
@@ -229,6 +241,11 @@ private fun OwnLineupScreen(
                         state = state,
                         hasSubs = hasSubs,
                         onRowClick = { if (!hasSubs) activeDialogSlot = state.slot },
+                        onLongClick = {
+                            if (isOffenseMode && state.currentPlayer != null) {
+                                jumpToSlotDialogState = state.slot
+                            }
+                        },
                         onSwapClick = {
                             when (state.swapType) {
                                 SwapType.SUB_IN -> swapDialogState = state
@@ -410,6 +427,26 @@ private fun OwnLineupScreen(
             dismissButton = { TextButton(onClick = { returnStarterDialogState = null }) { Text(stringResource(R.string.btn_cancel)) } }
         )
     }
+
+    // Jump to Slot Dialog
+    jumpToSlotDialogState?.let { slot ->
+        AlertDialog(
+            onDismissRequest = { jumpToSlotDialogState = null },
+            title = { Text(stringResource(R.string.dialog_jump_to_slot_title, slot)) },
+            text = { Text(stringResource(R.string.dialog_jump_to_slot_message, slot)) },
+            confirmButton = {
+                Button(onClick = {
+                    val resultIntent = Intent()
+                    resultIntent.putExtra("jumpToSlot", slot)
+                    onResult(RESULT_OK, resultIntent)
+                    onFinish()
+                }) { Text(stringResource(R.string.btn_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { jumpToSlotDialogState = null }) { Text(stringResource(R.string.btn_cancel)) }
+            }
+        )
+    }
 }
 
 @Composable
@@ -438,18 +475,23 @@ private fun SlotNumber(slot: Int, color: Color) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun StarterRow(
     state: SlotState,
     hasSubs: Boolean,
     onRowClick: () -> Unit,
+    onLongClick: () -> Unit,
     onSwapClick: () -> Unit,
     onClearClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onRowClick),
+            .combinedClickable(
+                onClick = onRowClick,
+                onLongClick = onLongClick
+            ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Row(

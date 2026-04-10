@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -53,12 +55,10 @@ class BattingTrackActivity : ComponentActivity() {
 
         val snackbarHostState = remember { SnackbarHostState() }
 
-        val lineup = remember(gameId) { db.getOwnLineup(gameId) }
+        var lineup by remember { mutableStateOf(emptyMap<Int, Player>()) }
 
-        fun refreshAtBat(id: Long) {
-            if (id != -1L) {
-                pitches = db.getPitchesForAtBat(id)
-            }
+        fun refreshLineup() {
+            lineup = db.getOwnLineup(gameId)
         }
 
         fun startNewAtBat(slot: Int): Long {
@@ -70,8 +70,36 @@ class BattingTrackActivity : ComponentActivity() {
             return newId
         }
 
+        val launcher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            refreshLineup()
+            if (result.resultCode == RESULT_OK) {
+                val jumpToSlot = result.data?.getIntExtra("jumpToSlot", -1) ?: -1
+                if (jumpToSlot != -1) {
+                    val currentAb = db.getAtBat(currentAtBatId)
+                    if (currentAb != null && currentAb.result == null) {
+                        val pitchesCount = db.getPitchesForAtBat(currentAtBatId).size
+                        if (pitchesCount == 0) {
+                            db.deleteAtBat(currentAtBatId)
+                        } else {
+                            db.updateAtBatResult(currentAtBatId, "OUT") // Treat as out if skipped? Or just leave it?
+                        }
+                    }
+                    startNewAtBat(jumpToSlot)
+                }
+            }
+        }
+
+        fun refreshAtBat(id: Long) {
+            if (id != -1L) {
+                pitches = db.getPitchesForAtBat(id)
+            }
+        }
+
         LaunchedEffect(gameId) {
             if (gameId != -1L) {
+                refreshLineup()
                 val (i, o) = db.getGameState(gameId)
                 inning = i
                 outs = o
@@ -162,7 +190,7 @@ class BattingTrackActivity : ComponentActivity() {
                     .background(colorResource(R.color.color_background))
             ) {
                 StatsBar(inning, outs, pitches)
-                BatterStrip(currentSlot, lineup[currentSlot])
+                BatterStrip(currentSlot, lineup[currentSlot], launcher)
                 Box(modifier = Modifier.weight(1f)) {
                     PitchLog(pitches)
                 }
@@ -315,7 +343,11 @@ class BattingTrackActivity : ComponentActivity() {
     }
 
     @Composable
-    fun BatterStrip(slot: Int, player: Player?) {
+    fun BatterStrip(
+        slot: Int,
+        player: Player?,
+        launcher: androidx.activity.result.ActivityResultLauncher<Intent>
+    ) {
         val context = LocalContext.current
         val batterText = if (player != null)
             stringResource(R.string.label_batter_slot_with_jersey, "#${player.number} ${player.name}", slot)
@@ -340,7 +372,8 @@ class BattingTrackActivity : ComponentActivity() {
                     .clickable {
                         val i = Intent(context, OwnLineupActivity::class.java)
                         i.putExtra("gameId", gameId)
-                        context.startActivity(i)
+                        i.putExtra("isOffenseMode", true)
+                        launcher.launch(i)
                     }
                     .padding(8.dp)
             )

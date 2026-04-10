@@ -11,6 +11,7 @@
     <string name="btn_copy">Kopieren</string>
     <string name="btn_done">Fertig</string>
     <string name="btn_back_to_game">Zurück</string>
+    <string name="btn_confirm">Bestätigen</string>
     <string name="btn_import">Importieren</string>
     <string name="error_required_field">Pflichtfeld</string>
 
@@ -184,6 +185,8 @@
     <string name="dialog_sub_injury">Verletzung</string>
     <string name="dialog_return_title">Rückwechslung – Slot %d</string>
     <string name="dialog_return_message">%s zurück ins Spiel?</string>
+    <string name="dialog_jump_to_slot_title">Springe zu Slot %d</string>
+    <string name="dialog_jump_to_slot_message">Möchtest du zu Slot %d springen? (Batting out of order)</string>
     <string name="dialog_injury_title">Verletzung – Slot %d</string>
     <string name="dialog_no_subs_title">Keine Substitutes verfügbar</string>
     <string name="dialog_no_subs_message">Alle Substitutes wurden bereits eingesetzt.</string>

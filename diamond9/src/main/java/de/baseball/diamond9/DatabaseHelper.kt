@@ -509,6 +509,8 @@ class DatabaseHelper(context: Context) {
 
     fun getAtBatsForGame(gameId: Long): List<AtBat> = atBatDao.getAtBatsForGame(gameId)
 
+    fun getAtBat(atBatId: Long): AtBat? = atBatDao.getAtBatById(atBatId)
+
     fun updateAtBatResult(atBatId: Long, result: String?) {
         val ab = atBatDao.getAtBatById(atBatId) ?: return
         atBatDao.updateAtBat(ab.copy(result = result))
