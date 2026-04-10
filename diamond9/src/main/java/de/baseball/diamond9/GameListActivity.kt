@@ -125,10 +125,12 @@ class GameListActivity : ComponentActivity() {
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onGameClick = { game ->
                         startActivity(Intent(this, GameHubActivity::class.java).apply {
-                            putExtra("gameId", game.id)
-                            putExtra("gameOpponent", game.opponent)
-                            putExtra("gameDate", game.date)
-                            putExtra("gameTime", game.gameTime)
+                            putExtra("game_id", game.id)
+                            putExtra("opponent", game.opponent)
+                            putExtra("date", game.date)
+                            putExtra("own_team", teamName)
+                            putExtra("own_team_id", teamId)
+                            putExtra("is_home", game.isHome)
                         })
                     },
                     onSeasonStatsClick = {

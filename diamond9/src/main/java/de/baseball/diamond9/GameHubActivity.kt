@@ -146,9 +146,47 @@ private fun Scoreboard(gameId: Long, ownTeam: String, opponent: String, isHome: 
     val guestTeam = if (isHome == 1) opponent else ownTeam
     val homeTeam = if (isHome == 1) ownTeam else opponent
 
-    fun runsFor(teamIndex: Int, inning: Int): Int = db.getScoreboardRuns(gameId, inning, teamIndex)
-    fun hasEntry(teamIndex: Int, inning: Int): Boolean = db.hasScoreboardEntry(gameId, inning, teamIndex)
-    fun totalFor(teamIndex: Int): Int = (1..7).sumOf { runsFor(teamIndex, it) }
+    // teamIndex: 0 = guest, 1 = home
+    var editCell by remember { mutableStateOf<Pair<Int, Int>?>(null) } // teamIndex to inning
+    // runs[teamIndex][inning-1]
+    val runs = remember { mutableStateOf(Array(2) { t -> IntArray(9) { inn -> db.getScoreboardRuns(gameId, inn + 1, t) } }) }
+    val hasEntry = remember { mutableStateOf(Array(2) { t -> BooleanArray(9) { inn -> db.hasScoreboardEntry(gameId, inn + 1, t) } }) }
+
+    fun reload() {
+        runs.value = Array(2) { t -> IntArray(9) { inn -> db.getScoreboardRuns(gameId, inn + 1, t) } }
+        hasEntry.value = Array(2) { t -> BooleanArray(9) { inn -> db.hasScoreboardEntry(gameId, inn + 1, t) } }
+    }
+
+    fun totalFor(teamIndex: Int): Int = runs.value[teamIndex].sum()
+
+    // Dialog for entering runs
+    editCell?.let { (teamIndex, inning) ->
+        val current = runs.value[teamIndex][inning - 1]
+        var input by remember(editCell) { mutableStateOf(if (hasEntry.value[teamIndex][inning - 1]) current.toString() else "") }
+        AlertDialog(
+            onDismissRequest = { editCell = null },
+            title = { Text("Inning $inning – ${if (teamIndex == 0) guestTeam else homeTeam}") },
+            text = {
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = { if (it.length <= 2 && it.all { c -> c.isDigit() }) input = it },
+                    label = { Text(stringResource(R.string.scoreboard_runs_label)) },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val r = input.toIntOrNull() ?: 0
+                    db.upsertScoreboardRun(gameId, inning, teamIndex, r)
+                    reload()
+                    editCell = null
+                }) { Text(stringResource(R.string.btn_save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { editCell = null }) { Text(stringResource(R.string.btn_cancel)) }
+            }
+        )
+    }
 
     Card(
         modifier = Modifier
@@ -161,15 +199,15 @@ private fun Scoreboard(gameId: Long, ownTeam: String, opponent: String, isHome: 
             // Header Row
             Row(modifier = Modifier.background(colorResource(R.color.color_primary))) {
                 ScoreCell("", 100.dp, true)
-                (1..7).forEach { ScoreCell(it.toString(), 30.dp, true) }
+                (1..9).forEach { ScoreCell(it.toString(), 30.dp, true) }
                 ScoreCell(stringResource(R.string.scoreboard_total_label), 40.dp, true)
             }
             // Guest Row
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ScoreCell(guestTeam, 100.dp, false, FontWeight.Bold)
-                (1..7).forEach { inn ->
-                    val r = if (hasEntry(0, inn)) runsFor(0, inn).toString() else "-"
-                    ScoreCell(r, 30.dp, false)
+                (1..9).forEach { inn ->
+                    val r = if (hasEntry.value[0][inn - 1]) runs.value[0][inn - 1].toString() else "-"
+                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(0, inn) })
                 }
                 ScoreCell(totalFor(0).toString(), 40.dp, false, FontWeight.Bold)
             }
@@ -177,9 +215,9 @@ private fun Scoreboard(gameId: Long, ownTeam: String, opponent: String, isHome: 
             // Home Row
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ScoreCell(homeTeam, 100.dp, false, FontWeight.Bold)
-                (1..7).forEach { inn ->
-                    val r = if (hasEntry(1, inn)) runsFor(1, inn).toString() else "-"
-                    ScoreCell(r, 30.dp, false)
+                (1..9).forEach { inn ->
+                    val r = if (hasEntry.value[1][inn - 1]) runs.value[1][inn - 1].toString() else "-"
+                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(1, inn) })
                 }
                 ScoreCell(totalFor(1).toString(), 40.dp, false, FontWeight.Bold)
             }
