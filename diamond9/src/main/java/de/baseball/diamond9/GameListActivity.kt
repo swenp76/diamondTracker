@@ -1,6 +1,7 @@
 package de.baseball.diamond9
 
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -77,6 +78,7 @@ class GameListActivity : ComponentActivity() {
                             putExtra("gameId", game.id)
                             putExtra("gameOpponent", game.opponent)
                             putExtra("gameDate", game.date)
+                            putExtra("gameTime", game.gameTime)
                         })
                     },
                     onSeasonStatsClick = {
@@ -184,9 +186,9 @@ private fun GameListScreen(
             confirmLabel = stringResource(R.string.btn_create),
             opponents = db.getOpponentTeamsForTeam(teamId),
             onDismiss = { showAddDialog = false },
-            onConfirm = { date, opponent ->
+            onConfirm = { date, time, opponent ->
                 db.insertOpponentTeamForTeam(opponent, teamId)
-                db.insertGame(date, opponent, teamId)
+                db.insertGame(date, opponent, teamId, time)
                 refresh()
                 showAddDialog = false
             }
@@ -198,12 +200,13 @@ private fun GameListScreen(
             title = stringResource(R.string.dialog_edit_game_title),
             confirmLabel = stringResource(R.string.btn_save),
             initialDate = game.date,
+            initialTime = game.gameTime,
             initialOpponent = game.opponent,
             opponents = db.getOpponentTeamsForTeam(teamId),
             onDismiss = { gameToEdit = null },
-            onConfirm = { date, opponent ->
+            onConfirm = { date, time, opponent ->
                 db.insertOpponentTeamForTeam(opponent, teamId)
-                db.updateGame(game.id, date, opponent)
+                db.updateGame(game.id, date, opponent, time)
                 refresh()
                 gameToEdit = null
             }
@@ -295,8 +298,9 @@ private fun GameItem(
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
+                val dateLabel = if (game.gameTime.isNotEmpty()) "${game.date}  ${game.gameTime}" else game.date
                 Text(
-                    text = game.date,
+                    text = dateLabel,
                     fontSize = 14.sp,
                     color = colorResource(R.color.color_text_secondary)
                 )
@@ -321,10 +325,11 @@ private fun GameDialog(
     title: String,
     confirmLabel: String,
     initialDate: String = "",
+    initialTime: String = "",
     initialOpponent: String = "",
     opponents: List<OpponentTeam>,
     onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit
+    onConfirm: (String, String, String) -> Unit   // date, time, opponent
 ) {
     val context = LocalContext.current
     val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.US)
@@ -344,6 +349,7 @@ private fun GameDialog(
     }
 
     var date by remember { mutableStateOf(if (initialDate.isNotEmpty()) initialDate else sdf.format(calendar.time)) }
+    var time by remember { mutableStateOf(initialTime) }
     var opponentText by remember { mutableStateOf(if (initialOpponent.isNotEmpty() && opponents.none { it.name == initialOpponent }) initialOpponent else "") }
     var selectedOpponent by remember { mutableStateOf(opponents.find { it.name == initialOpponent }) }
     var dateError by remember { mutableStateOf(false) }
@@ -361,6 +367,14 @@ private fun GameDialog(
         calendar.get(Calendar.MONTH),
         calendar.get(Calendar.DAY_OF_MONTH)
     )
+
+    val timePickerDialog = remember {
+        val initHour = if (time.length == 5) time.substring(0, 2).toIntOrNull() ?: 12 else 12
+        val initMin  = if (time.length == 5) time.substring(3, 5).toIntOrNull() ?: 0  else 0
+        TimePickerDialog(context, { _, h, m ->
+            time = "%02d:%02d".format(h, m)
+        }, initHour, initMin, true)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -381,6 +395,24 @@ private fun GameDialog(
                         disabledTextColor = MaterialTheme.colorScheme.onSurface,
                         disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         disabledBorderColor = if (dateError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
+                        disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+
+                OutlinedTextField(
+                    value = time,
+                    onValueChange = { },
+                    label = { Text(stringResource(R.string.label_time)) },
+                    placeholder = { Text(stringResource(R.string.hint_time)) },
+                    readOnly = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { timePickerDialog.show() },
+                    enabled = false,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        disabledBorderColor = MaterialTheme.colorScheme.outline,
                         disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
@@ -441,7 +473,7 @@ private fun GameDialog(
             Button(onClick = {
                 val finalOpponent = opponentText.trim().ifEmpty { selectedOpponent?.name ?: "" }
                 if (date.isNotBlank() && finalOpponent.isNotBlank()) {
-                    onConfirm(date, finalOpponent)
+                    onConfirm(date, time, finalOpponent)
                 } else {
                     if (date.isBlank()) dateError = true
                     if (finalOpponent.isBlank()) opponentError = true

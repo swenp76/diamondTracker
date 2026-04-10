@@ -42,6 +42,7 @@ class GameHubActivity : ComponentActivity() {
         val gameId = intent.getLongExtra("gameId", -1)
         val gameOpponent = intent.getStringExtra("gameOpponent") ?: ""
         val gameDate = intent.getStringExtra("gameDate") ?: ""
+        val gameTime = intent.getStringExtra("gameTime") ?: ""
 
         val db = DatabaseHelper(this)
         val teamName = db.getGame(gameId)?.teamId?.let { db.getTeamById(it)?.name } ?: ""
@@ -51,6 +52,7 @@ class GameHubActivity : ComponentActivity() {
                 gameId = gameId,
                 gameOpponent = gameOpponent,
                 gameDate = gameDate,
+                gameTime = gameTime,
                 teamName = teamName,
                 db = db,
                 onBackClick = { finish() },
@@ -104,6 +106,7 @@ private fun GameHubScreen(
     gameId: Long,
     gameOpponent: String,
     gameDate: String,
+    gameTime: String,
     teamName: String,
     db: DatabaseHelper,
     onBackClick: () -> Unit,
@@ -113,13 +116,14 @@ private fun GameHubScreen(
     onOppoLineupClick: () -> Unit,
     onBatterStatsClick: () -> Unit
 ) {
+    val dateLabel = if (gameTime.isNotEmpty()) "$gameDate  $gameTime" else gameDate
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text(gameOpponent, style = MaterialTheme.typography.titleLarge)
-                        Text(gameDate, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                        Text(dateLabel, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                     }
                 },
                 navigationIcon = {

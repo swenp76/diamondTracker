@@ -18,8 +18,8 @@ abstract class GameDao {
     @Insert
     abstract fun insertGame(game: Game): Long
 
-    @Query("UPDATE games SET date = :date, opponent = :opponent WHERE id = :gameId")
-    abstract fun updateGame(gameId: Long, date: String, opponent: String)
+    @Query("UPDATE games SET date = :date, opponent = :opponent, game_time = :gameTime WHERE id = :gameId")
+    abstract fun updateGame(gameId: Long, date: String, opponent: String, gameTime: String)
 
     @Query("UPDATE games SET inning = :inning, outs = :outs WHERE id = :gameId")
     abstract fun updateGameState(gameId: Long, inning: Int, outs: Int)

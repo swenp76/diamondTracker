@@ -27,7 +27,7 @@ diamond9/src/main/java/de/baseball/diamond9/
 │   ├── ScoreboardDao.kt      ← neu: scoreboard_runs
 │   └── TeamDao.kt
 ├── AppNavigation.kt          ← NavDrawer (AppDrawer Composable)
-├── BackupManager.kt          ← Backup/Restore (JSON, dbVersion 8)
+├── BackupManager.kt          ← Backup/Restore (JSON, dbVersion 9)
 ├── BattingTrackActivity.kt   ← Offense / Batting
 ├── CoachAct.kt               ← Startseite
 ├── DatabaseHelper.kt         ← Wrapper über alle DAOs + Entities
@@ -114,6 +114,7 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ **#1** Farbkonsistenz: alle Hex-Farben in colors.xml zentralisiert, Composables nutzen colorResource()
 - ✅ **#5** Batting Stats pro Spiel (BatterStatsActivity, GameHub-Button "Batting Stats", Query getGameBatterStats)
 - ✅ **#6** IP (Innings Pitched): formatIP(), getOutsForGame(), ip-Feld in PitcherStats, StatCard in StatsActivity
+- ✅ Uhrzeit pro Spiel: game_time-Feld (DB v9), TimePickerDialog im GameDialog, Anzeige in GameItem + GameHub-TopAppBar
 
 ---
 
@@ -218,14 +219,14 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 
 ---
 
-## Datenbankschema (Version 8)
+## Datenbankschema (Version 9)
 
 | Tabelle | Wichtige Felder |
 |---------|----------------|
 | `teams` | id, name |
 | `team_positions` | team_id, position |
 | `players` | id, team_id, name, number, primary_position, secondary_position, is_pitcher, birth_year |
-| `games` | id, date, opponent, team_id, inning, outs, leadoff_slot, **start_time** |
+| `games` | id, date, opponent, team_id, inning, outs, leadoff_slot, **start_time**, **game_time** |
 | `pitchers` | id, game_id, name, player_id |
 | `pitches` | id, pitcher_id, at_bat_id, type, sequence_nr, inning |
 | `at_bats` | id, game_id, player_id, slot, inning, result |
@@ -256,7 +257,8 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | 5 → 6 | `scoreboard_runs`-Tabelle | ✅ |
 | 6 → 7 | `start_time` in `games` | ✅ |
 | 7 → 8 | `team_id` in `opponent_teams` (#2) | ✅ |
-| 8 → 9 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
-| 9 → 10 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
+| 8 → 9 | `game_time` in `games` (Spieluhrzeit) | ✅ |
+| 9 → 10 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
+| 10 → 11 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
 
 **Hinweis:** Jede Migration hier eintragen und gleichzeitig `BackupManager` aktualisieren.

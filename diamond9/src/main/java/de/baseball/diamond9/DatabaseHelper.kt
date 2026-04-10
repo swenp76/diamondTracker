@@ -15,7 +15,8 @@ data class Game(
     @ColumnInfo(name = "inning", defaultValue = "1") val inning: Int = 1,
     @ColumnInfo(name = "outs", defaultValue = "0") val outs: Int = 0,
     @ColumnInfo(name = "leadoff_slot", defaultValue = "1") val leadoffSlot: Int = 1,
-    @ColumnInfo(name = "start_time", defaultValue = "0") val startTime: Long = 0L
+    @ColumnInfo(name = "start_time", defaultValue = "0") val startTime: Long = 0L,
+    @ColumnInfo(name = "game_time", defaultValue = "") val gameTime: String = ""
 )
 
 @Entity(tableName = "pitchers")
@@ -234,8 +235,8 @@ class DatabaseHelper(context: Context) {
 
     // ── Games ──────────────────────────────────────────────────────────────────
 
-    fun insertGame(date: String, opponent: String, teamId: Long): Long =
-        gameDao.insertGame(Game(date = date, opponent = opponent, teamId = teamId))
+    fun insertGame(date: String, opponent: String, teamId: Long, gameTime: String = ""): Long =
+        gameDao.insertGame(Game(date = date, opponent = opponent, teamId = teamId, gameTime = gameTime))
 
     fun getAllGames(): List<Game> = gameDao.getAllGames()
 
@@ -243,8 +244,8 @@ class DatabaseHelper(context: Context) {
 
     fun getGame(gameId: Long): Game? = gameDao.getGame(gameId)
 
-    fun updateGame(gameId: Long, date: String, opponent: String) =
-        gameDao.updateGame(gameId, date, opponent)
+    fun updateGame(gameId: Long, date: String, opponent: String, gameTime: String = "") =
+        gameDao.updateGame(gameId, date, opponent, gameTime)
 
     fun deleteGame(gameId: Long) = gameDao.deleteGameWithCascade(gameId)
 

@@ -83,6 +83,8 @@
     <string name="label_own_team">Own Team</string>
     <string name="label_date">Date</string>
     <string name="hint_date_format">DD.MM.YYYY</string>
+    <string name="label_time">Time (optional)</string>
+    <string name="hint_time">HH:MM</string>
     <string name="label_opponent">Opponent</string>
     <string name="hint_opponent">Team</string>
     <string name="label_or_enter_new">Or enter new:</string>
