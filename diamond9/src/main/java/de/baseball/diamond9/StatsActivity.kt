@@ -89,6 +89,7 @@ fun StatsScreen(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val strikePercent = if (stats.totalPitches > 0) (stats.strikes * 100.0 / stats.totalPitches).toInt() else 0
                 StatCard(label = stringResource(R.string.stat_strike_percent), value = "$strikePercent%", valueColor = colorResource(R.color.color_green_dark), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_ip), value = stats.ip, modifier = Modifier.weight(1f))
                 Spacer(modifier = Modifier.weight(2f))
             }
 

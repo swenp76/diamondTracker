@@ -214,7 +214,8 @@ data class PitcherStats(
     val hits: Int,
     val strikeouts: Int,
     val totalPitches: Int,
-    val pitches: List<Pitch>
+    val pitches: List<Pitch>,
+    val ip: String = ""
 )
 
 // ── DatabaseHelper – Room-Wrapper mit identischer API ─────────────────────────
@@ -294,9 +295,12 @@ class DatabaseHelper(context: Context) {
     fun getPitchesForPitcher(pitcherId: Long): List<Pitch> =
         pitcherDao.getPitchesForPitcher(pitcherId)
 
+    private fun formatIP(outs: Int) = "${outs / 3}.${outs % 3}"
+
     fun getStatsForPitcher(pitcherId: Long): PitcherStats {
         val pitcher = pitcherDao.getPitcherById(pitcherId)
         val pitches = getPitchesForPitcher(pitcherId)
+        val outs = atBatDao.getOutsForGame(pitcher.gameId)
 
         var strikes = 0
         var currentStrikesAtBat = 0
@@ -328,7 +332,8 @@ class DatabaseHelper(context: Context) {
             hits = pitches.count { it.type == "H" },
             strikeouts = pitches.count { it.type == "K" },
             totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "F" || it.type == "HBP" || it.type == "H" },
-            pitches = pitches
+            pitches = pitches,
+            ip = formatIP(outs)
         )
     }
 

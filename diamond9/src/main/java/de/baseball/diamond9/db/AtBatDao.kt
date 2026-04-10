@@ -43,6 +43,9 @@ abstract class AtBatDao {
     @Query("DELETE FROM pitches WHERE at_bat_id = :atBatId")
     abstract fun deletePitchesForAtBat(atBatId: Long)
 
+    @Query("SELECT COUNT(*) FROM at_bats WHERE game_id = :gameId AND result IN ('K', 'OUT')")
+    abstract fun getOutsForGame(gameId: Long): Int
+
     @Query("""
         SELECT player_id,
             SUM(CASE WHEN result IN ('K','H','OUT') THEN 1 ELSE 0 END) AS ab,

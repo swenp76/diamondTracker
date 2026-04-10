@@ -113,31 +113,13 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ **#2** Gegner teamabhängig (opponent_teams.team_id, DB v8, NavDrawer zeigt Opponents nur bei aktivem Team)
 - ✅ **#1** Farbkonsistenz: alle Hex-Farben in colors.xml zentralisiert, Composables nutzen colorResource()
 - ✅ **#5** Batting Stats pro Spiel (BatterStatsActivity, GameHub-Button "Batting Stats", Query getGameBatterStats)
+- ✅ **#6** IP (Innings Pitched): formatIP(), getOutsForGame(), ip-Feld in PitcherStats, StatCard in StatsActivity
 
 ---
 
 ## Offene Aufgaben (nach Priorität)
 
 ### 🔴 Hoch
-
-#### #6 – Feature: IP (Innings Pitched)
-**Datei:** `DatabaseHelper.kt`, `StatsActivity.kt`
-
-Berechnung: `outs / 3` ganze Innings, `outs % 3` Rest → Darstellung z.B. `2.1`
-```kotlin
-fun formatIP(outs: Int): String = "${outs / 3}.${outs % 3}"
-```
-Outs = At-Bats mit `result = "K"` oder `result = "OUT"` für diesen Pitcher.
-
-Neuer Query in `AtBatDao` oder `PitcherDao`:
-```sql
-SELECT COUNT(*) FROM at_bats
-WHERE game_id = :gameId AND result IN ('K', 'OUT')
-```
-
-In `PitcherStats` neues Feld `ip: String` ergänzen und in `StatsActivity` anzeigen.
-
----
 
 ### 🟡 Mittel
 
