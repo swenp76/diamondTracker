@@ -86,11 +86,10 @@ class PitchTrackActivity : ComponentActivity() {
         fun addOut() {
             val newOuts = outs + 1
             if (newOuts >= 3) {
-                if (gameId != -1L) {
-                    val gameBF = db.getTotalBFForGame(gameId)
-                    val currentSlot = (gameBF % 9) + 1
-                    db.updateLeadoffSlot(gameId, currentSlot)
-                }
+                // When 3 outs are reached, the next inning for the OWN team starts.
+                // We should NOT overwrite leadoff_slot here because leadoff_slot tracks
+                // which OWN player starts the next offense.
+                // The opponent's batter progress is not tracked via leadoff_slot.
                 inning++
                 outs = 0
                 showInningSnackbar = true

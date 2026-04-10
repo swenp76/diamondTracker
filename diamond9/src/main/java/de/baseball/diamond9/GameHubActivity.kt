@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import kotlinx.coroutines.delay
 
 class GameHubActivity : ComponentActivity() {
@@ -321,7 +322,7 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
     val hours = elapsedMs / 3_600_000L
     val minutes = (elapsedMs % 3_600_000L) / 60_000L
     val seconds = (elapsedMs % 60_000L) / 1_000L
-    val timeString = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    val timeString = String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
 
     Card(
         modifier = Modifier
