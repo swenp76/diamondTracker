@@ -17,31 +17,33 @@ Sie hilft beim Verwalten von Teams, Erstellen von Aufstellungen und Tracken von 
 ```
 diamond9/src/main/java/de/baseball/diamond9/
 ├── db/
-│   ├── AppDatabase.kt        ← Room-Datenbank, Migrations, Version 8
+│   ├── AppDatabase.kt        ← Room-Datenbank, Migrations, Version 11
 │   ├── AtBatDao.kt
 │   ├── GameDao.kt
 │   ├── LineupDao.kt
 │   ├── OpponentTeamDao.kt
 │   ├── PitcherDao.kt
 │   ├── PlayerDao.kt
-│   ├── ScoreboardDao.kt      ← neu: scoreboard_runs
+│   ├── ScoreboardDao.kt
 │   └── TeamDao.kt
 ├── AppNavigation.kt          ← NavDrawer (AppDrawer Composable)
-├── BackupManager.kt          ← Backup/Restore (JSON, dbVersion 9)
+├── AboutActivity.kt          ← Über die App (Lizenz, GitHub)
+├── BackupManager.kt          ← Backup/Restore (JSON, dbVersion 11) + Einzelspiel-Export/Import
+├── BatterStatsActivity.kt    ← Batting-Statistiken pro Spiel
 ├── BattingTrackActivity.kt   ← Offense / Batting
 ├── CoachAct.kt               ← Startseite
 ├── DatabaseHelper.kt         ← Wrapper über alle DAOs + Entities
 ├── GameHubActivity.kt        ← Spiel-Hub (Offense/Defense/Lineup + Scoreboard + Spieluhr)
-├── GameListActivity.kt
+├── GameListActivity.kt       ← Spielliste mit Import/Export pro Spiel
 ├── ManageOpponentsActivity.kt
 ├── OpponentLineupActivity.kt
 ├── OwnLineupActivity.kt
 ├── PitchTrackActivity.kt     ← Defense / Pitching
 ├── PitcherListActivity.kt
-├── PitcherTrendHelper.kt     ← Statistik-Hilfsfunktionen
-├── SeasonStatsActivity.kt    ← neu: Saison-Statistiken (Batter + Pitcher)
+├── PitcherTrendHelper.kt     ← Statistik-Hilfsfunktionen (buildBatterStats, getTrendLevel, …)
+├── SeasonStatsActivity.kt    ← Saison-Statistiken (Batter + Pitcher)
 ├── SettingsActivity.kt
-├── StatsActivity.kt          ← Pitcher-Statistiken (pro Spiel)
+├── StatsActivity.kt          ← Pitcher-Statistiken (pro Spiel, inkl. IP)
 ├── TeamDetailActivity.kt
 └── TeamListActivity.kt
 ```
@@ -115,6 +117,11 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ **#5** Batting Stats pro Spiel (BatterStatsActivity, GameHub-Button "Batting Stats", Query getGameBatterStats)
 - ✅ **#6** IP (Innings Pitched): formatIP(), getOutsForGame(), ip-Feld in PitcherStats, StatCard in StatsActivity
 - ✅ Uhrzeit pro Spiel: game_time-Feld (DB v9), TimePickerDialog im GameDialog, Anzeige in GameItem + GameHub-TopAppBar
+- ✅ Home/Away-Kennzeichnung pro Spiel (is_home-Feld, DB v10, Toggle im GameDialog)
+- ✅ Spieluhr: Pause/Resume + elapsed_time_ms-Persistierung (DB v11)
+- ✅ Einzelspiel-Export/Import: vollständiges JSON (Lineup, At-Bats, Pitches, Scoreboard) aus Spielliste
+- ✅ Status-Bar-Lesbarkeit: dunkle Icons in CoachAct (isAppearanceLightStatusBars)
+- ✅ Unit-Tests: PitcherTrendHelperTest (27 Tests), GameBatterStatsDaoTest (11 Tests), BackupManagerMigrationsTest (15 Tests)
 
 ---
 
@@ -205,12 +212,16 @@ Nach jedem abgeschlossenen Halbinning im Scoreboard prüfen ob Regel greift.
 
 ---
 
-#### #18 + #19 + #20 – Feature: Backup / Restore (Skeleton vorhanden)
+#### #18 + #19 + #20 – Feature: Backup / Restore (Teilweise implementiert)
 
-`BackupManager.kt` ist angelegt (DB-Version 7, Export-Skeleton).
+`BackupManager.kt` ist angelegt (DB-Version 11).
+
+Bereits implementiert:
+- Einzelspiel-Export/Import: `exportGame(gameId)`, `importGame(teamId, json)` (Lineup, AtBats, Pitches, Scoreboard)
+- Einstiegspunkt: `GameListActivity` (Share/Import-Menü)
+
 Noch zu implementieren:
-- Export aller verbleibenden Tabellen (players, pitchers, pitches, at_bats, lineups, …)
-- Export in Datei via `ActivityResultContracts.CreateDocument`
+- Vollständiges DB-Backup aller Teams/Daten via `ActivityResultContracts.CreateDocument`
 - Import via `ActivityResultContracts.OpenDocument`
 - Einstiegspunkt in `SettingsActivity`
 
@@ -226,7 +237,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | `teams` | id, name |
 | `team_positions` | team_id, position |
 | `players` | id, team_id, name, number, primary_position, secondary_position, is_pitcher, birth_year |
-| `games` | id, date, opponent, team_id, inning, outs, leadoff_slot, **start_time**, **elapsed_time_ms**, **game_time** |
+| `games` | id, date, opponent, team_id, inning, outs, leadoff_slot, **start_time**, **elapsed_time_ms**, **game_time**, **is_home** |
 | `pitchers` | id, game_id, name, player_id |
 | `pitches` | id, pitcher_id, at_bat_id, type, sequence_nr, inning |
 | `at_bats` | id, game_id, player_id, slot, inning, result |
