@@ -108,7 +108,7 @@ private fun OwnLineupScreen(
     var subStatuses by remember { mutableStateOf(emptyMap<Long, SubStatus>()) }
     var substitutions by remember { mutableStateOf(emptyList<Substitution>()) }
     var lineup by remember { mutableStateOf(emptyMap<Int, Player>()) }
-    var wechselEntries by remember { mutableStateOf(emptyList<WechselEntry>()) }
+
 
     var activeDialogSlot by remember { mutableStateOf<Int?>(null) }
     var swapDialogState by remember { mutableStateOf<SlotState?>(null) }
@@ -153,7 +153,11 @@ private fun OwnLineupScreen(
         subStatuses = computedSubStatuses
     }
 
-    val entries = remember(substitutions, slotStates) {
+    val orangeBright = colorResource(R.color.color_orange_bright)
+    val greenBright = colorResource(R.color.color_green_bright)
+    val strikeColor = colorResource(R.color.color_strike)
+
+    val wechselEntries = remember(substitutions, slotStates, orangeBright, greenBright, strikeColor) {
         val list = mutableListOf<WechselEntry>()
         val seen = mutableSetOf<Long>()
         substitutions.forEach { sub ->
@@ -164,9 +168,9 @@ private fun OwnLineupScreen(
                 val timesIn = substitutions.count { it.playerInId == playerOut.id }
                 val isStarter = slotStates.any { it.originalPlayer?.id == playerOut.id }
                 val (label, color) = when {
-                    isStarter && timesIn == 0 -> "OUT_CAN_RETURN" to colorResource(R.color.color_orange_bright)
-                    isStarter && timesIn >= 1 -> "RETURNED" to colorResource(R.color.color_green_bright)
-                    else -> "OUT" to colorResource(R.color.color_strike)
+                    isStarter && timesIn == 0 -> "OUT_CAN_RETURN" to orangeBright
+                    isStarter && timesIn >= 1 -> "RETURNED" to greenBright
+                    else -> "OUT" to strikeColor
                 }
                 list.add(WechselEntry(playerOut, label, color))
             }
@@ -175,15 +179,14 @@ private fun OwnLineupScreen(
                 val timesOut = substitutions.count { it.playerOutId == playerIn.id }
                 val isOnField = slotStates.any { it.currentPlayer?.id == playerIn.id }
                 val (label, color) = when {
-                    isOnField && timesOut == 0 -> "IN_GAME" to colorResource(R.color.color_green_bright)
-                    else -> "DONE" to colorResource(R.color.color_strike)
+                    isOnField && timesOut == 0 -> "IN_GAME" to greenBright
+                    else -> "DONE" to strikeColor
                 }
                 list.add(WechselEntry(playerIn, label, color))
             }
         }
         list
     }
-    wechselEntries = entries
 
     LaunchedEffect(Unit) {
         refresh()
