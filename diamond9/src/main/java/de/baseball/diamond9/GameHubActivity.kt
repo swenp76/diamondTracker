@@ -2,14 +2,10 @@ package de.baseball.diamond9
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
-import org.json.JSONArray
-import org.json.JSONObject
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,59 +33,21 @@ import kotlinx.coroutines.delay
 
 class GameHubActivity : ComponentActivity() {
 
-    private lateinit var db: DatabaseHelper
-    private var gameId: Long = -1
-    private var gameOpponent: String = ""
-    private var gameDate: String = ""
-    private var gameTime: String = ""
-    private var teamName: String = ""
-    private var teamId: Long = -1
-    private var isHome: Int = 1
-
-    private val exportLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        uri ?: return@registerForActivityResult
-        try {
-            contentResolver.openOutputStream(uri)?.use { out ->
-                out.write(buildLineupJson().toByteArray(Charsets.UTF_8))
-            }
-            Toast.makeText(this, getString(R.string.toast_lineup_exported), Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, getString(R.string.toast_lineup_import_failed, e.message), Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private val importLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri ?: return@registerForActivityResult
-        try {
-            val json = contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
-                ?: return@registerForActivityResult
-            val filled = importLineupJson(json)
-            Toast.makeText(this, getString(R.string.toast_lineup_imported, filled), Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, getString(R.string.toast_lineup_import_failed, e.message), Toast.LENGTH_LONG).show()
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
 
-        gameId = intent.getLongExtra("gameId", -1)
-        gameOpponent = intent.getStringExtra("gameOpponent") ?: ""
-        gameDate = intent.getStringExtra("gameDate") ?: ""
-        gameTime = intent.getStringExtra("gameTime") ?: ""
+        val gameId = intent.getLongExtra("gameId", -1)
+        val gameOpponent = intent.getStringExtra("gameOpponent") ?: ""
+        val gameDate = intent.getStringExtra("gameDate") ?: ""
+        val gameTime = intent.getStringExtra("gameTime") ?: ""
 
-        db = DatabaseHelper(this)
+        val db = DatabaseHelper(this)
         val game = db.getGame(gameId)
-        teamId = game?.teamId ?: -1
-        teamName = game?.teamId?.let { db.getTeamById(it)?.name } ?: ""
-        isHome = game?.isHome ?: 1
+        val teamName = game?.teamId?.let { db.getTeamById(it)?.name } ?: ""
+        val isHome = game?.isHome ?: 1
 
         setContent {
             GameHubScreen(
@@ -134,105 +92,9 @@ class GameHubActivity : ComponentActivity() {
                         putExtra("gameOpponent", gameOpponent)
                         putExtra("gameDate", gameDate)
                     })
-                },
-                onExportClick = {
-                    val safeName = gameOpponent.replace(Regex("[^A-Za-z0-9_\\- ]"), "_")
-                    exportLauncher.launch("lineup_${safeName}_${gameDate}.json")
-                },
-                onImportClick = {
-                    importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*"))
                 }
             )
         }
-    }
-
-    private fun buildLineupJson(): String {
-        val root = JSONObject()
-        root.put("exportType", "gameLineup")
-        root.put("version", 1)
-        root.put("gameDate", gameDate)
-        root.put("gameTime", gameTime)
-        root.put("opponent", gameOpponent)
-        root.put("isHome", isHome)
-        root.put("teamName", teamName)
-
-        val ownLineup = db.getOwnLineup(gameId)
-        val ownArr = JSONArray()
-        for (slot in 1..20) {
-            val player = ownLineup[slot] ?: continue
-            ownArr.put(JSONObject().apply {
-                put("slot", slot)
-                put("playerNumber", player.number)
-                put("playerName", player.name)
-                put("primaryPosition", player.primaryPosition)
-            })
-        }
-        root.put("ownLineup", ownArr)
-
-        val oppoArr = JSONArray()
-        for (entry in db.getLineup(gameId)) {
-            oppoArr.put(JSONObject().apply {
-                put("battingOrder", entry.battingOrder)
-                put("jerseyNumber", entry.jerseyNumber)
-            })
-        }
-        root.put("opponentLineup", oppoArr)
-
-        val benchArr = JSONArray()
-        for (b in db.getBenchPlayers(gameId)) {
-            benchArr.put(JSONObject().apply { put("jerseyNumber", b.jerseyNumber) })
-        }
-        root.put("opponentBench", benchArr)
-
-        return root.toString(2)
-    }
-
-    /** Returns the number of own lineup slots successfully filled. */
-    private fun importLineupJson(json: String): Int {
-        val root = JSONObject(json)
-        if (root.optString("exportType") != "gameLineup") {
-            Toast.makeText(this, getString(R.string.toast_lineup_invalid_format), Toast.LENGTH_LONG).show()
-            return 0
-        }
-
-        db.clearLineupForGame(gameId)
-
-        var filled = 0
-
-        // Own lineup – resolve by jersey number from current team's roster
-        val players = if (teamId >= 0) db.getPlayersForTeam(teamId) else emptyList()
-        val byNumber = players.groupBy { it.number }
-
-        val ownArr = root.optJSONArray("ownLineup")
-        if (ownArr != null) {
-            for (i in 0 until ownArr.length()) {
-                val obj = ownArr.getJSONObject(i)
-                val slot = obj.getInt("slot")
-                val number = obj.getString("playerNumber")
-                val player = byNumber[number]?.firstOrNull() ?: continue
-                db.setOwnLineupPlayer(gameId, slot, player.id)
-                filled++
-            }
-        }
-
-        // Opponent lineup
-        val oppoArr = root.optJSONArray("opponentLineup")
-        if (oppoArr != null) {
-            for (i in 0 until oppoArr.length()) {
-                val obj = oppoArr.getJSONObject(i)
-                db.upsertLineupEntry(gameId, obj.getInt("battingOrder"), obj.getString("jerseyNumber"))
-            }
-        }
-
-        // Opponent bench
-        val benchArr = root.optJSONArray("opponentBench")
-        if (benchArr != null) {
-            for (i in 0 until benchArr.length()) {
-                db.insertBenchPlayer(gameId, benchArr.getJSONObject(i).getString("jerseyNumber"))
-            }
-        }
-
-        return filled
     }
 }
 
@@ -251,12 +113,9 @@ private fun GameHubScreen(
     onDefenseClick: () -> Unit,
     onLineupClick: () -> Unit,
     onOppoLineupClick: () -> Unit,
-    onBatterStatsClick: () -> Unit,
-    onExportClick: () -> Unit,
-    onImportClick: () -> Unit
+    onBatterStatsClick: () -> Unit
 ) {
     val dateLabel = if (gameTime.isNotEmpty()) "$gameDate  $gameTime" else gameDate
-    var menuExpanded by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -269,26 +128,6 @@ private fun GameHubScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
-                    }
-                },
-                actions = {
-                    Box {
-                        IconButton(onClick = { menuExpanded = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.content_desc_more))
-                        }
-                        DropdownMenu(
-                            expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_export_lineup)) },
-                                onClick = { menuExpanded = false; onExportClick() }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_import_lineup)) },
-                                onClick = { menuExpanded = false; onImportClick() }
-                            )
-                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)

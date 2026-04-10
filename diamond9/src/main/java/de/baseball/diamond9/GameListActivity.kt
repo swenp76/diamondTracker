@@ -4,9 +4,15 @@ import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableIntStateOf
+import org.json.JSONArray
+import org.json.JSONObject
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -30,6 +37,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -50,11 +58,51 @@ import java.util.Locale
 class GameListActivity : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
+    private lateinit var backupManager: BackupManager
+
+    private var gameToExport: Game? = null
+    private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri?.let {
+            gameToExport?.let { game ->
+                try {
+                    val json = backupManager.exportGame(game.id)
+                    contentResolver.openOutputStream(it)?.use { os ->
+                        os.write(json.toString(4).toByteArray())
+                    }
+                    Toast.makeText(this, R.string.toast_game_exported, Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private var pendingImportJson: JSONObject? = null
+    private var onImportConfirmed: ((JSONObject) -> Unit)? = null
+
+    private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            try {
+                contentResolver.openInputStream(it)?.use { isStream ->
+                    val json = JSONObject(isStream.bufferedReader().readText())
+                    if (json.optString("type") == "single_game") {
+                        pendingImportJson = json
+                        onImportConfirmed?.invoke(json)
+                    } else {
+                        Toast.makeText(this, "Invalid game file", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         db = DatabaseHelper(this)
+        backupManager = BackupManager(this)
 
         val teamId = intent.getLongExtra("teamId", 0L)
         val teamName = intent.getStringExtra("teamName") ?: ""
@@ -88,6 +136,15 @@ class GameListActivity : ComponentActivity() {
                             putExtra("teamId", teamId)
                             putExtra("teamName", teamName)
                         })
+                    },
+                    onExportGame = { game ->
+                        gameToExport = game
+                        val fileName = "Game_${game.date.replace(".", "")}_${game.opponent.replace(" ", "_")}.json"
+                        exportLauncher.launch(fileName)
+                    },
+                    onImportGame = { callback ->
+                        onImportConfirmed = callback
+                        importLauncher.launch(arrayOf("application/json"))
                     }
                 )
             }
@@ -103,13 +160,18 @@ private fun GameListScreen(
     db: DatabaseHelper,
     onMenuClick: () -> Unit,
     onGameClick: (Game) -> Unit,
-    onSeasonStatsClick: () -> Unit = {}
+    onSeasonStatsClick: () -> Unit = {},
+    onExportGame: (Game) -> Unit,
+    onImportGame: ((JSONObject) -> Unit) -> Unit
 ) {
+    val context = LocalContext.current
+    val backupManager = remember { BackupManager(context) }
     var games by remember { mutableStateOf(emptyList<Game>()) }
     var showAddDialog by remember { mutableStateOf(false) }
     var gameToEdit by remember { mutableStateOf<Game?>(null) }
     var gameToDelete by remember { mutableStateOf<Game?>(null) }
     var gameToCopy by remember { mutableStateOf<Game?>(null) }
+    var pendingImport by remember { mutableStateOf<JSONObject?>(null) }
 
     fun refresh() {
         games = db.getGamesForTeam(teamId)
@@ -131,6 +193,11 @@ private fun GameListScreen(
                 actions = {
                     IconButton(onClick = onSeasonStatsClick) {
                         Icon(Icons.Default.Leaderboard, contentDescription = stringResource(R.string.season_stats_btn))
+                    }
+                    IconButton(onClick = {
+                        onImportGame { json -> pendingImport = json }
+                    }) {
+                        Icon(Icons.Default.Upload, contentDescription = stringResource(R.string.menu_import_game))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -174,12 +241,34 @@ private fun GameListScreen(
                             onClick = { onGameClick(game) },
                             onEdit = { gameToEdit = game },
                             onCopy = { gameToCopy = game },
-                            onDelete = { gameToDelete = game }
+                            onDelete = { gameToDelete = game },
+                            onExport = { onExportGame(game) }
                         )
                     }
                 }
             }
         }
+    }
+
+    pendingImport?.let { json ->
+        val gObj = json.optJSONObject("game")
+        val date = gObj?.optString("date") ?: ""
+        val opp = gObj?.optString("opponent") ?: ""
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            title = { Text(stringResource(R.string.menu_import_game)) },
+            text = { Text(stringResource(R.string.dialog_import_game_confirm, date, opp)) },
+            confirmButton = {
+                Button(onClick = {
+                    backupManager.importGame(teamId, json)
+                    refresh()
+                    pendingImport = null
+                }) { Text(stringResource(R.string.btn_import)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImport = null }) { Text(stringResource(R.string.btn_cancel)) }
+            }
+        )
     }
 
     if (showAddDialog) {
@@ -278,7 +367,8 @@ private fun GameItem(
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onCopy: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onExport: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -323,6 +413,9 @@ private fun GameItem(
 
             IconButton(onClick = onCopy) {
                 Icon(Icons.Default.ContentCopy, null, tint = colorResource(R.color.color_primary))
+            }
+            IconButton(onClick = onExport) {
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = colorResource(R.color.color_primary))
             }
             IconButton(onClick = onEdit) {
                 Icon(Icons.Default.Edit, null, tint = colorResource(R.color.color_primary))
