@@ -112,31 +112,13 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ **#10** Spieluhr im GameHub (start_time in games, aufwärts zählend, überlebt App-Neustart)
 - ✅ **#2** Gegner teamabhängig (opponent_teams.team_id, DB v8, NavDrawer zeigt Opponents nur bei aktivem Team)
 - ✅ **#1** Farbkonsistenz: alle Hex-Farben in colors.xml zentralisiert, Composables nutzen colorResource()
+- ✅ **#5** Batting Stats pro Spiel (BatterStatsActivity, GameHub-Button "Batting Stats", Query getGameBatterStats)
 
 ---
 
 ## Offene Aufgaben (nach Priorität)
 
 ### 🔴 Hoch
-
-#### #5 – Feature: Batter-Statistik (pro Spiel)
-Die `at_bats`-Tabelle mit `result`-Feld (K, BB, H, HBP, OUT) ist bereits vorhanden.
-
-Zu implementieren:
-- Pro At-Bat: K, BB, H, Out erfassen (bereits teilweise vorhanden)
-- Neuer Screen `BatterStatsActivity` oder Tab in `StatsActivity`:
-  aggregiert pro Spieler über ein Spiel: AB, H, AVG, BB, K
-- Neuer DAO-Query in `AtBatDao`:
-  ```sql
-  SELECT player_id,
-    COUNT(*) as ab,
-    SUM(CASE WHEN result = 'H' THEN 1 ELSE 0 END) as hits,
-    SUM(CASE WHEN result = 'BB' THEN 1 ELSE 0 END) as walks,
-    SUM(CASE WHEN result = 'K' THEN 1 ELSE 0 END) as strikeouts
-  FROM at_bats WHERE game_id = :gameId GROUP BY player_id
-  ```
-
----
 
 #### #6 – Feature: IP (Innings Pitched)
 **Datei:** `DatabaseHelper.kt`, `StatsActivity.kt`

@@ -81,6 +81,14 @@ class GameHubActivity : ComponentActivity() {
                         putExtra("opponentName", gameOpponent)
                     }
                     startActivity(intent)
+                },
+                onBatterStatsClick = {
+                    val intent = Intent(this, BatterStatsActivity::class.java).apply {
+                        putExtra("gameId", gameId)
+                        putExtra("gameOpponent", gameOpponent)
+                        putExtra("gameDate", gameDate)
+                    }
+                    startActivity(intent)
                 }
             )
         }
@@ -99,7 +107,8 @@ private fun GameHubScreen(
     onOffenseClick: () -> Unit,
     onDefenseClick: () -> Unit,
     onLineupClick: () -> Unit,
-    onOppoLineupClick: () -> Unit
+    onOppoLineupClick: () -> Unit,
+    onBatterStatsClick: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -159,6 +168,11 @@ private fun GameHubScreen(
                         text = stringResource(R.string.gamehub_oppo_lineup),
                         color = colorResource(R.color.color_purple),
                         onClick = onOppoLineupClick
+                    )
+                    HubButton(
+                        text = stringResource(R.string.gamehub_batter_stats),
+                        color = colorResource(R.color.color_orange),
+                        onClick = onBatterStatsClick
                     )
                 }
             }

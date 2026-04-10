@@ -91,6 +91,8 @@
     <string name="gamehub_defense">Defense</string>
     <string name="gamehub_lineup">Lineup</string>
     <string name="gamehub_oppo_lineup">Oppo-Lineup</string>
+    <string name="gamehub_batter_stats">Batting Stats</string>
+    <string name="batter_stats_empty">Keine At-Bats erfasst</string>
     <string name="toast_offense_coming_soon">Offense – coming soon</string>
 
     <!-- ── Pitcher ────────────────────────────────────────────────────────── -->

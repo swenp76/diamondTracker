@@ -32,6 +32,7 @@
         <activity android:name=".ManageOpponentsActivity" android:exported="false" />
         <activity android:name=".BattingTrackActivity" android:exported="false" />
         <activity android:name=".SeasonStatsActivity" android:exported="false" />
+        <activity android:name=".BatterStatsActivity" android:exported="false" />
         <activity android:name=".AboutActivity" android:exported="false" />
 
     </application>

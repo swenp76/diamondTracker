@@ -174,6 +174,15 @@ object BaseballPositions {
     }
 }
 
+data class GameBatterStatsRow(
+    @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "ab")         val ab: Int,
+    @ColumnInfo(name = "hits")       val hits: Int,
+    @ColumnInfo(name = "walks")      val walks: Int,
+    @ColumnInfo(name = "strikeouts") val strikeouts: Int,
+    @ColumnInfo(name = "hbp")        val hbp: Int
+)
+
 data class SeasonBatterRow(
     @ColumnInfo(name = "player_id") val playerId: Long,
     @ColumnInfo(name = "ab") val ab: Int,
@@ -505,6 +514,9 @@ class DatabaseHelper(context: Context) {
     fun getPitchesForAtBat(atBatId: Long): List<Pitch> = atBatDao.getPitchesForAtBat(atBatId)
 
     // ── Season Stats ───────────────────────────────────────────────────────────
+
+    fun getGameBatterStats(gameId: Long): List<GameBatterStatsRow> =
+        atBatDao.getGameBatterStats(gameId)
 
     fun getSeasonBatterStats(teamId: Long): List<SeasonBatterRow> =
         atBatDao.getSeasonBatterStats(teamId)

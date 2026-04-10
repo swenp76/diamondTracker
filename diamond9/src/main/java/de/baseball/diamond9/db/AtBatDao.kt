@@ -44,6 +44,19 @@ abstract class AtBatDao {
     abstract fun deletePitchesForAtBat(atBatId: Long)
 
     @Query("""
+        SELECT player_id,
+            SUM(CASE WHEN result IN ('K','H','OUT') THEN 1 ELSE 0 END) AS ab,
+            SUM(CASE WHEN result = 'H'   THEN 1 ELSE 0 END) AS hits,
+            SUM(CASE WHEN result = 'BB'  THEN 1 ELSE 0 END) AS walks,
+            SUM(CASE WHEN result = 'K'   THEN 1 ELSE 0 END) AS strikeouts,
+            SUM(CASE WHEN result = 'HBP' THEN 1 ELSE 0 END) AS hbp
+        FROM at_bats
+        WHERE game_id = :gameId AND result IS NOT NULL AND player_id > 0
+        GROUP BY player_id
+    """)
+    abstract fun getGameBatterStats(gameId: Long): List<GameBatterStatsRow>
+
+    @Query("""
         SELECT ab.player_id AS player_id,
             SUM(CASE WHEN ab.result IN ('K', 'H', 'OUT') THEN 1 ELSE 0 END) AS ab,
             SUM(CASE WHEN ab.result = 'H'   THEN 1 ELSE 0 END) AS hits,
