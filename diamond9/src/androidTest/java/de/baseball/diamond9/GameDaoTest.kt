@@ -66,7 +66,7 @@ class GameDaoTest {
     fun updateGame_changesDateAndOpponent() {
         val id = gameDao.insertGame(Game(date = "01.04.2026", opponent = "Tigers", teamId = 0))
 
-        gameDao.updateGame(id, "15.04.2026", "Lions")
+        gameDao.updateGame(id, "15.04.2026", "Lions", "18:00")
 
         val updated = gameDao.getGame(id)
         assertNotNull(updated)

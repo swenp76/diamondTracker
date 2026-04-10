@@ -114,7 +114,11 @@ fun OpponentLineupScreen(
         benchPlayers = db.getBenchPlayers(gameId)
     }
 
-    val wechselEntries = remember(slotStates, subStatuses) {
+    val orangeBright = colorResource(R.color.color_orange_bright)
+    val greenBright = colorResource(R.color.color_green_bright)
+    val strikeColor = colorResource(R.color.color_strike)
+
+    val wechselEntries = remember(slotStates, subStatuses, orangeBright, greenBright, strikeColor) {
         val subs = db.getOpponentSubstitutionsForGame(gameId)
         val entries = mutableListOf<OppWechselEntry>()
         val seen = mutableSetOf<String>()
@@ -124,16 +128,16 @@ fun OpponentLineupScreen(
                 val timesIn = subs.count { it.jerseyIn == sub.jerseyOut }
                 val isStarter = slotStates.any { it.originalJersey == sub.jerseyOut }
                 val (label, color) = when {
-                    isStarter && timesIn == 0 -> "OUT_CAN_RETURN" to colorResource(R.color.color_orange_bright)
-                    isStarter && timesIn >= 1 -> "RETURNED" to colorResource(R.color.color_green_bright)
-                    else -> "OUT" to colorResource(R.color.color_strike)
+                    isStarter && timesIn == 0 -> "OUT_CAN_RETURN" to orangeBright
+                    isStarter && timesIn >= 1 -> "RETURNED" to greenBright
+                    else -> "OUT" to strikeColor
                 }
                 entries.add(OppWechselEntry(sub.jerseyOut, label, color))
             }
             if (seen.add(sub.jerseyIn)) {
                 val isOnField = slotStates.any { it.currentJersey == sub.jerseyIn }
-                val (label, color) = if (isOnField) "IN_GAME" to colorResource(R.color.color_green_bright)
-                else "DONE" to colorResource(R.color.color_strike)
+                val (label, color) = if (isOnField) "IN_GAME" to greenBright
+                else "DONE" to strikeColor
                 entries.add(OppWechselEntry(sub.jerseyIn, label, color))
             }
         }
