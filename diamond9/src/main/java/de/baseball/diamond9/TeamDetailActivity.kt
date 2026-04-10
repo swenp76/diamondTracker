@@ -24,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -165,7 +166,7 @@ fun TeamDetailScreen(
                 onClick = { showAddPlayerDialog = true },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text(stringResource(R.string.fab_add_player)) },
-                containerColor = Color(0xFF1a5fa8),
+                containerColor = colorResource(R.color.color_primary),
                 contentColor = Color.White
             )
         }
@@ -174,7 +175,7 @@ fun TeamDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFFF5F5F5))
+                .background(colorResource(R.color.color_background))
                 .padding(16.dp)
         ) {
             // Team Name Card
@@ -211,7 +212,7 @@ fun TeamDetailScreen(
                                     teamName = tempName.trim()
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1a5fa8))
+                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary))
                         ) {
                             Text(stringResource(R.string.btn_save))
                         }
@@ -327,14 +328,14 @@ fun PlayerItem(
                 modifier = Modifier
                     .size(48.dp)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, Color(0xFF1a5fa8), CircleShape),
+                    .border(1.dp, colorResource(R.color.color_primary), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = if (player.number.isNotEmpty()) "#${player.number}" else "–",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1a5fa8)
+                    color = colorResource(R.color.color_primary)
                 )
             }
 
@@ -344,13 +345,13 @@ fun PlayerItem(
                 text = player.name,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF333333),
+                color = colorResource(R.color.color_text_primary),
                 modifier = Modifier.weight(1f)
             )
 
             if (player.isPitcher) {
                 Surface(
-                    color = Color(0xFF1a5fa8),
+                    color = colorResource(R.color.color_primary),
                     shape = RoundedCornerShape(2.dp),
                     modifier = Modifier.padding(end = 6.dp)
                 ) {
@@ -367,14 +368,14 @@ fun PlayerItem(
             // Primary Position
             PositionBadge(
                 pos = player.primaryPosition,
-                textColor = Color(0xFFc0392b)
+                textColor = colorResource(R.color.color_strike)
             )
 
             if (player.secondaryPosition > 0) {
                 Spacer(modifier = Modifier.width(4.dp))
                 PositionBadge(
                     pos = player.secondaryPosition,
-                    textColor = Color(0xFF888888)
+                    textColor = colorResource(R.color.color_text_secondary)
                 )
             }
 
@@ -384,7 +385,7 @@ fun PlayerItem(
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = stringResource(R.string.content_desc_delete),
-                    tint = Color(0xFFc0392b)
+                    tint = colorResource(R.color.color_strike)
                 )
             }
         }
@@ -396,7 +397,7 @@ fun PositionBadge(pos: Int, textColor: Color) {
     Box(
         modifier = Modifier
             .size(40.dp)
-            .border(1.dp, Color(0xFFDDDDDD), CircleShape),
+            .border(1.dp, colorResource(R.color.color_divider), CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Text(

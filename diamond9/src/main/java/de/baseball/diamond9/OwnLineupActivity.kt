@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -163,9 +164,9 @@ private fun OwnLineupScreen(
                 val timesIn = substitutions.count { it.playerInId == playerOut.id }
                 val isStarter = slotStates.any { it.originalPlayer?.id == playerOut.id }
                 val (label, color) = when {
-                    isStarter && timesIn == 0 -> "OUT_CAN_RETURN" to Color(0xFFe67e22)
-                    isStarter && timesIn >= 1 -> "RETURNED" to Color(0xFF27ae60)
-                    else -> "OUT" to Color(0xFFc0392b)
+                    isStarter && timesIn == 0 -> "OUT_CAN_RETURN" to colorResource(R.color.color_orange_bright)
+                    isStarter && timesIn >= 1 -> "RETURNED" to colorResource(R.color.color_green_bright)
+                    else -> "OUT" to colorResource(R.color.color_strike)
                 }
                 list.add(WechselEntry(playerOut, label, color))
             }
@@ -174,8 +175,8 @@ private fun OwnLineupScreen(
                 val timesOut = substitutions.count { it.playerOutId == playerIn.id }
                 val isOnField = slotStates.any { it.currentPlayer?.id == playerIn.id }
                 val (label, color) = when {
-                    isOnField && timesOut == 0 -> "IN_GAME" to Color(0xFF27ae60)
-                    else -> "DONE" to Color(0xFFc0392b)
+                    isOnField && timesOut == 0 -> "IN_GAME" to colorResource(R.color.color_green_bright)
+                    else -> "DONE" to colorResource(R.color.color_strike)
                 }
                 list.add(WechselEntry(playerIn, label, color))
             }
@@ -210,7 +211,7 @@ private fun OwnLineupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            color = Color(0xFFF5F5F5)
+            color = colorResource(R.color.color_background)
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -255,7 +256,7 @@ private fun OwnLineupScreen(
 
                 if (wechselEntries.isNotEmpty()) {
                     item { SectionHeader(stringResource(R.string.lineup_section_changes)) }
-                    item { HorizontalDivider(color = Color(0xFFDDDDDD), thickness = 1.dp) }
+                    item { HorizontalDivider(color = colorResource(R.color.color_divider), thickness = 1.dp) }
                     items(wechselEntries) { entry ->
                         ChangeRow(entry)
                     }
@@ -414,7 +415,7 @@ private fun SectionHeader(title: String) {
         text = title,
         fontSize = 14.sp,
         fontWeight = FontWeight.Bold,
-        color = Color(0xFF888888),
+        color = colorResource(R.color.color_text_secondary),
         modifier = Modifier.padding(top = 24.dp, bottom = 8.dp, start = 8.dp)
     )
 }
@@ -454,7 +455,7 @@ private fun StarterRow(
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SlotNumber(state.slot, Color(0xFF1a5fa8))
+            SlotNumber(state.slot, colorResource(R.color.color_primary))
 
             Column(modifier = Modifier.weight(1f)) {
                 if (state.currentPlayer != null) {
@@ -462,13 +463,13 @@ private fun StarterRow(
                     Text(
                         text = "#${state.currentPlayer.number}  ${state.currentPlayer.name}${if (isSubstituted) "  ↩" else ""}",
                         fontSize = 16.sp,
-                        color = if (isSubstituted) Color(0xFFc0392b) else Color(0xFF222222)
+                        color = if (isSubstituted) colorResource(R.color.color_strike) else colorResource(R.color.color_text_dark)
                     )
                 } else {
                     Text(
                         text = stringResource(R.string.lineup_slot_empty),
                         fontSize = 16.sp,
-                        color = Color(0xFFBBBBBB)
+                        color = colorResource(R.color.color_gray_light)
                     )
                 }
             }
@@ -478,7 +479,7 @@ private fun StarterRow(
                 Button(
                     onClick = onSwapClick,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isInjuryOnly) Color(0xFFe67e22) else Color(0xFF1a5fa8)
+                        containerColor = if (isInjuryOnly) colorResource(R.color.color_orange_bright) else colorResource(R.color.color_primary)
                     ),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     modifier = Modifier.height(36.dp)
@@ -519,20 +520,20 @@ private fun SubstituteRow(
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SlotNumber(slot, Color(0xFF2c7a2c))
+            SlotNumber(slot, colorResource(R.color.color_green))
 
             Column(modifier = Modifier.weight(1f)) {
                 if (player != null) {
                     Text(
                         text = "#${player.number}  ${player.name}  (${stringResource(BaseballPositions.shortLabelRes(player.primaryPosition))})",
                         fontSize = 16.sp,
-                        color = if (status == SubStatus.DONE) Color(0xFF999999) else Color(0xFF222222)
+                        color = if (status == SubStatus.DONE) colorResource(R.color.color_gray) else colorResource(R.color.color_text_dark)
                     )
                 } else {
                     Text(
                         text = stringResource(R.string.lineup_slot_empty),
                         fontSize = 16.sp,
-                        color = Color(0xFFBBBBBB)
+                        color = colorResource(R.color.color_gray_light)
                     )
                 }
             }
@@ -540,10 +541,10 @@ private fun SubstituteRow(
             if (player != null) {
                 when (status) {
                     SubStatus.AVAILABLE -> {
-                        Text("✓", fontSize = 20.sp, color = Color(0xFF27ae60), modifier = Modifier.padding(horizontal = 8.dp))
+                        Text("✓", fontSize = 20.sp, color = colorResource(R.color.color_green_bright), modifier = Modifier.padding(horizontal = 8.dp))
                     }
                     SubStatus.DONE -> {
-                        Text("✗", fontSize = 20.sp, color = Color(0xFFc0392b), modifier = Modifier.padding(horizontal = 8.dp))
+                        Text("✗", fontSize = 20.sp, color = colorResource(R.color.color_strike), modifier = Modifier.padding(horizontal = 8.dp))
                     }
                     SubStatus.ACTIVE -> {
                         Spacer(modifier = Modifier.width(32.dp))
@@ -581,7 +582,7 @@ private fun ChangeRow(entry: WechselEntry) {
         Text(
             text = "#${entry.player.number}  ${entry.player.name}",
             fontSize = 15.sp,
-            color = Color(0xFF222222),
+            color = colorResource(R.color.color_text_dark),
             modifier = Modifier.weight(1f)
         )
         Text(

@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -63,23 +64,23 @@ fun StatsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFFF5F5F5))
+                .background(colorResource(R.color.color_background))
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatCard(label = stringResource(R.string.stat_bf), value = stats.bf.toString(), modifier = Modifier.weight(1f))
-                StatCard(label = stringResource(R.string.stat_hits), value = stats.hits.toString(), valueColor = Color(0xFFE74C3C), modifier = Modifier.weight(1f))
-                StatCard(label = stringResource(R.string.stat_balls), value = stats.balls.toString(), valueColor = Color(0xFF1A5FA8), modifier = Modifier.weight(1f))
-                StatCard(label = stringResource(R.string.stat_strikes), value = stats.strikes.toString(), valueColor = Color(0xFFC0392B), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_hits), value = stats.hits.toString(), valueColor = colorResource(R.color.color_hit), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_balls), value = stats.balls.toString(), valueColor = colorResource(R.color.color_primary), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_strikes), value = stats.strikes.toString(), valueColor = colorResource(R.color.color_strike), modifier = Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatCard(label = stringResource(R.string.stat_walks), value = stats.walks.toString(), valueColor = Color(0xFFD35400), modifier = Modifier.weight(1f))
-                StatCard(label = stringResource(R.string.stat_hbp), value = stats.hbp.toString(), valueColor = Color(0xFF8E44AD), modifier = Modifier.weight(1f))
-                StatCard(label = stringResource(R.string.stat_strikeouts), value = stats.strikeouts.toString(), valueColor = Color(0xFF27AE60), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_walks), value = stats.walks.toString(), valueColor = colorResource(R.color.color_walk), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_hbp), value = stats.hbp.toString(), valueColor = colorResource(R.color.color_hbp), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_strikeouts), value = stats.strikeouts.toString(), valueColor = colorResource(R.color.color_green_bright), modifier = Modifier.weight(1f))
                 StatCard(label = stringResource(R.string.stat_total_pitches), value = stats.totalPitches.toString(), modifier = Modifier.weight(1f))
             }
 
@@ -87,7 +88,7 @@ fun StatsScreen(
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val strikePercent = if (stats.totalPitches > 0) (stats.strikes * 100.0 / stats.totalPitches).toInt() else 0
-                StatCard(label = stringResource(R.string.stat_strike_percent), value = "$strikePercent%", valueColor = Color(0xFF3B6D11), modifier = Modifier.weight(1f))
+                StatCard(label = stringResource(R.string.stat_strike_percent), value = "$strikePercent%", valueColor = colorResource(R.color.color_green_dark), modifier = Modifier.weight(1f))
                 Spacer(modifier = Modifier.weight(2f))
             }
 
@@ -97,7 +98,7 @@ fun StatsScreen(
                 text = stringResource(R.string.stat_pitch_log),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF333333),
+                color = colorResource(R.color.color_text_primary),
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
@@ -124,7 +125,7 @@ fun StatCard(
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = label, fontSize = 11.sp, color = Color(0xFF888888))
+            Text(text = label, fontSize = 11.sp, color = colorResource(R.color.color_text_secondary))
             Text(text = value, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = valueColor)
         }
     }
@@ -141,7 +142,7 @@ fun PitchGrid(pitches: List<Pitch>, jerseyMap: Map<Int, String> = emptyMap()) {
     if (groups.isEmpty()) {
         Text(
             text = "–",
-            color = Color(0xFF888888),
+            color = colorResource(R.color.color_text_secondary),
             fontSize = 13.sp,
             modifier = Modifier.padding(8.dp)
         )
@@ -159,14 +160,14 @@ fun PitchGrid(pitches: List<Pitch>, jerseyMap: Map<Int, String> = emptyMap()) {
                 .padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFF1A5FA8), thickness = 1.dp)
+            HorizontalDivider(modifier = Modifier.weight(1f), color = colorResource(R.color.color_primary), thickness = 1.dp)
             Text(
                 text = "  Inning $inningNr  ",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A5FA8)
+                color = colorResource(R.color.color_primary)
             )
-            HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFF1A5FA8), thickness = 1.dp)
+            HorizontalDivider(modifier = Modifier.weight(1f), color = colorResource(R.color.color_primary), thickness = 1.dp)
         }
 
         val chunked = inningGroups.chunked(3)
@@ -175,8 +176,8 @@ fun PitchGrid(pitches: List<Pitch>, jerseyMap: Map<Int, String> = emptyMap()) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             repeat(minOf(inningGroups.size, 3)) {
                 Row(modifier = Modifier.weight(1f)) {
-                    Text("B", modifier = Modifier.weight(1f), fontSize = 10.sp, color = Color(0xFF1A5FA8), textAlign = TextAlign.Center)
-                    Text("S", modifier = Modifier.weight(1f), fontSize = 10.sp, color = Color(0xFFC0392B), textAlign = TextAlign.Center)
+                    Text("B", modifier = Modifier.weight(1f), fontSize = 10.sp, color = colorResource(R.color.color_primary), textAlign = TextAlign.Center)
+                    Text("S", modifier = Modifier.weight(1f), fontSize = 10.sp, color = colorResource(R.color.color_strike), textAlign = TextAlign.Center)
                 }
             }
             repeat(3 - minOf(inningGroups.size, 3)) {
@@ -207,7 +208,7 @@ fun BatterBlock(group: BatterGroup) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 2.dp)
-            .background(Color(0xFFE8EFF8))
+            .background(colorResource(R.color.color_bg_primary_light))
             .padding(horizontal = 2.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -215,7 +216,7 @@ fun BatterBlock(group: BatterGroup) {
             text = headerText,
             fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1A5FA8),
+            color = colorResource(R.color.color_primary),
             textAlign = TextAlign.Center,
             maxLines = 1
         )
@@ -229,22 +230,22 @@ fun BatterBlock(group: BatterGroup) {
         when (pitch.type) {
             "W", "HBP", "H", "SO" -> {
                 val bgColor = when (pitch.type) {
-                    "W"   -> Color(0xFFFFF7E6)
-                    "HBP" -> Color(0xFFF3E5F5)
-                    "SO"  -> Color(0xFFE8F5E9)
-                    else  -> Color(0xFFFFEBEE)
+                    "W"   -> colorResource(R.color.color_bg_walk)
+                    "HBP" -> colorResource(R.color.color_bg_hbp)
+                    "SO"  -> colorResource(R.color.color_bg_strikeout)
+                    else  -> colorResource(R.color.color_bg_out)
                 }
                 val textColor = when (pitch.type) {
-                    "W"   -> Color(0xFFD35400)
-                    "HBP" -> Color(0xFF8E44AD)
-                    "SO"  -> Color(0xFF27AE60)
-                    else  -> Color(0xFFE74C3C)
+                    "W"   -> colorResource(R.color.color_walk)
+                    "HBP" -> colorResource(R.color.color_hbp)
+                    "SO"  -> colorResource(R.color.color_green_bright)
+                    else  -> colorResource(R.color.color_hit)
                 }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(18.dp)
-                        .border(0.5.dp, Color(0xFFDDDDDD))
+                        .border(0.5.dp, colorResource(R.color.color_divider))
                         .background(bgColor),
                     contentAlignment = Alignment.Center
                 ) {
@@ -253,8 +254,8 @@ fun BatterBlock(group: BatterGroup) {
             }
             "B", "S", "F" -> {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    PitchCell(pitch, listOf("B"), Color(0xFF1A5FA8), Modifier.weight(1f))
-                    PitchCell(pitch, listOf("S", "F"), Color(0xFFC0392B), Modifier.weight(1f))
+                    PitchCell(pitch, listOf("B"), colorResource(R.color.color_primary), Modifier.weight(1f))
+                    PitchCell(pitch, listOf("S", "F"), colorResource(R.color.color_strike), Modifier.weight(1f))
                 }
             }
         }
@@ -266,19 +267,19 @@ fun PitchCell(pitch: Pitch?, types: List<String>, activeColor: Color, modifier: 
     Box(
         modifier = modifier
             .height(18.dp)
-            .border(0.5.dp, Color(0xFFDDDDDD))
+            .border(0.5.dp, colorResource(R.color.color_divider))
             .padding(2.dp),
         contentAlignment = Alignment.Center
     ) {
         val isMatch = pitch != null && pitch.type in types
         val displayColor = when (pitch?.type) {
-            "F" -> Color(0xFFF39C12)
+            "F" -> colorResource(R.color.color_foul)
             else -> activeColor
         }
         Text(
             text = if (pitch == null) "" else if (isMatch) "✓" else "·",
             fontSize = 11.sp,
-            color = if (isMatch) displayColor else if (pitch == null) Color(0xFFDDDDDD) else Color(0xFFCCCCCC)
+            color = if (isMatch) displayColor else if (pitch == null) colorResource(R.color.color_divider) else colorResource(R.color.color_gray_medium)
         )
     }
 }

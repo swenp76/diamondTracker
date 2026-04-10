@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -130,7 +131,7 @@ class PitchTrackActivity : ComponentActivity() {
                 modifier = Modifier
                     .padding(padding)
                     .fillMaxSize()
-                    .background(Color(0xFFF5F5F5))
+                    .background(colorResource(R.color.color_background))
             ) {
                 StatsBar(stats, inning, outs)
                 BatterStrip(stats)
@@ -217,15 +218,15 @@ class PitchTrackActivity : ComponentActivity() {
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                StatItem(stringResource(R.string.stat_bf), totalBF.toString(), Color(0xFF333333))
-                StatItem(stringResource(R.string.stat_balls), stats.balls.toString(), Color(0xFF1A5FA8))
-                StatItem(stringResource(R.string.stat_strikes), stats.strikes.toString(), Color(0xFFC0392B))
-                StatItem(stringResource(R.string.stat_walks), stats.walks.toString(), Color(0xFFD35400))
-                StatItem(stringResource(R.string.stat_hbp), stats.hbp.toString(), Color(0xFF8E44AD))
-                StatItem(stringResource(R.string.stat_pitch), (stats.totalPitches + 1).toString(), Color(0xFF333333))
-                StatItem(stringResource(R.string.stat_count), "$atBatBalls-$atBatStrikes", Color(0xFF1A5FA8))
+                StatItem(stringResource(R.string.stat_bf), totalBF.toString(), colorResource(R.color.color_text_primary))
+                StatItem(stringResource(R.string.stat_balls), stats.balls.toString(), colorResource(R.color.color_primary))
+                StatItem(stringResource(R.string.stat_strikes), stats.strikes.toString(), colorResource(R.color.color_strike))
+                StatItem(stringResource(R.string.stat_walks), stats.walks.toString(), colorResource(R.color.color_walk))
+                StatItem(stringResource(R.string.stat_hbp), stats.hbp.toString(), colorResource(R.color.color_hbp))
+                StatItem(stringResource(R.string.stat_pitch), (stats.totalPitches + 1).toString(), colorResource(R.color.color_text_primary))
+                StatItem(stringResource(R.string.stat_count), "$atBatBalls-$atBatStrikes", colorResource(R.color.color_primary))
             }
-            HorizontalDivider(color = Color(0xFFEEEEEE))
+            HorizontalDivider(color = colorResource(R.color.color_divider_light))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -237,13 +238,13 @@ class PitchTrackActivity : ComponentActivity() {
                     text = stringResource(R.string.label_inning, inning),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF333333)
+                    color = colorResource(R.color.color_text_primary)
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = stringResource(R.string.label_outs),
                         fontSize = 14.sp,
-                        color = Color(0xFF888888)
+                        color = colorResource(R.color.color_text_secondary)
                     )
                     repeat(3) { index ->
                         Box(
@@ -251,7 +252,7 @@ class PitchTrackActivity : ComponentActivity() {
                                 .padding(horizontal = 3.dp)
                                 .size(14.dp)
                                 .background(
-                                    color = if (index < outs) Color(0xFFC0392B) else Color(0xFFDDDDDD),
+                                    color = if (index < outs) colorResource(R.color.color_strike) else colorResource(R.color.color_divider),
                                     shape = CircleShape
                                 )
                         )
@@ -262,9 +263,9 @@ class PitchTrackActivity : ComponentActivity() {
     }
 
     @Composable
-    fun StatItem(label: String, value: String, color: Color) {
+    fun StatItem(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, fontSize = 11.sp, color = Color(0xFF888888))
+            Text(label, fontSize = 11.sp, color = colorResource(R.color.color_text_secondary))
             Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = color)
         }
     }
@@ -283,17 +284,17 @@ class PitchTrackActivity : ComponentActivity() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF1A5FA8))
+                .background(colorResource(R.color.color_primary))
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.label_batter), fontSize = 13.sp, color = Color(0xFFAACCFF))
+            Text(stringResource(R.string.label_batter), fontSize = 13.sp, color = colorResource(R.color.color_primary_light))
             Spacer(modifier = Modifier.width(8.dp))
             Text(batterText, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
             Text(
                 stringResource(R.string.hint_lineup),
                 fontSize = 12.sp,
-                color = Color(0xFFAACCFF),
+                color = colorResource(R.color.color_primary_light),
                 modifier = Modifier
                     .clickable {
                         if (gameId != -1L) {
@@ -311,13 +312,13 @@ class PitchTrackActivity : ComponentActivity() {
     @Composable
     fun PitchLog(stats: PitcherStats, listState: androidx.compose.foundation.lazy.LazyListState) {
         val gameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
-        
+
         // Count total pitches to maintain correct numbering even when reversed
         val totalPitchesCount = stats.pitches.count { it.type == "B" || it.type == "S" || it.type == "F" }
-        
+
         // Reverse order for display
         val displayItems = stats.pitches.reversed()
-        
+
         var bfCount = gameBF
         var pitchNumber = totalPitchesCount
 
@@ -337,28 +338,28 @@ class PitchTrackActivity : ComponentActivity() {
                             stringResource(R.string.pitch_label_slot_with_jersey, nextJersey, battingOrder)
                         else
                             stringResource(R.string.pitch_label_slot, battingOrder)
-                        
-                        Text(batterLabel, color = Color(0xFF888888), fontSize = 11.sp)
+
+                        Text(batterLabel, color = colorResource(R.color.color_text_secondary), fontSize = 11.sp)
                         bfCount--
                     }
-                    "HBP" -> Text(stringResource(R.string.pitch_label_hbp), color = Color(0xFF8E44AD), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    "H" -> Text(stringResource(R.string.pitch_label_hit), color = Color(0xFFE74C3C), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    "W" -> Text(stringResource(R.string.pitch_label_walk), color = Color(0xFFD35400), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    "SO" -> Text(stringResource(R.string.pitch_label_strikeout), color = Color(0xFF27AE60), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "HBP" -> Text(stringResource(R.string.pitch_label_hbp), color = colorResource(R.color.color_hbp), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "H" -> Text(stringResource(R.string.pitch_label_hit), color = colorResource(R.color.color_hit), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "W" -> Text(stringResource(R.string.pitch_label_walk), color = colorResource(R.color.color_walk), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "SO" -> Text(stringResource(R.string.pitch_label_strikeout), color = colorResource(R.color.color_green_bright), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "B", "S", "F" -> {
                         val currentNum = pitchNumber
                         pitchNumber--
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("$currentNum.", fontSize = 12.sp, color = Color(0xFF666666), modifier = Modifier.width(32.dp))
+                            Text("$currentNum.", fontSize = 12.sp, color = colorResource(R.color.color_text_tertiary), modifier = Modifier.width(32.dp))
                             val label = when (pitch.type) {
                                 "B" -> stringResource(R.string.pitch_label_ball)
                                 "F" -> stringResource(R.string.pitch_label_foul)
                                 else -> stringResource(R.string.pitch_label_strike)
                             }
                             val bgColor = when (pitch.type) {
-                                "B" -> Color(0xFF1A5FA8)
-                                "F" -> Color(0xFFF39C12)
-                                else -> Color(0xFFC0392B)
+                                "B" -> colorResource(R.color.color_primary)
+                                "F" -> colorResource(R.color.color_foul)
+                                else -> colorResource(R.color.color_strike)
                             }
                             Surface(
                                 color = bgColor,
@@ -406,7 +407,7 @@ class PitchTrackActivity : ComponentActivity() {
                         Icon(
                             imageVector = Icons.Default.ShowChart,
                             contentDescription = stringResource(R.string.content_desc_trend),
-                            tint = Color(0xFF1A5FA8)
+                            tint = colorResource(R.color.color_primary)
                         )
                     }
                 }
@@ -414,7 +415,7 @@ class PitchTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onBall,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A5FA8)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_ball), fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -423,7 +424,7 @@ class PitchTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onStrike,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC0392B)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_strike), fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -434,7 +435,7 @@ class PitchTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onHit,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE74C3C)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_hit), fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -443,7 +444,7 @@ class PitchTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onHbp,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E44AD)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hbp)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_hbp), fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -452,7 +453,7 @@ class PitchTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onFoul,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF39C12)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_foul)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_foul), fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -463,7 +464,7 @@ class PitchTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onBf,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B6D11)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_dark)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_add_batter), fontSize = 16.sp)
@@ -472,7 +473,7 @@ class PitchTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onOut,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC0392B)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_out), fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -481,7 +482,7 @@ class PitchTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onUndo,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF888888)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_undo), fontSize = 14.sp)
@@ -528,7 +529,7 @@ class PitchTrackActivity : ComponentActivity() {
                 text = stringResource(R.string.trend_title),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF333333),
+                color = colorResource(R.color.color_text_primary),
                 modifier = Modifier.padding(vertical = 12.dp)
             )
 
@@ -541,7 +542,7 @@ class PitchTrackActivity : ComponentActivity() {
                 ) {
                     Text(
                         text = stringResource(R.string.trend_no_data),
-                        color = Color(0xFF888888),
+                        color = colorResource(R.color.color_text_secondary),
                         fontSize = 14.sp
                     )
                 }
@@ -627,9 +628,9 @@ class PitchTrackActivity : ComponentActivity() {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 val (bgColor, emoji, message) = when (trendLevel) {
-                    TrendLevel.GOOD   -> Triple(Color(0xFF27AE60), "🟢", stringResource(R.string.trend_good))
-                    TrendLevel.WATCH  -> Triple(Color(0xFFE67E22), "🟡", stringResource(R.string.trend_watch))
-                    TrendLevel.CHANGE -> Triple(Color(0xFFC0392B), "🔴", stringResource(R.string.trend_change))
+                    TrendLevel.GOOD   -> Triple(colorResource(R.color.color_green_bright), "🟢", stringResource(R.string.trend_good))
+                    TrendLevel.WATCH  -> Triple(colorResource(R.color.color_orange_bright), "🟡", stringResource(R.string.trend_watch))
+                    TrendLevel.CHANGE -> Triple(colorResource(R.color.color_strike), "🔴", stringResource(R.string.trend_change))
                 }
 
                 Surface(
@@ -662,7 +663,7 @@ class PitchTrackActivity : ComponentActivity() {
                                 Text(
                                     text = stringResource(R.string.trend_last_bf, (last * 100).toInt(), arrow),
                                     fontSize = 12.sp,
-                                    color = Color(0xFF666666)
+                                    color = colorResource(R.color.color_text_tertiary)
                                 )
                             }
                         }
@@ -675,7 +676,7 @@ class PitchTrackActivity : ComponentActivity() {
                     text = stringResource(R.string.trend_per_batter),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF555555),
+                    color = colorResource(R.color.color_text_subtle),
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
                 batters.forEach { b ->
@@ -688,21 +689,21 @@ class PitchTrackActivity : ComponentActivity() {
                         Text(
                             text = stringResource(R.string.trend_batter_nr, b.batterNr),
                             fontSize = 12.sp,
-                            color = Color(0xFF666666)
+                            color = colorResource(R.color.color_text_tertiary)
                         )
                         Text(
                             text = "${b.balls}B ${b.strikes}S ${b.fouls}F",
                             fontSize = 12.sp,
-                            color = Color(0xFF666666)
+                            color = colorResource(R.color.color_text_tertiary)
                         )
                         Text(
                             text = "${(b.strikePercent * 100).toInt()}%",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = when {
-                                b.strikePercent >= 0.6f -> Color(0xFF27AE60)
-                                b.strikePercent >= 0.4f -> Color(0xFFE67E22)
-                                else -> Color(0xFFC0392B)
+                                b.strikePercent >= 0.6f -> colorResource(R.color.color_green_bright)
+                                b.strikePercent >= 0.4f -> colorResource(R.color.color_orange_bright)
+                                else -> colorResource(R.color.color_strike)
                             }
                         )
                     }

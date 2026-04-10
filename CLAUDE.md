@@ -111,6 +111,7 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ **#9** Scoreboard im GameHub (scoreboard_runs-Tabelle, 9 Innings, Away/Home, klickbare Zellen)
 - ✅ **#10** Spieluhr im GameHub (start_time in games, aufwärts zählend, überlebt App-Neustart)
 - ✅ **#2** Gegner teamabhängig (opponent_teams.team_id, DB v8, NavDrawer zeigt Opponents nur bei aktivem Team)
+- ✅ **#1** Farbkonsistenz: alle Hex-Farben in colors.xml zentralisiert, Composables nutzen colorResource()
 
 ---
 
@@ -157,12 +158,6 @@ In `PitcherStats` neues Feld `ip: String` ergänzen und in `StatsActivity` anzei
 ---
 
 ### 🟡 Mittel
-
-#### #1 – Design: Farbkonsistenz
-Alle hardcodierten Hex-Farben in allen Composables durch `colorResource(R.color.X)` ersetzen.
-Farben in `colors.xml` zentralisieren (siehe Farbdefinitionen oben).
-
----
 
 #### #3 – Cleanup: NavDrawer Einstellungen
 **Datei:** `SettingsActivity.kt`

@@ -27,14 +27,12 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-private val Primary = Color(0xFF1a5fa8)
-private val OpponentColor = Color(0xFFc0392b)
 
 class SettingsActivity : ComponentActivity() {
 
@@ -92,7 +90,7 @@ private fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            color = Color(0xFFF5F5F5)
+            color = colorResource(R.color.color_background)
         ) {
             Column(
                 modifier = Modifier
@@ -103,7 +101,7 @@ private fun SettingsScreen(
                 Text(
                     text = stringResource(R.string.settings_section_general),
                     fontSize = 11.sp,
-                    color = Color(0xFF888888),
+                    color = colorResource(R.color.color_text_secondary),
                     fontWeight = FontWeight.Normal,
                     letterSpacing = 1.sp,
                     modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
@@ -113,7 +111,7 @@ private fun SettingsScreen(
                     title = stringResource(R.string.settings_teams_title),
                     subtitle = stringResource(R.string.settings_teams_subtitle),
                     icon = Icons.Default.Build,
-                    iconColor = Primary,
+                    iconColor = colorResource(R.color.color_primary),
                     onClick = onTeamsClick
                 )
 
@@ -123,7 +121,7 @@ private fun SettingsScreen(
                     title = stringResource(R.string.settings_opponents_title),
                     subtitle = stringResource(R.string.settings_opponents_subtitle),
                     icon = Icons.Default.Group,
-                    iconColor = OpponentColor,
+                    iconColor = colorResource(R.color.color_strike),
                     onClick = onOpponentsClick
                 )
             }
@@ -169,12 +167,12 @@ private fun SettingsCard(
                     text = title,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF333333)
+                    color = colorResource(R.color.color_text_primary)
                 )
                 Text(
                     text = subtitle,
                     fontSize = 13.sp,
-                    color = Color(0xFF888888)
+                    color = colorResource(R.color.color_text_secondary)
                 )
             }
 
@@ -182,7 +180,7 @@ private fun SettingsCard(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = Color(0xFFCCCCCC)
+                tint = colorResource(R.color.color_gray_medium)
             )
         }
     }

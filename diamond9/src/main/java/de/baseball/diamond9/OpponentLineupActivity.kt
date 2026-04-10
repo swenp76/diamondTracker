@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -123,16 +124,16 @@ fun OpponentLineupScreen(
                 val timesIn = subs.count { it.jerseyIn == sub.jerseyOut }
                 val isStarter = slotStates.any { it.originalJersey == sub.jerseyOut }
                 val (label, color) = when {
-                    isStarter && timesIn == 0 -> "OUT_CAN_RETURN" to Color(0xFFe67e22)
-                    isStarter && timesIn >= 1 -> "RETURNED" to Color(0xFF27ae60)
-                    else -> "OUT" to Color(0xFFc0392b)
+                    isStarter && timesIn == 0 -> "OUT_CAN_RETURN" to colorResource(R.color.color_orange_bright)
+                    isStarter && timesIn >= 1 -> "RETURNED" to colorResource(R.color.color_green_bright)
+                    else -> "OUT" to colorResource(R.color.color_strike)
                 }
                 entries.add(OppWechselEntry(sub.jerseyOut, label, color))
             }
             if (seen.add(sub.jerseyIn)) {
                 val isOnField = slotStates.any { it.currentJersey == sub.jerseyIn }
-                val (label, color) = if (isOnField) "IN_GAME" to Color(0xFF27ae60)
-                else "DONE" to Color(0xFFc0392b)
+                val (label, color) = if (isOnField) "IN_GAME" to colorResource(R.color.color_green_bright)
+                else "DONE" to colorResource(R.color.color_strike)
                 entries.add(OppWechselEntry(sub.jerseyIn, label, color))
             }
         }
@@ -163,7 +164,7 @@ fun OpponentLineupScreen(
     ) { padding ->
         Surface(
             modifier = Modifier.fillMaxSize().padding(padding),
-            color = Color(0xFFF5F5F5)
+            color = colorResource(R.color.color_background)
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -237,7 +238,7 @@ fun OpponentLineupScreen(
 
                 if (wechselEntries.isNotEmpty()) {
                     item { SectionHeader(stringResource(R.string.lineup_section_changes)) }
-                    item { HorizontalDivider(color = Color(0xFFDDDDDD), thickness = 1.dp) }
+                    item { HorizontalDivider(color = colorResource(R.color.color_divider), thickness = 1.dp) }
                     items(wechselEntries) { entry ->
                         OpponentChangeRow(entry)
                     }
@@ -349,7 +350,7 @@ fun OpponentLineupScreen(
                                         subSelectionDialogState = null
                                     }.padding(16.dp),
                                     fontSize = 16.sp,
-                                    color = Color(0xFF1a5fa8)
+                                    color = colorResource(R.color.color_primary)
                                 )
                             }
                         }
@@ -425,7 +426,7 @@ private fun SectionHeader(title: String) {
         text = title,
         fontSize = 14.sp,
         fontWeight = FontWeight.Bold,
-        color = Color(0xFF888888),
+        color = colorResource(R.color.color_text_secondary),
         modifier = Modifier.padding(top = 24.dp, bottom = 8.dp, start = 8.dp)
     )
 }
@@ -453,7 +454,7 @@ private fun OpponentStarterRow(
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SlotNumber(state.slot, Color(0xFF1a5fa8))
+            SlotNumber(state.slot, colorResource(R.color.color_primary))
 
             val isSubstituted = state.currentJersey != state.originalJersey && state.originalJersey.isNotEmpty()
             Text(
@@ -461,9 +462,9 @@ private fun OpponentStarterRow(
                 else stringResource(R.string.lineup_slot_empty),
                 fontSize = 16.sp,
                 color = when {
-                    state.currentJersey.isEmpty() -> Color(0xFFBBBBBB)
-                    isSubstituted -> Color(0xFFc0392b)
-                    else -> Color(0xFF222222)
+                    state.currentJersey.isEmpty() -> colorResource(R.color.color_gray_light)
+                    isSubstituted -> colorResource(R.color.color_strike)
+                    else -> colorResource(R.color.color_text_dark)
                 },
                 modifier = Modifier.weight(1f)
             )
@@ -472,7 +473,7 @@ private fun OpponentStarterRow(
                 val isInjuryOnly = state.swapType == SwapType.INJURY_ONLY
                 Button(
                     onClick = onSwapClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = if (isInjuryOnly) Color(0xFFe67e22) else Color(0xFF1a5fa8)),
+                    colors = ButtonDefaults.buttonColors(containerColor = if (isInjuryOnly) colorResource(R.color.color_orange_bright) else colorResource(R.color.color_primary)),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     modifier = Modifier.height(36.dp)
                 ) {
@@ -508,23 +509,23 @@ private fun OpponentSubstituteRow(
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SlotNumber(bankSlot + 10, Color(0xFF2c7a2c))
+            SlotNumber(bankSlot + 10, colorResource(R.color.color_green))
 
             Text(
                 text = if (bp != null) "#${bp.jerseyNumber}" else stringResource(R.string.lineup_slot_empty),
                 fontSize = 16.sp,
                 color = when {
-                    bp == null -> Color(0xFFBBBBBB)
-                    status == OppSubStatus.DONE -> Color(0xFF999999)
-                    else -> Color(0xFF222222)
+                    bp == null -> colorResource(R.color.color_gray_light)
+                    status == OppSubStatus.DONE -> colorResource(R.color.color_gray)
+                    else -> colorResource(R.color.color_text_dark)
                 },
                 modifier = Modifier.weight(1f)
             )
 
             if (bp != null) {
                 when (status) {
-                    OppSubStatus.AVAILABLE -> Text("✓", fontSize = 20.sp, color = Color(0xFF27ae60), modifier = Modifier.padding(horizontal = 8.dp))
-                    OppSubStatus.DONE -> Text("✗", fontSize = 20.sp, color = Color(0xFFc0392b), modifier = Modifier.padding(horizontal = 8.dp))
+                    OppSubStatus.AVAILABLE -> Text("✓", fontSize = 20.sp, color = colorResource(R.color.color_green_bright), modifier = Modifier.padding(horizontal = 8.dp))
+                    OppSubStatus.DONE -> Text("✗", fontSize = 20.sp, color = colorResource(R.color.color_strike), modifier = Modifier.padding(horizontal = 8.dp))
                     else -> Spacer(modifier = Modifier.width(32.dp))
                 }
             }
@@ -557,7 +558,7 @@ private fun OpponentChangeRow(entry: OppWechselEntry) {
         Text(
             text = "#${entry.jersey}",
             fontSize = 15.sp,
-            color = Color(0xFF222222),
+            color = colorResource(R.color.color_text_dark),
             modifier = Modifier.weight(1f)
         )
         Text(

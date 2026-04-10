@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -85,7 +86,7 @@ private fun SeasonStatsScreen(
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = Color.White,
-                contentColor = Color(0xFF1A5FA8)
+                contentColor = colorResource(R.color.color_primary)
             ) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
@@ -116,7 +117,7 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
 
     if (rows.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.season_stats_empty_batter), color = Color(0xFF888888))
+            Text(stringResource(R.string.season_stats_empty_batter), color = colorResource(R.color.color_text_secondary))
         }
         return
     }
@@ -167,7 +168,7 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper) {
 
     if (rows.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.season_stats_empty_pitcher), color = Color(0xFF888888))
+            Text(stringResource(R.string.season_stats_empty_pitcher), color = colorResource(R.color.color_text_secondary))
         }
         return
     }
@@ -211,7 +212,7 @@ private fun StatsHeaderRow(columns: List<Pair<String, Float>>) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF1A5FA8))
+            .background(colorResource(R.color.color_primary))
             .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
         columns.forEach { (label, weight) ->
@@ -232,7 +233,7 @@ private fun StatsDataRow(columns: List<Pair<String, Float>>, isEven: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (isEven) Color.White else Color(0xFFF5F7FA))
+            .background(if (isEven) Color.White else colorResource(R.color.color_background))
             .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -241,7 +242,7 @@ private fun StatsDataRow(columns: List<Pair<String, Float>>, isEven: Boolean) {
                 text = text,
                 modifier = Modifier.weight(weight),
                 fontSize = 13.sp,
-                color = Color(0xFF333333),
+                color = colorResource(R.color.color_text_primary),
                 textAlign = if (index == 0) TextAlign.Start else TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

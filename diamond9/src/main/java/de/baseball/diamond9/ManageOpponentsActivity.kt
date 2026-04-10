@@ -25,14 +25,12 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-private val DeleteRed = Color(0xFFc0392b)
-private val Primary = Color(0xFF1a5fa8)
 
 class ManageOpponentsActivity : ComponentActivity() {
 
@@ -100,7 +98,7 @@ private fun ManageOpponentsScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = Primary,
+                containerColor = colorResource(R.color.color_primary),
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.Add, null) },
                 text = { Text(stringResource(R.string.fab_add_opponent)) }
@@ -111,14 +109,14 @@ private fun ManageOpponentsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            color = Color(0xFFF5F5F5)
+            color = colorResource(R.color.color_background)
         ) {
             if (opponents.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         text = stringResource(R.string.empty_opponents),
                         fontSize = 15.sp,
-                        color = Color(0xFF888888),
+                        color = colorResource(R.color.color_text_secondary),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(32.dp)
                     )
@@ -186,7 +184,7 @@ private fun ManageOpponentsScreen(
                         refresh()
                         opponentToDelete = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = DeleteRed)
+                    colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike))
                 ) { Text(stringResource(R.string.btn_delete)) }
             },
             dismissButton = {
@@ -222,7 +220,7 @@ private fun OpponentItem(
             )
 
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.content_desc_delete), tint = DeleteRed)
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.content_desc_delete), tint = colorResource(R.color.color_strike))
             }
         }
     }

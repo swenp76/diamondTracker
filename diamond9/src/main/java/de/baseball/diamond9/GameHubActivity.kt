@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -122,7 +123,7 @@ private fun GameHubScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            color = Color(0xFFF5F5F5)
+            color = colorResource(R.color.color_background)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Scoreboard(
@@ -141,22 +142,22 @@ private fun GameHubScreen(
                 ) {
                     HubButton(
                         text = stringResource(R.string.gamehub_offense),
-                        color = Color(0xFF1a5fa8),
+                        color = colorResource(R.color.color_primary),
                         onClick = onOffenseClick
                     )
                     HubButton(
                         text = stringResource(R.string.gamehub_defense),
-                        color = Color(0xFFc0392b),
+                        color = colorResource(R.color.color_strike),
                         onClick = onDefenseClick
                     )
                     HubButton(
                         text = stringResource(R.string.gamehub_lineup),
-                        color = Color(0xFF2c7a2c),
+                        color = colorResource(R.color.color_green),
                         onClick = onLineupClick
                     )
                     HubButton(
                         text = stringResource(R.string.gamehub_oppo_lineup),
-                        color = Color(0xFF7d3c98),
+                        color = colorResource(R.color.color_purple),
                         onClick = onOppoLineupClick
                     )
                 }
@@ -268,8 +269,8 @@ private fun Scoreboard(
             // Fixed right column: totals
             Column {
                 ScoreCell(text = stringResource(R.string.scoreboard_total_label), isHeader = true, width = 36.dp, fontWeight = FontWeight.Bold)
-                ScoreCell(text = totalFor(0).toString(), width = 36.dp, fontWeight = FontWeight.Bold, bgColor = Color(0xFFF0F0F0))
-                ScoreCell(text = totalFor(1).toString(), width = 36.dp, fontWeight = FontWeight.Bold, bgColor = Color(0xFFF0F0F0))
+                ScoreCell(text = totalFor(0).toString(), width = 36.dp, fontWeight = FontWeight.Bold, bgColor = colorResource(R.color.color_divider_light))
+                ScoreCell(text = totalFor(1).toString(), width = 36.dp, fontWeight = FontWeight.Bold, bgColor = colorResource(R.color.color_divider_light))
             }
         }
     }
@@ -312,7 +313,7 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
                 text = timeString,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (startTime > 0L) Color(0xFF1A5FA8) else Color(0xFF888888)
+                color = if (startTime > 0L) colorResource(R.color.color_primary) else colorResource(R.color.color_text_secondary)
             )
             if (startTime == 0L) {
                 Button(
@@ -322,7 +323,7 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
                         startTime = now
                         elapsedMs = 0L
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2c7a2c)),
+                    colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(stringResource(R.string.timer_btn_start), fontWeight = FontWeight.Bold)
@@ -331,7 +332,7 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
                 Text(
                     text = stringResource(R.string.timer_label_running),
                     fontSize = 13.sp,
-                    color = Color(0xFF888888)
+                    color = colorResource(R.color.color_text_secondary)
                 )
             }
         }
@@ -347,15 +348,15 @@ private fun ScoreCell(
     bgColor: Color = Color.Transparent,
     onClick: (() -> Unit)? = null
 ) {
-    val background = if (isHeader) Color(0xFF1A5FA8) else bgColor
-    val textColor = if (isHeader) Color.White else Color(0xFF333333)
+    val background = if (isHeader) colorResource(R.color.color_primary) else bgColor
+    val textColor = if (isHeader) Color.White else colorResource(R.color.color_text_primary)
 
     Box(
         modifier = Modifier
             .width(width)
             .height(36.dp)
             .background(background)
-            .border(0.5.dp, Color(0xFFCCCCCC))
+            .border(0.5.dp, colorResource(R.color.color_gray_medium))
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
         contentAlignment = Alignment.Center
     ) {
