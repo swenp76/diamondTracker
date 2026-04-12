@@ -109,19 +109,20 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ Mehrsprachigkeit (Deutsch/Englisch)
 - ✅ Offense / Batting-Tracking (BattingTrackActivity) mit At-Bat-Ergebnissen
 - ✅ **#4** Out-Button: nur Outs+1, kein Batter-Wechsel (für Stolen Base Outs etc.)
-- ✅ **#7** Spielübergreifende Statistiken (SeasonStatsActivity): Batter-Tab (AB/H/AVG/BB/K) + Pitcher-Tab (BF/P/S%/BB/K)
+- ✅ **#7** Spielübergreifende Statistiken (SeasonStatsActivity): Batter-Tab (PA/AB/H/AVG/OBP/BB/K) + Pitcher-Tab (BF/P/S%/BB/K)
 - ✅ **#9** Scoreboard im GameHub (scoreboard_runs-Tabelle, 9 Innings, Away/Home, klickbare Zellen)
 - ✅ **#10** Spieluhr im GameHub (start_time in games, aufwärts zählend, überlebt App-Neustart)
 - ✅ **#2** Gegner teamabhängig (opponent_teams.team_id, DB v8, NavDrawer zeigt Opponents nur bei aktivem Team)
 - ✅ **#1** Farbkonsistenz: alle Hex-Farben in colors.xml zentralisiert, Composables nutzen colorResource()
-- ✅ **#5** Batting Stats pro Spiel (BatterStatsActivity, GameHub-Button "Batting Stats", Query getGameBatterStats)
+- ✅ **#5** Batting Stats pro Spiel (BatterStatsActivity, GameHub-Button "Batting Stats", Spalten PA/AB/H/AVG/OBP/BB/K)
 - ✅ **#6** IP (Innings Pitched): formatIP(), getOutsForGame(), ip-Feld in PitcherStats, StatCard in StatsActivity
 - ✅ Uhrzeit pro Spiel: game_time-Feld (DB v9), TimePickerDialog im GameDialog, Anzeige in GameItem + GameHub-TopAppBar
 - ✅ Home/Away-Kennzeichnung pro Spiel (is_home-Feld, DB v10, Toggle im GameDialog)
 - ✅ Spieluhr: Pause/Resume + elapsed_time_ms-Persistierung (DB v11)
 - ✅ Einzelspiel-Export/Import: vollständiges JSON (Lineup, At-Bats, Pitches, Scoreboard) aus Spielliste
 - ✅ Status-Bar-Lesbarkeit: dunkle Icons in CoachAct (isAppearanceLightStatusBars)
-- ✅ Unit-Tests: PitcherTrendHelperTest (27 Tests), GameBatterStatsDaoTest (11 Tests), BackupManagerMigrationsTest (15 Tests)
+- ✅ At-Bat Results: 2-stufiger Result-Picker (H/K/BB in 1 Tap; OUT▸ → GO/FO/LO; ··· → KL/SAC/FC/E/DP/HBP)
+- ✅ Unit-Tests: PitcherTrendHelperTest (30 Tests), GameBatterStatsDaoTest (11 Tests), BackupManagerMigrationsTest (15 Tests)
 
 ---
 
@@ -251,9 +252,9 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | **`scoreboard_runs`** | **id, game_id, inning, is_home, runs** |
 
 **Pitch-Typen:** `B` = Ball, `S` = Strike, `F` = Foul, `BF` = Batter Faced,
-`H` = Hit, `HBP` = Hit by Pitch, `W` = Walk, `K` = Strikeout
+`SO` = Strikeout-Pitch, `H` = Hit, `HBP` = Hit by Pitch, `W` = Walk
 
-**At-Bat Results:** `K`, `BB`, `H`, `HBP`, `OUT`
+**At-Bat Results:** `K`, `KL` (strikeout looking), `GO`, `FO`, `LO` (outs), `BB`, `H`, `HBP`, `SAC`, `FC`, `E`, `DP` — legacy: `OUT`
 
 ---
 
