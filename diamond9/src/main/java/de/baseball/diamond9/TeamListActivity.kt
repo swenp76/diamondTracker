@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -198,7 +199,7 @@ fun TeamListScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onAddTeamClick,
-                containerColor = Color(0xFF1A5FA8),
+                containerColor = colorResource(R.color.color_primary),
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text(stringResource(R.string.fab_add_team)) }
@@ -215,7 +216,7 @@ fun TeamListScreen(
                 Text(
                     text = stringResource(R.string.empty_teams),
                     fontSize = 15.sp,
-                    color = Color(0xFF888888),
+                    color = colorResource(R.color.color_text_secondary),
                     modifier = Modifier.padding(32.dp)
                 )
             }
@@ -262,7 +263,7 @@ fun TeamItem(
                 imageVector = Icons.Default.Settings,
                 contentDescription = null,
                 modifier = Modifier.size(36.dp),
-                tint = Color(0xFF1A5FA8)
+                tint = colorResource(R.color.color_primary)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -270,19 +271,19 @@ fun TeamItem(
                     text = team.name,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF333333)
+                    color = colorResource(R.color.color_text_primary)
                 )
                 Text(
                     text = stringResource(R.string.team_tap_to_edit),
                     fontSize = 13.sp,
-                    color = Color(0xFF888888)
+                    color = colorResource(R.color.color_text_secondary)
                 )
             }
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = stringResource(R.string.content_desc_delete),
-                    tint = Color(0xFFC0392B)
+                    tint = colorResource(R.color.color_strike)
                 )
             }
         }

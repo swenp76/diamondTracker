@@ -11,11 +11,21 @@
     <string name="btn_copy">Copy</string>
     <string name="btn_done">Done</string>
     <string name="btn_back_to_game">Back</string>
+    <string name="btn_confirm">Confirm</string>
+    <string name="btn_jump">Jump</string>
     <string name="btn_import">Import</string>
     <string name="error_required_field">Required field</string>
 
     <!-- ── Content Descriptions ─────────────────────────────────────────── -->
     <string name="content_desc_back">Back</string>
+    <string name="content_desc_share_lineup">Share Lineup</string>
+    <string name="menu_export_game">Export Game</string>
+    <string name="menu_import_game">Import Game</string>
+    <string name="toast_game_exported">Game exported</string>
+    <string name="toast_game_imported">Game imported (%d own slots filled)</string>
+    <string name="toast_game_import_failed">Import failed: %s</string>
+    <string name="toast_game_invalid_format">Invalid format – not a game export file</string>
+    <string name="dialog_import_game_confirm">Import game from %1$s against %2$s?</string>
     <string name="content_desc_more">More</string>
     <string name="content_desc_delete">Delete</string>
     <string name="content_desc_add">Add</string>
@@ -31,6 +41,7 @@
     <string name="stat_total_pitches">Total Pitches</string>
     <string name="stat_strikeouts">K</string>
     <string name="stat_strike_percent">Strike%</string>
+    <string name="stat_ip">IP</string>
     <string name="stat_pitch">Pitch</string>
     <string name="stat_count">Count</string>
     <string name="stat_pitch_log">Pitch Log</string>
@@ -82,6 +93,11 @@
     <string name="label_own_team">Own Team</string>
     <string name="label_date">Date</string>
     <string name="hint_date_format">DD.MM.YYYY</string>
+    <string name="label_time">Time (optional)</string>
+    <string name="hint_time">HH:MM</string>
+    <string name="label_location">Home / Away</string>
+    <string name="location_home">Home</string>
+    <string name="location_away">Away</string>
     <string name="label_opponent">Opponent</string>
     <string name="hint_opponent">Team</string>
     <string name="label_or_enter_new">Or enter new:</string>
@@ -91,6 +107,8 @@
     <string name="gamehub_defense">Defense</string>
     <string name="gamehub_lineup">Lineup</string>
     <string name="gamehub_oppo_lineup">Opponent Lineup</string>
+    <string name="gamehub_batter_stats">Batting Stats</string>
+    <string name="batter_stats_empty">No at-bats recorded</string>
     <string name="toast_offense_coming_soon">Offense – coming soon</string>
 
     <!-- ── Pitcher ────────────────────────────────────────────────────────── -->
@@ -179,6 +197,8 @@
     <string name="dialog_sub_injury">Injury</string>
     <string name="dialog_return_title">Re-entry – Slot %d</string>
     <string name="dialog_return_message">%s back in game?</string>
+    <string name="dialog_jump_to_slot_title">Jump to Slot %d</string>
+    <string name="dialog_jump_to_slot_message">Do you want to jump to Slot %d? (Batting out of order)</string>
     <string name="dialog_injury_title">Injury – Slot %d</string>
     <string name="dialog_no_subs_title">No substitutes available</string>
     <string name="dialog_no_subs_message">All substitutes have already been used.</string>
@@ -238,6 +258,41 @@
     <string name="dialog_delete_opponent_message">Remove \"%s\" from the list?</string>
     <string name="hint_opponent_team_name">Team Name</string>
     <string name="fab_add_opponent">Add Opponent</string>
+
+    <!-- ── Season Stats ─────────────────────────────────────────────────── -->
+    <string name="season_stats_title">Season Stats</string>
+    <string name="season_stats_tab_batter">Batter</string>
+    <string name="season_stats_tab_pitcher">Pitcher</string>
+    <string name="season_stats_col_name">Name</string>
+    <string name="season_stats_col_ab">AB</string>
+    <string name="season_stats_col_h">H</string>
+    <string name="season_stats_col_avg">AVG</string>
+    <string name="season_stats_col_bb">BB</string>
+    <string name="season_stats_col_k">K</string>
+    <string name="season_stats_col_bf">BF</string>
+    <string name="season_stats_col_p">P</string>
+    <string name="season_stats_col_strike_pct">S%</string>
+    <string name="season_stats_empty_batter">No batting data yet.</string>
+    <string name="season_stats_empty_pitcher">No pitching data yet.</string>
+    <string name="season_stats_unknown_player">Unknown</string>
+    <string name="season_stats_btn">Season Stats</string>
+
+    <!-- ── Game Timer ───────────────────────────────────────────────────── -->
+    <string name="timer_btn_start">Start</string>
+    <string name="timer_btn_pause">Pause</string>
+    <string name="timer_btn_resume">Resume</string>
+    <string name="timer_btn_reset">Reset</string>
+    <string name="timer_label_running">running</string>
+    <string name="timer_label_paused">paused</string>
+    <string name="dialog_timer_reset_title">Reset Timer</string>
+    <string name="dialog_timer_reset_message">Do you want to reset the game timer to 00:00:00?</string>
+
+    <!-- ── Scoreboard ───────────────────────────────────────────────────── -->
+    <string name="scoreboard_away">Away</string>
+    <string name="scoreboard_home">Home</string>
+    <string name="scoreboard_total_label">R</string>
+    <string name="scoreboard_runs_label">Runs</string>
+    <string name="scoreboard_dialog_title">Inning %1$d – %2$s</string>
 
     <!-- ── Empty States ──────────────────────────────────────────────────── -->
     <string name="empty_games">No games yet.\nAdd a new game first.</string>

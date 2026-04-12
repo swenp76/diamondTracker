@@ -1,17 +1,26 @@
 package de.baseball.diamond9
 
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableIntStateOf
+import org.json.JSONArray
+import org.json.JSONObject
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,18 +29,22 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -42,17 +55,54 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-private val Primary = Color(0xFF1a5fa8)
-private val DeleteRed = Color(0xFFc0392b)
-
 class GameListActivity : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
+    private lateinit var backupManager: BackupManager
+
+    private var gameToExport: Game? = null
+    private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri?.let {
+            gameToExport?.let { game ->
+                try {
+                    val json = backupManager.exportGame(game.id)
+                    contentResolver.openOutputStream(it)?.use { os ->
+                        os.write(json.toString(4).toByteArray())
+                    }
+                    Toast.makeText(this, R.string.toast_game_exported, Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private var pendingImportJson: JSONObject? = null
+    private var onImportConfirmed: ((JSONObject) -> Unit)? = null
+
+    private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            try {
+                contentResolver.openInputStream(it)?.use { isStream ->
+                    val json = JSONObject(isStream.bufferedReader().readText())
+                    if (json.optString("type") == "single_game") {
+                        pendingImportJson = json
+                        onImportConfirmed?.invoke(json)
+                    } else {
+                        Toast.makeText(this, "Invalid game file", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         db = DatabaseHelper(this)
+        backupManager = BackupManager(this)
 
         val teamId = intent.getLongExtra("teamId", 0L)
         val teamName = intent.getStringExtra("teamName") ?: ""
@@ -65,7 +115,8 @@ class GameListActivity : ComponentActivity() {
                 drawerState = drawerState,
                 scope = scope,
                 currentActivity = GameListActivity::class.java,
-                context = this
+                context = this,
+                teamId = teamId
             ) {
                 GameListScreen(
                     teamId = teamId,
@@ -74,10 +125,28 @@ class GameListActivity : ComponentActivity() {
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onGameClick = { game ->
                         startActivity(Intent(this, GameHubActivity::class.java).apply {
-                            putExtra("gameId", game.id)
-                            putExtra("gameOpponent", game.opponent)
-                            putExtra("gameDate", game.date)
+                            putExtra("game_id", game.id)
+                            putExtra("opponent", game.opponent)
+                            putExtra("date", game.date)
+                            putExtra("own_team", teamName)
+                            putExtra("own_team_id", teamId)
+                            putExtra("is_home", game.isHome)
                         })
+                    },
+                    onSeasonStatsClick = {
+                        startActivity(Intent(this, SeasonStatsActivity::class.java).apply {
+                            putExtra("teamId", teamId)
+                            putExtra("teamName", teamName)
+                        })
+                    },
+                    onExportGame = { game ->
+                        gameToExport = game
+                        val fileName = "Game_${game.date.replace(".", "")}_${game.opponent.replace(" ", "_")}.json"
+                        exportLauncher.launch(fileName)
+                    },
+                    onImportGame = { callback ->
+                        onImportConfirmed = callback
+                        importLauncher.launch(arrayOf("application/json"))
                     }
                 )
             }
@@ -92,13 +161,19 @@ private fun GameListScreen(
     teamName: String,
     db: DatabaseHelper,
     onMenuClick: () -> Unit,
-    onGameClick: (Game) -> Unit
+    onGameClick: (Game) -> Unit,
+    onSeasonStatsClick: () -> Unit = {},
+    onExportGame: (Game) -> Unit,
+    onImportGame: ((JSONObject) -> Unit) -> Unit
 ) {
+    val context = LocalContext.current
+    val backupManager = remember { BackupManager(context) }
     var games by remember { mutableStateOf(emptyList<Game>()) }
     var showAddDialog by remember { mutableStateOf(false) }
     var gameToEdit by remember { mutableStateOf<Game?>(null) }
     var gameToDelete by remember { mutableStateOf<Game?>(null) }
     var gameToCopy by remember { mutableStateOf<Game?>(null) }
+    var pendingImport by remember { mutableStateOf<JSONObject?>(null) }
 
     fun refresh() {
         games = db.getGamesForTeam(teamId)
@@ -117,13 +192,23 @@ private fun GameListScreen(
                         Icon(Icons.Default.Menu, null)
                     }
                 },
+                actions = {
+                    IconButton(onClick = onSeasonStatsClick) {
+                        Icon(Icons.Default.Leaderboard, contentDescription = stringResource(R.string.season_stats_btn))
+                    }
+                    IconButton(onClick = {
+                        onImportGame { json -> pendingImport = json }
+                    }) {
+                        Icon(Icons.Default.Upload, contentDescription = stringResource(R.string.menu_import_game))
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = Primary,
+                containerColor = colorResource(R.color.color_primary),
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.Add, null) },
                 text = { Text(stringResource(R.string.fab_add_game)) }
@@ -134,14 +219,14 @@ private fun GameListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            color = Color(0xFFF5F5F5)
+            color = colorResource(R.color.color_background)
         ) {
             if (games.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         text = stringResource(R.string.empty_games),
                         fontSize = 15.sp,
-                        color = Color(0xFF888888),
+                        color = colorResource(R.color.color_text_secondary),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(32.dp)
                     )
@@ -158,7 +243,8 @@ private fun GameListScreen(
                             onClick = { onGameClick(game) },
                             onEdit = { gameToEdit = game },
                             onCopy = { gameToCopy = game },
-                            onDelete = { gameToDelete = game }
+                            onDelete = { gameToDelete = game },
+                            onExport = { onExportGame(game) }
                         )
                     }
                 }
@@ -166,15 +252,36 @@ private fun GameListScreen(
         }
     }
 
+    pendingImport?.let { json ->
+        val gObj = json.optJSONObject("game")
+        val date = gObj?.optString("date") ?: ""
+        val opp = gObj?.optString("opponent") ?: ""
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            title = { Text(stringResource(R.string.menu_import_game)) },
+            text = { Text(stringResource(R.string.dialog_import_game_confirm, date, opp)) },
+            confirmButton = {
+                Button(onClick = {
+                    backupManager.importGame(teamId, json)
+                    refresh()
+                    pendingImport = null
+                }) { Text(stringResource(R.string.btn_import)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImport = null }) { Text(stringResource(R.string.btn_cancel)) }
+            }
+        )
+    }
+
     if (showAddDialog) {
         GameDialog(
             title = stringResource(R.string.dialog_add_game_title),
             confirmLabel = stringResource(R.string.btn_create),
-            opponents = db.getAllOpponentTeams(),
+            opponents = db.getOpponentTeamsForTeam(teamId),
             onDismiss = { showAddDialog = false },
-            onConfirm = { date, opponent ->
-                db.insertOpponentTeamIfNew(opponent)
-                db.insertGame(date, opponent, teamId)
+            onConfirm = { date, time, opponent, isHome ->
+                db.insertOpponentTeamForTeam(opponent, teamId)
+                db.insertGame(date, opponent, teamId, time, isHome)
                 refresh()
                 showAddDialog = false
             }
@@ -186,12 +293,14 @@ private fun GameListScreen(
             title = stringResource(R.string.dialog_edit_game_title),
             confirmLabel = stringResource(R.string.btn_save),
             initialDate = game.date,
+            initialTime = game.gameTime,
             initialOpponent = game.opponent,
-            opponents = db.getAllOpponentTeams(),
+            initialIsHome = game.isHome,
+            opponents = db.getOpponentTeamsForTeam(teamId),
             onDismiss = { gameToEdit = null },
-            onConfirm = { date, opponent ->
-                db.insertOpponentTeamIfNew(opponent)
-                db.updateGame(game.id, date, opponent)
+            onConfirm = { date, time, opponent, isHome ->
+                db.insertOpponentTeamForTeam(opponent, teamId)
+                db.updateGame(game.id, date, opponent, time, isHome)
                 refresh()
                 gameToEdit = null
             }
@@ -244,7 +353,7 @@ private fun GameListScreen(
                         refresh()
                         gameToDelete = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = DeleteRed)
+                    colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike))
                 ) { Text(stringResource(R.string.btn_delete)) }
             },
             dismissButton = {
@@ -260,7 +369,8 @@ private fun GameItem(
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onCopy: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onExport: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -277,27 +387,43 @@ private fun GameItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = game.opponent,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    val badgeLabel = if (game.isHome == 1) stringResource(R.string.location_home) else stringResource(R.string.location_away)
+                    val badgeColor = if (game.isHome == 1) colorResource(R.color.color_green) else colorResource(R.color.color_orange)
+                    Box(
+                        modifier = Modifier
+                            .background(badgeColor, shape = MaterialTheme.shapes.small)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(badgeLabel, fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+                val dateLabel = if (game.gameTime.isNotEmpty()) "${game.date}  ${game.gameTime}" else game.date
                 Text(
-                    text = game.opponent,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-                Text(
-                    text = game.date,
+                    text = dateLabel,
                     fontSize = 14.sp,
-                    color = Color(0xFF888888)
+                    color = colorResource(R.color.color_text_secondary)
                 )
             }
 
             IconButton(onClick = onCopy) {
-                Icon(Icons.Default.ContentCopy, null, tint = Primary)
+                Icon(Icons.Default.ContentCopy, null, tint = colorResource(R.color.color_primary))
+            }
+            IconButton(onClick = onExport) {
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = colorResource(R.color.color_primary))
             }
             IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, null, tint = Primary)
+                Icon(Icons.Default.Edit, null, tint = colorResource(R.color.color_primary))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, null, tint = DeleteRed)
+                Icon(Icons.Default.Delete, null, tint = colorResource(R.color.color_strike))
             }
         }
     }
@@ -309,10 +435,12 @@ private fun GameDialog(
     title: String,
     confirmLabel: String,
     initialDate: String = "",
+    initialTime: String = "",
     initialOpponent: String = "",
+    initialIsHome: Int = 1,
     opponents: List<OpponentTeam>,
     onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit
+    onConfirm: (String, String, String, Int) -> Unit   // date, time, opponent, isHome
 ) {
     val context = LocalContext.current
     val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.US)
@@ -332,6 +460,8 @@ private fun GameDialog(
     }
 
     var date by remember { mutableStateOf(if (initialDate.isNotEmpty()) initialDate else sdf.format(calendar.time)) }
+    var time by remember { mutableStateOf(initialTime) }
+    var isHome by remember { mutableStateOf(initialIsHome) }
     var opponentText by remember { mutableStateOf(if (initialOpponent.isNotEmpty() && opponents.none { it.name == initialOpponent }) initialOpponent else "") }
     var selectedOpponent by remember { mutableStateOf(opponents.find { it.name == initialOpponent }) }
     var dateError by remember { mutableStateOf(false) }
@@ -349,6 +479,14 @@ private fun GameDialog(
         calendar.get(Calendar.MONTH),
         calendar.get(Calendar.DAY_OF_MONTH)
     )
+
+    val timePickerDialog = remember {
+        val initHour = if (time.length == 5) time.substring(0, 2).toIntOrNull() ?: 12 else 12
+        val initMin  = if (time.length == 5) time.substring(3, 5).toIntOrNull() ?: 0  else 0
+        TimePickerDialog(context, { _, h, m ->
+            time = "%02d:%02d".format(h, m)
+        }, initHour, initMin, true)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -372,6 +510,46 @@ private fun GameDialog(
                         disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
+
+                OutlinedTextField(
+                    value = time,
+                    onValueChange = { },
+                    label = { Text(stringResource(R.string.label_time)) },
+                    placeholder = { Text(stringResource(R.string.hint_time)) },
+                    readOnly = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { timePickerDialog.show() },
+                    enabled = false,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        disabledBorderColor = MaterialTheme.colorScheme.outline,
+                        disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+
+                Column {
+                    Text(
+                        text = stringResource(R.string.label_location),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(1 to R.string.location_home, 0 to R.string.location_away).forEach { (value, labelRes) ->
+                            val selected = isHome == value
+                            val bgColor = if (selected) colorResource(R.color.color_primary) else Color.Transparent
+                            val textColor = if (selected) Color.White else colorResource(R.color.color_text_primary)
+                            OutlinedButton(
+                                onClick = { isHome = value },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.outlinedButtonColors(containerColor = bgColor)
+                            ) {
+                                Text(stringResource(labelRes), color = textColor, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                            }
+                        }
+                    }
+                }
 
                 if (opponents.isNotEmpty()) {
                     ExposedDropdownMenuBox(
@@ -429,7 +607,7 @@ private fun GameDialog(
             Button(onClick = {
                 val finalOpponent = opponentText.trim().ifEmpty { selectedOpponent?.name ?: "" }
                 if (date.isNotBlank() && finalOpponent.isNotBlank()) {
-                    onConfirm(date, finalOpponent)
+                    onConfirm(date, time, finalOpponent, isHome)
                 } else {
                     if (date.isBlank()) dateError = true
                     if (finalOpponent.isBlank()) opponentError = true

@@ -11,6 +11,8 @@
     <string name="btn_copy">Kopieren</string>
     <string name="btn_done">Fertig</string>
     <string name="btn_back_to_game">Zurück</string>
+    <string name="btn_confirm">Bestätigen</string>
+    <string name="btn_jump">Springen</string>
     <string name="btn_import">Importieren</string>
     <string name="error_required_field">Pflichtfeld</string>
 
@@ -31,6 +33,7 @@
     <string name="stat_total_pitches">Total Pitches</string>
     <string name="stat_strikeouts">K</string>
     <string name="stat_strike_percent">Strike%</string>
+    <string name="stat_ip">IP</string>
     <string name="stat_pitch">Pitch</string>
     <string name="stat_count">Count</string>
     <string name="stat_pitch_log">Pitch-Verlauf</string>
@@ -82,6 +85,8 @@
     <string name="label_own_team">Eigenes Team</string>
     <string name="label_date">Datum</string>
     <string name="hint_date_format">TT.MM.JJJJ</string>
+    <string name="label_time">Uhrzeit (optional)</string>
+    <string name="hint_time">HH:MM</string>
     <string name="label_opponent">Gegner</string>
     <string name="hint_opponent">Mannschaft</string>
     <string name="label_or_enter_new">Oder neu eingeben:</string>
@@ -91,6 +96,8 @@
     <string name="gamehub_defense">Defense</string>
     <string name="gamehub_lineup">Lineup</string>
     <string name="gamehub_oppo_lineup">Oppo-Lineup</string>
+    <string name="gamehub_batter_stats">Batting Stats</string>
+    <string name="batter_stats_empty">Keine At-Bats erfasst</string>
     <string name="toast_offense_coming_soon">Offense – coming soon</string>
 
     <!-- ── Pitcher ────────────────────────────────────────────────────────── -->
@@ -179,6 +186,8 @@
     <string name="dialog_sub_injury">Verletzung</string>
     <string name="dialog_return_title">Rückwechslung – Slot %d</string>
     <string name="dialog_return_message">%s zurück ins Spiel?</string>
+    <string name="dialog_jump_to_slot_title">Springe zu Slot %d</string>
+    <string name="dialog_jump_to_slot_message">Möchtest du zu Slot %d springen? (Batting out of order)</string>
     <string name="dialog_injury_title">Verletzung – Slot %d</string>
     <string name="dialog_no_subs_title">Keine Substitutes verfügbar</string>
     <string name="dialog_no_subs_message">Alle Substitutes wurden bereits eingesetzt.</string>
@@ -261,6 +270,21 @@
     <string name="about_github_url">https://github.com/swenp76/diamondTracker</string>
     <string name="about_disclaimer">Diese Software wird „wie besehen“ ohne jegliche Gewährleistung, weder ausdrücklich noch stillschweigend, bereitgestellt, einschließlich, aber nicht beschränkt auf die Gewährleistungen der Marktgängigkeit, der Eignung für einen bestimmten Zweck und der Nichtverletzung von Rechten Dritter.</string>
     <string name="about_github_button">Auf GitHub ansehen</string>
+    <string name="menu_import_game">Spiel importieren</string>
+    <string name="menu_export_game">Spiel exportieren</string>
+    <string name="toast_game_exported">Spiel exportiert</string>
+    <string name="dialog_import_game_confirm">Spiel vom %1$s gegen %2$s importieren?</string>
 
+    <!-- ── Season Stats ─────────────────────────────────────────────────── -->
+    <string name="season_stats_btn">Saison-Statistiken</string>
 
+    <!-- ── Game Timer ───────────────────────────────────────────────────── -->
+    <string name="timer_btn_start">Start</string>
+    <string name="timer_btn_pause">Pause</string>
+    <string name="timer_btn_resume">Fortsetzen</string>
+    <string name="timer_btn_reset">Reset</string>
+    <string name="timer_label_running">läuft</string>
+    <string name="timer_label_paused">pausiert</string>
+    <string name="dialog_timer_reset_title">Timer zurücksetzen</string>
+    <string name="dialog_timer_reset_message">Möchtest du den Spiel-Timer auf 00:00:00 zurücksetzen?</string>
 </resources>

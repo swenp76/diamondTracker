@@ -13,7 +13,14 @@
       "Bash(cp app/src/main/java/de/baseball/pitcher/db/*.kt app/src/main/java/de/baseball/diamond9/db/)",
       "Bash(cp app/src/androidTest/java/de/baseball/pitcher/*.kt app/src/androidTest/java/de/baseball/diamond9/)",
       "Bash(find app/src/main/java/de/baseball/diamond9 app/src/androidTest/java/de/baseball/diamond9 -name '*.kt' -exec sed -i 's/package de\\\\.baseball\\\\.pitcher/package de.baseball.diamond9/g; s/import de\\\\.baseball\\\\.pitcher\\\\./import de.baseball.diamond9./g' '{}' +)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(cmd.exe /c \"cd /d C:\\\\Users\\\\Swen\\\\Documents\\\\PitcherApp\\\\PitcherApp && gradlew.bat assembleDebug 2>&1\")",
+      "Bash(cmd.exe /c \"cd /d C:\\\\Users\\\\Swen\\\\Documents\\\\PitcherApp\\\\PitcherApp && gradlew.bat assembleDebug\")",
+      "Bash(cmd.exe:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(ls /c/Users/Swen/Documents/PitcherApp/PitcherApp/*.bat)",
+      "Bash(ls /c/Users/Swen/Documents/PitcherApp/PitcherApp/gradlew*)"
     ]
   }
 }

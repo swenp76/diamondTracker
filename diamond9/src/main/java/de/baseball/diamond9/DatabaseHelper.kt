@@ -14,7 +14,11 @@ data class Game(
     @ColumnInfo(name = "team_id") val teamId: Long = 0,
     @ColumnInfo(name = "inning", defaultValue = "1") val inning: Int = 1,
     @ColumnInfo(name = "outs", defaultValue = "0") val outs: Int = 0,
-    @ColumnInfo(name = "leadoff_slot", defaultValue = "1") val leadoffSlot: Int = 1
+    @ColumnInfo(name = "leadoff_slot", defaultValue = "1") val leadoffSlot: Int = 1,
+    @ColumnInfo(name = "start_time", defaultValue = "0") val startTime: Long = 0L,
+    @ColumnInfo(name = "elapsed_time_ms", defaultValue = "0") val elapsedTimeMs: Long = 0L,
+    @ColumnInfo(name = "game_time", defaultValue = "") val gameTime: String = "",
+    @ColumnInfo(name = "is_home", defaultValue = "1") val isHome: Int = 1  // 1 = home, 0 = away
 )
 
 @Entity(tableName = "pitchers")
@@ -103,10 +107,20 @@ data class Substitution(
     @ColumnInfo(name = "player_in_id") val playerInId: Long
 )
 
-@Entity(tableName = "opponent_teams", indices = [Index(value = ["name"], unique = true)])
+@Entity(tableName = "opponent_teams", indices = [Index(value = ["name", "team_id"], unique = true)])
 data class OpponentTeam(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String
+    val name: String,
+    @ColumnInfo(name = "team_id", defaultValue = "0") val teamId: Long = 0L
+)
+
+@Entity(tableName = "scoreboard_runs")
+data class ScoreboardRun(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "game_id") val gameId: Long,
+    @ColumnInfo(name = "inning") val inning: Int,
+    @ColumnInfo(name = "is_home") val isHome: Int, // 0 = away, 1 = home
+    @ColumnInfo(name = "runs") val runs: Int = 0
 )
 
 @Entity(tableName = "opponent_substitutions")
@@ -163,6 +177,36 @@ object BaseballPositions {
     }
 }
 
+data class GameBatterStatsRow(
+    @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "ab")         val ab: Int,
+    @ColumnInfo(name = "hits")       val hits: Int,
+    @ColumnInfo(name = "walks")      val walks: Int,
+    @ColumnInfo(name = "strikeouts") val strikeouts: Int,
+    @ColumnInfo(name = "hbp")        val hbp: Int
+)
+
+data class SeasonBatterRow(
+    @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "ab") val ab: Int,
+    @ColumnInfo(name = "hits") val hits: Int,
+    @ColumnInfo(name = "walks") val walks: Int,
+    @ColumnInfo(name = "strikeouts") val strikeouts: Int,
+    @ColumnInfo(name = "hbp") val hbp: Int
+)
+
+data class SeasonPitcherRow(
+    @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "total_pitches") val totalPitches: Int,
+    @ColumnInfo(name = "bf") val bf: Int,
+    @ColumnInfo(name = "balls") val balls: Int,
+    @ColumnInfo(name = "strikes") val strikes: Int,
+    @ColumnInfo(name = "fouls") val fouls: Int,
+    @ColumnInfo(name = "walks") val walks: Int,
+    @ColumnInfo(name = "hits") val hits: Int,
+    @ColumnInfo(name = "ks") val ks: Int
+)
+
 data class PitcherStats(
     val pitcher: Pitcher,
     val bf: Int,
@@ -173,7 +217,8 @@ data class PitcherStats(
     val hits: Int,
     val strikeouts: Int,
     val totalPitches: Int,
-    val pitches: List<Pitch>
+    val pitches: List<Pitch>,
+    val ip: String = ""
 )
 
 // ── DatabaseHelper – Room-Wrapper mit identischer API ─────────────────────────
@@ -188,11 +233,12 @@ class DatabaseHelper(context: Context) {
     private val playerDao = db.playerDao()
     private val lineupDao = db.lineupDao()
     private val opponentTeamDao = db.opponentTeamDao()
+    private val scoreboardDao = db.scoreboardDao()
 
     // ── Games ──────────────────────────────────────────────────────────────────
 
-    fun insertGame(date: String, opponent: String, teamId: Long): Long =
-        gameDao.insertGame(Game(date = date, opponent = opponent, teamId = teamId))
+    fun insertGame(date: String, opponent: String, teamId: Long, gameTime: String = "", isHome: Int = 1): Long =
+        gameDao.insertGame(Game(date = date, opponent = opponent, teamId = teamId, gameTime = gameTime, isHome = isHome))
 
     fun getAllGames(): List<Game> = gameDao.getAllGames()
 
@@ -200,8 +246,8 @@ class DatabaseHelper(context: Context) {
 
     fun getGame(gameId: Long): Game? = gameDao.getGame(gameId)
 
-    fun updateGame(gameId: Long, date: String, opponent: String) =
-        gameDao.updateGame(gameId, date, opponent)
+    fun updateGame(gameId: Long, date: String, opponent: String, gameTime: String = "", isHome: Int = 1) =
+        gameDao.updateGame(gameId, date, opponent, gameTime, isHome)
 
     fun deleteGame(gameId: Long) = gameDao.deleteGameWithCascade(gameId)
 
@@ -219,9 +265,21 @@ class DatabaseHelper(context: Context) {
     fun updateLeadoffSlot(gameId: Long, slot: Int) =
         gameDao.updateLeadoffSlot(gameId, slot)
 
+    fun getStartTime(gameId: Long): Long =
+        gameDao.getGame(gameId)?.startTime ?: 0L
+
+    fun setStartTime(gameId: Long, timestamp: Long) =
+        gameDao.updateStartTime(gameId, timestamp)
+
+    fun getElapsedTime(gameId: Long): Long =
+        gameDao.getGame(gameId)?.elapsedTimeMs ?: 0L
+
+    fun setElapsedTime(gameId: Long, elapsedMs: Long) =
+        gameDao.updateElapsedTime(gameId, elapsedMs)
+
     fun copyGame(sourceGameId: Long, newOpponent: String): Long {
         val source = getGame(sourceGameId) ?: return -1
-        return insertGame(source.date, newOpponent, source.teamId)
+        return insertGame(source.date, newOpponent, source.teamId, isHome = source.isHome)
     }
 
     // ── Pitchers ───────────────────────────────────────────────────────────────
@@ -246,9 +304,12 @@ class DatabaseHelper(context: Context) {
     fun getPitchesForPitcher(pitcherId: Long): List<Pitch> =
         pitcherDao.getPitchesForPitcher(pitcherId)
 
+    private fun formatIP(outs: Int) = "${outs / 3}.${outs % 3}"
+
     fun getStatsForPitcher(pitcherId: Long): PitcherStats {
         val pitcher = pitcherDao.getPitcherById(pitcherId)
         val pitches = getPitchesForPitcher(pitcherId)
+        val outs = atBatDao.getOutsForGame(pitcher.gameId)
 
         var strikes = 0
         var currentStrikesAtBat = 0
@@ -280,7 +341,8 @@ class DatabaseHelper(context: Context) {
             hits = pitches.count { it.type == "H" },
             strikeouts = pitches.count { it.type == "K" },
             totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "F" || it.type == "HBP" || it.type == "H" },
-            pitches = pitches
+            pitches = pitches,
+            ip = formatIP(outs)
         )
     }
 
@@ -397,6 +459,14 @@ class DatabaseHelper(context: Context) {
     fun clearOwnLineupSlot(gameId: Long, slot: Int) =
         lineupDao.clearOwnLineupSlot(gameId, slot)
 
+    fun clearLineupForGame(gameId: Long) {
+        lineupDao.clearOwnLineup(gameId)
+        lineupDao.clearSubstitutions(gameId)
+        lineupDao.clearOpponentLineup(gameId)
+        lineupDao.clearOpponentBench(gameId)
+        lineupDao.clearOpponentSubstitutions(gameId)
+    }
+
     fun getOwnLineup(gameId: Long): Map<Int, Player> =
         lineupDao.getOwnLineupRaw(gameId).associate { row ->
             row.slot to Player(
@@ -418,8 +488,14 @@ class DatabaseHelper(context: Context) {
 
     fun getAllOpponentTeams(): List<OpponentTeam> = opponentTeamDao.getAll()
 
+    fun getOpponentTeamsForTeam(teamId: Long): List<OpponentTeam> =
+        opponentTeamDao.getForTeam(teamId)
+
     fun insertOpponentTeamIfNew(name: String): Long =
         opponentTeamDao.insert(OpponentTeam(name = name))
+
+    fun insertOpponentTeamForTeam(name: String, teamId: Long): Long =
+        opponentTeamDao.insert(OpponentTeam(name = name, teamId = teamId))
 
     fun deleteOpponentTeam(id: Long) = opponentTeamDao.delete(id)
 
@@ -440,6 +516,8 @@ class DatabaseHelper(context: Context) {
 
     fun getAtBatsForGame(gameId: Long): List<AtBat> = atBatDao.getAtBatsForGame(gameId)
 
+    fun getAtBat(atBatId: Long): AtBat? = atBatDao.getAtBatById(atBatId)
+
     fun updateAtBatResult(atBatId: Long, result: String?) {
         val ab = atBatDao.getAtBatById(atBatId) ?: return
         atBatDao.updateAtBat(ab.copy(result = result))
@@ -458,4 +536,36 @@ class DatabaseHelper(context: Context) {
     fun undoLastPitchForAtBat(atBatId: Long) = atBatDao.undoLastPitch(atBatId)
 
     fun getPitchesForAtBat(atBatId: Long): List<Pitch> = atBatDao.getPitchesForAtBat(atBatId)
+
+    // ── Season Stats ───────────────────────────────────────────────────────────
+
+    fun getGameBatterStats(gameId: Long): List<GameBatterStatsRow> =
+        atBatDao.getGameBatterStats(gameId)
+
+    fun getSeasonBatterStats(teamId: Long): List<SeasonBatterRow> =
+        atBatDao.getSeasonBatterStats(teamId)
+
+    fun getSeasonPitcherStats(teamId: Long): List<SeasonPitcherRow> =
+        pitcherDao.getSeasonPitcherStats(teamId)
+
+    // ── Scoreboard ─────────────────────────────────────────────────────────────
+
+    fun getScoreboard(gameId: Long): List<ScoreboardRun> = scoreboardDao.getScoreboard(gameId)
+
+    fun getScoreboardRuns(gameId: Long, inning: Int, teamIndex: Int): Int =
+        scoreboardDao.getRun(gameId, inning, teamIndex)?.runs ?: 0
+
+    fun hasScoreboardEntry(gameId: Long, inning: Int, teamIndex: Int): Boolean =
+        scoreboardDao.getRun(gameId, inning, teamIndex) != null
+
+    fun upsertScoreboardRun(gameId: Long, inning: Int, isHome: Int, runs: Int) {
+        val existing = scoreboardDao.getRun(gameId, inning, isHome)
+        if (existing != null) {
+            scoreboardDao.update(existing.copy(runs = runs))
+        } else {
+            scoreboardDao.insert(ScoreboardRun(gameId = gameId, inning = inning, isHome = isHome, runs = runs))
+        }
+    }
+
+    fun getTeamById(teamId: Long): Team? = teamDao.getAllTeams().find { it.id == teamId }
 }

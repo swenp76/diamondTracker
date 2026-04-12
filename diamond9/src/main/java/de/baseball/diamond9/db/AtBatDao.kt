@@ -42,4 +42,34 @@ abstract class AtBatDao {
 
     @Query("DELETE FROM pitches WHERE at_bat_id = :atBatId")
     abstract fun deletePitchesForAtBat(atBatId: Long)
+
+    @Query("SELECT COUNT(*) FROM at_bats WHERE game_id = :gameId AND result IN ('K', 'OUT')")
+    abstract fun getOutsForGame(gameId: Long): Int
+
+    @Query("""
+        SELECT player_id,
+            SUM(CASE WHEN result IN ('K','H','OUT') THEN 1 ELSE 0 END) AS ab,
+            SUM(CASE WHEN result = 'H'   THEN 1 ELSE 0 END) AS hits,
+            SUM(CASE WHEN result = 'BB'  THEN 1 ELSE 0 END) AS walks,
+            SUM(CASE WHEN result = 'K'   THEN 1 ELSE 0 END) AS strikeouts,
+            SUM(CASE WHEN result = 'HBP' THEN 1 ELSE 0 END) AS hbp
+        FROM at_bats
+        WHERE game_id = :gameId AND result IS NOT NULL AND player_id > 0
+        GROUP BY player_id
+    """)
+    abstract fun getGameBatterStats(gameId: Long): List<GameBatterStatsRow>
+
+    @Query("""
+        SELECT ab.player_id AS player_id,
+            SUM(CASE WHEN ab.result IN ('K', 'H', 'OUT') THEN 1 ELSE 0 END) AS ab,
+            SUM(CASE WHEN ab.result = 'H'   THEN 1 ELSE 0 END) AS hits,
+            SUM(CASE WHEN ab.result = 'BB'  THEN 1 ELSE 0 END) AS walks,
+            SUM(CASE WHEN ab.result = 'K'   THEN 1 ELSE 0 END) AS strikeouts,
+            SUM(CASE WHEN ab.result = 'HBP' THEN 1 ELSE 0 END) AS hbp
+        FROM at_bats ab
+        JOIN games g ON g.id = ab.game_id
+        WHERE g.team_id = :teamId AND ab.result IS NOT NULL AND ab.player_id > 0
+        GROUP BY ab.player_id
+    """)
+    abstract fun getSeasonBatterStats(teamId: Long): List<SeasonBatterRow>
 }

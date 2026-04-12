@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,15 +52,13 @@ class BattingTrackActivity : ComponentActivity() {
         var currentSlot by remember { mutableStateOf(1) }
         var currentAtBatId by remember { mutableStateOf<Long>(-1) }
         var pitches by remember { mutableStateOf(emptyList<Pitch>()) }
-        
+
         val snackbarHostState = remember { SnackbarHostState() }
 
-        val lineup = remember(gameId) { db.getOwnLineup(gameId) }
+        var lineup by remember { mutableStateOf(emptyMap<Int, Player>()) }
 
-        fun refreshAtBat(id: Long) {
-            if (id != -1L) {
-                pitches = db.getPitchesForAtBat(id)
-            }
+        fun refreshLineup() {
+            lineup = db.getOwnLineup(gameId)
         }
 
         fun startNewAtBat(slot: Int): Long {
@@ -69,15 +70,44 @@ class BattingTrackActivity : ComponentActivity() {
             return newId
         }
 
+        val launcher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            refreshLineup()
+            if (result.resultCode == RESULT_OK) {
+                val jumpToSlot = result.data?.getIntExtra("jumpToSlot", -1) ?: -1
+                if (jumpToSlot != -1) {
+                    val currentAb = db.getAtBat(currentAtBatId)
+                    if (currentAb != null && currentAb.result == null) {
+                        val pitchesCount = db.getPitchesForAtBat(currentAtBatId).size
+                        if (pitchesCount == 0) {
+                            db.deleteAtBat(currentAtBatId)
+                        } else {
+                            db.updateAtBatResult(currentAtBatId, "OUT") // Treat as out if skipped? Or just leave it?
+                        }
+                    }
+                    startNewAtBat(jumpToSlot)
+                }
+            }
+        }
+
+        fun refreshAtBat(id: Long) {
+            if (id != -1L) {
+                pitches = db.getPitchesForAtBat(id)
+            }
+        }
+
         LaunchedEffect(gameId) {
             if (gameId != -1L) {
+                refreshLineup()
                 val (i, o) = db.getGameState(gameId)
                 inning = i
                 outs = o
-                
+
                 val existingAtBats = db.getAtBatsForGame(gameId)
                 if (existingAtBats.isEmpty()) {
                     val leadoff = db.getLeadoffSlot(gameId)
+                    currentSlot = leadoff
                     startNewAtBat(leadoff)
                 } else {
                     val lastAb = existingAtBats.last()
@@ -146,7 +176,7 @@ class BattingTrackActivity : ComponentActivity() {
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color(0xFF1a5fa8),
+                        containerColor = colorResource(R.color.color_primary),
                         titleContentColor = Color.White,
                         navigationIconContentColor = Color.White
                     )
@@ -157,10 +187,10 @@ class BattingTrackActivity : ComponentActivity() {
                 modifier = Modifier
                     .padding(padding)
                     .fillMaxSize()
-                    .background(Color(0xFFF5F5F5))
+                    .background(colorResource(R.color.color_background))
             ) {
                 StatsBar(inning, outs, pitches)
-                BatterStrip(currentSlot, lineup[currentSlot])
+                BatterStrip(currentSlot, lineup[currentSlot], launcher)
                 Box(modifier = Modifier.weight(1f)) {
                     PitchLog(pitches)
                 }
@@ -218,7 +248,7 @@ class BattingTrackActivity : ComponentActivity() {
                                     val currentAbIndex = allAb.indexOfFirst { it.id == abId }
                                     if (currentAbIndex > 0) {
                                         val prevAb = allAb[currentAbIndex - 1]
-                                        
+
                                         if (prevAb.result == "K" || prevAb.result == "OUT") {
                                             if (outs > 0) {
                                                 outs--
@@ -263,12 +293,12 @@ class BattingTrackActivity : ComponentActivity() {
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                StatItem(stringResource(R.string.stat_balls), balls.toString(), Color(0xFF1A5FA8))
-                StatItem(stringResource(R.string.stat_strikes), strikes.toString(), Color(0xFFC0392B))
-                StatItem(stringResource(R.string.stat_pitch), (pitches.count { it.type in listOf("B", "S", "F") } + 1).toString(), Color(0xFF333333))
-                StatItem(stringResource(R.string.stat_count), "$balls-$strikes", Color(0xFF1A5FA8))
+                StatItem(stringResource(R.string.stat_balls), balls.toString(), colorResource(R.color.color_primary))
+                StatItem(stringResource(R.string.stat_strikes), strikes.toString(), colorResource(R.color.color_strike))
+                StatItem(stringResource(R.string.stat_pitch), (pitches.count { it.type in listOf("B", "S", "F") } + 1).toString(), colorResource(R.color.color_text_primary))
+                StatItem(stringResource(R.string.stat_count), "$balls-$strikes", colorResource(R.color.color_primary))
             }
-            HorizontalDivider(color = Color(0xFFEEEEEE))
+            HorizontalDivider(color = colorResource(R.color.color_divider_light))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -280,13 +310,13 @@ class BattingTrackActivity : ComponentActivity() {
                     text = stringResource(R.string.label_inning, inning),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF333333)
+                    color = colorResource(R.color.color_text_primary)
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = stringResource(R.string.label_outs),
                         fontSize = 14.sp,
-                        color = Color(0xFF888888)
+                        color = colorResource(R.color.color_text_secondary)
                     )
                     repeat(3) { index ->
                         Box(
@@ -294,7 +324,7 @@ class BattingTrackActivity : ComponentActivity() {
                                 .padding(horizontal = 3.dp)
                                 .size(14.dp)
                                 .background(
-                                    color = if (index < outs) Color(0xFFC0392B) else Color(0xFFDDDDDD),
+                                    color = if (index < outs) colorResource(R.color.color_strike) else colorResource(R.color.color_divider),
                                     shape = CircleShape
                                 )
                         )
@@ -305,15 +335,19 @@ class BattingTrackActivity : ComponentActivity() {
     }
 
     @Composable
-    fun StatItem(label: String, value: String, color: Color) {
+    fun StatItem(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, fontSize = 11.sp, color = Color(0xFF888888))
+            Text(label, fontSize = 11.sp, color = colorResource(R.color.color_text_secondary))
             Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = color)
         }
     }
 
     @Composable
-    fun BatterStrip(slot: Int, player: Player?) {
+    fun BatterStrip(
+        slot: Int,
+        player: Player?,
+        launcher: androidx.activity.result.ActivityResultLauncher<Intent>
+    ) {
         val context = LocalContext.current
         val batterText = if (player != null)
             stringResource(R.string.label_batter_slot_with_jersey, "#${player.number} ${player.name}", slot)
@@ -323,22 +357,23 @@ class BattingTrackActivity : ComponentActivity() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF1A5FA8))
+                .background(colorResource(R.color.color_primary))
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.label_batter), fontSize = 13.sp, color = Color(0xFFAACCFF))
+            Text(stringResource(R.string.label_batter), fontSize = 13.sp, color = colorResource(R.color.color_primary_light))
             Spacer(modifier = Modifier.width(8.dp))
             Text(batterText, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
             Text(
                 stringResource(R.string.hint_lineup),
                 fontSize = 12.sp,
-                color = Color(0xFFAACCFF),
+                color = colorResource(R.color.color_primary_light),
                 modifier = Modifier
                     .clickable {
                         val i = Intent(context, OwnLineupActivity::class.java)
                         i.putExtra("gameId", gameId)
-                        context.startActivity(i)
+                        i.putExtra("isOffenseMode", true)
+                        launcher.launch(i)
                     }
                     .padding(8.dp)
             )
@@ -358,17 +393,17 @@ class BattingTrackActivity : ComponentActivity() {
         ) {
             items(displayItems) { pitch ->
                 when (pitch.type) {
-                    "HBP" -> Text(stringResource(R.string.pitch_label_hbp), color = Color(0xFF8E44AD), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    "H" -> Text(stringResource(R.string.pitch_label_hit), color = Color(0xFFE74C3C), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "HBP" -> Text(stringResource(R.string.pitch_label_hbp), color = colorResource(R.color.color_hbp), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "H" -> Text(stringResource(R.string.pitch_label_hit), color = colorResource(R.color.color_hit), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "B", "S", "F" -> {
                         val currentNum = pitchNumber
                         pitchNumber--
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("$currentNum.", fontSize = 12.sp, color = Color(0xFF666666), modifier = Modifier.width(32.dp))
+                            Text("$currentNum.", fontSize = 12.sp, color = colorResource(R.color.color_text_tertiary), modifier = Modifier.width(32.dp))
                             val (label, bgColor) = when (pitch.type) {
-                                "B" -> stringResource(R.string.pitch_label_ball) to Color(0xFF1A5FA8)
-                                "F" -> stringResource(R.string.pitch_label_foul) to Color(0xFFF39C12)
-                                else -> stringResource(R.string.pitch_label_strike) to Color(0xFFC0392B)
+                                "B" -> stringResource(R.string.pitch_label_ball) to colorResource(R.color.color_primary)
+                                "F" -> stringResource(R.string.pitch_label_foul) to colorResource(R.color.color_foul)
+                                else -> stringResource(R.string.pitch_label_strike) to colorResource(R.color.color_strike)
                             }
                             Surface(
                                 color = bgColor,
@@ -410,7 +445,7 @@ class BattingTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onBall,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A5FA8)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_ball), fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -419,7 +454,7 @@ class BattingTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onStrike,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC0392B)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_strike), fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -430,7 +465,7 @@ class BattingTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onHit,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE74C3C)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_hit), fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -439,7 +474,7 @@ class BattingTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onHbp,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E44AD)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hbp)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_hbp), fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -448,7 +483,7 @@ class BattingTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onFoul,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF39C12)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_foul)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_foul), fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -459,7 +494,7 @@ class BattingTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onOut,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC0392B)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_out), fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -468,7 +503,7 @@ class BattingTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onUndo,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF888888)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_undo), fontSize = 14.sp)

@@ -18,14 +18,20 @@ abstract class GameDao {
     @Insert
     abstract fun insertGame(game: Game): Long
 
-    @Query("UPDATE games SET date = :date, opponent = :opponent WHERE id = :gameId")
-    abstract fun updateGame(gameId: Long, date: String, opponent: String)
+    @Query("UPDATE games SET date = :date, opponent = :opponent, game_time = :gameTime, is_home = :isHome WHERE id = :gameId")
+    abstract fun updateGame(gameId: Long, date: String, opponent: String, gameTime: String, isHome: Int)
 
     @Query("UPDATE games SET inning = :inning, outs = :outs WHERE id = :gameId")
     abstract fun updateGameState(gameId: Long, inning: Int, outs: Int)
 
     @Query("UPDATE games SET leadoff_slot = :slot WHERE id = :gameId")
     abstract fun updateLeadoffSlot(gameId: Long, slot: Int)
+
+    @Query("UPDATE games SET start_time = :timestamp WHERE id = :gameId")
+    abstract fun updateStartTime(gameId: Long, timestamp: Long)
+
+    @Query("UPDATE games SET elapsed_time_ms = :elapsedMs WHERE id = :gameId")
+    abstract fun updateElapsedTime(gameId: Long, elapsedMs: Long)
 
     @Transaction
     open fun deleteGameWithCascade(gameId: Long) {
@@ -37,6 +43,7 @@ abstract class GameDao {
         deleteOwnLineup(gameId)
         deleteSubstitutions(gameId)
         deleteOppSubstitutions(gameId)
+        deleteScoreboardRuns(gameId)
         deleteGameById(gameId)
     }
 
@@ -63,6 +70,9 @@ abstract class GameDao {
 
     @Query("DELETE FROM opponent_substitutions WHERE game_id = :gameId")
     abstract fun deleteOppSubstitutions(gameId: Long)
+
+    @Query("DELETE FROM scoreboard_runs WHERE game_id = :gameId")
+    abstract fun deleteScoreboardRuns(gameId: Long)
 
     @Query("DELETE FROM games WHERE id = :gameId")
     abstract fun deleteGameById(gameId: Long)

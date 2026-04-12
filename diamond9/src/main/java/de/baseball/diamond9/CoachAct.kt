@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -55,8 +57,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
 
-private val Primary = Color(0xFF1a5fa8)
-
 class CoachAct : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
@@ -64,6 +64,8 @@ class CoachAct : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = true
         db = DatabaseHelper(this)
         setContent {
             val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -161,7 +163,7 @@ private fun CoachSelectScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFFF5F5F5)
+        color = colorResource(R.color.color_background)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -173,7 +175,7 @@ private fun CoachSelectScreen(
                     text = stringResource(R.string.app_name),
                     fontSize = 42.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Primary,
+                    color = colorResource(R.color.color_primary),
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -182,7 +184,7 @@ private fun CoachSelectScreen(
                 Text(
                     text = stringResource(R.string.coach_select_title),
                     fontSize = 16.sp,
-                    color = Color(0xFF555555),
+                    color = colorResource(R.color.color_text_subtle),
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -192,7 +194,7 @@ private fun CoachSelectScreen(
                     Text(
                         text = stringResource(R.string.coach_select_no_teams),
                         fontSize = 15.sp,
-                        color = Color(0xFF888888),
+                        color = colorResource(R.color.color_text_secondary),
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -203,7 +205,7 @@ private fun CoachSelectScreen(
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
                             .padding(top = 8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary))
                     ) {
                         Text(
                             text = stringResource(R.string.btn_load_demo_team),
@@ -234,7 +236,7 @@ private fun CoachSelectScreen(
                 Icon(
                     imageVector = Icons.Default.Menu,
                     contentDescription = null,
-                    tint = Primary
+                    tint = colorResource(R.color.color_primary)
                 )
             }
         }
@@ -262,12 +264,12 @@ private fun TeamSelectCard(team: Team, onClick: () -> Unit) {
                 text = team.name,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1a1a1a)
+                color = colorResource(R.color.color_text_dark)
             )
             Text(
                 text = "›",
                 fontSize = 24.sp,
-                color = Primary
+                color = colorResource(R.color.color_primary)
             )
         }
     }
