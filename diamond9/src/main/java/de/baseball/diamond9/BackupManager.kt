@@ -397,7 +397,7 @@ class BackupManager(private val context: Context) {
             for (i in 0 until lineupArr.length()) {
                 val entry = lineupArr.getJSONObject(i)
                 val slot = entry.getInt("slot")
-                require(slot in 1..9) { "Invalid lineup slot: $slot" }
+                require(slot in 1..10) { "Invalid lineup slot: $slot" }
                 val pid = findOrCreatePlayer(entry.getJSONObject("player"))
                 db.setOwnLineupPlayer(gameId, slot, pid)
             }
@@ -409,7 +409,7 @@ class BackupManager(private val context: Context) {
             for (i in 0 until subArr.length()) {
                 val s = subArr.getJSONObject(i)
                 val slot = s.getInt("slot")
-                require(slot in 1..9) { "Invalid substitution slot: $slot" }
+                require(slot in 1..10) { "Invalid substitution slot: $slot" }
                 val pOut = findOrCreatePlayer(s.optJSONObject("player_out"))
                 val pIn = findOrCreatePlayer(s.optJSONObject("player_in"))
                 db.addSubstitution(gameId, slot, pOut, pIn)
@@ -423,7 +423,7 @@ class BackupManager(private val context: Context) {
                 val abObj = abArr.getJSONObject(i)
                 val abSlot = abObj.getInt("slot")
                 val abInning = abObj.getInt("inning")
-                require(abSlot in 1..9) { "Invalid at-bat slot: $abSlot" }
+                require(abSlot in 1..10) { "Invalid at-bat slot: $abSlot" }
                 require(abInning in 1..20) { "Invalid at-bat inning: $abInning" }
                 val pid = findOrCreatePlayer(abObj.optJSONObject("player"))
                 val abId = db.insertAtBat(gameId, pid, abSlot, abInning)
@@ -471,7 +471,7 @@ class BackupManager(private val context: Context) {
             for (i in 0 until oppLArr.length()) {
                 val l = oppLArr.getJSONObject(i)
                 val order = l.getInt("batting_order")
-                require(order in 1..9) { "Invalid batting order: $order" }
+                require(order in 1..10) { "Invalid batting order: $order" }
                 db.upsertLineupEntry(gameId, order, l.getString("jersey_number").take(3))
             }
         }
@@ -486,7 +486,7 @@ class BackupManager(private val context: Context) {
             for (i in 0 until oppSArr.length()) {
                 val os = oppSArr.getJSONObject(i)
                 val slot = os.getInt("slot")
-                require(slot in 1..9) { "Invalid opponent substitution slot: $slot" }
+                require(slot in 1..10) { "Invalid opponent substitution slot: $slot" }
                 db.addOpponentSubstitution(gameId, slot, os.getString("jersey_out").take(3), os.getString("jersey_in").take(3))
             }
         }
