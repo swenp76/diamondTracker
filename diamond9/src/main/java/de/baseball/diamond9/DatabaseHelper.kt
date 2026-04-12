@@ -315,7 +315,7 @@ class DatabaseHelper(context: Context) {
         var currentStrikesAtBat = 0
         for (p in pitches) {
             when (p.type) {
-                "S" -> {
+                "S", "SO" -> {
                     strikes++
                     currentStrikesAtBat++
                 }
@@ -339,8 +339,8 @@ class DatabaseHelper(context: Context) {
             walks = pitches.count { it.type == "W" },
             hbp = pitches.count { it.type == "HBP" },
             hits = pitches.count { it.type == "H" },
-            strikeouts = pitches.count { it.type == "K" },
-            totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "F" || it.type == "HBP" || it.type == "H" },
+            strikeouts = pitches.count { it.type == "SO" },
+            totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "SO" || it.type == "F" || it.type == "HBP" || it.type == "H" },
             pitches = pitches,
             ip = formatIP(outs)
         )

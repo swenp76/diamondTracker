@@ -139,7 +139,11 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
                 val name = players[row.playerId]?.let { "#${it.number} ${it.name}" }
                     ?: stringResource(R.string.season_stats_unknown_player)
                 val avg = if (row.ab > 0) row.hits.toFloat() / row.ab else 0f
-                val avgStr = if (row.ab > 0) ".%03d".format((avg * 1000).toInt()) else "---"
+                val avgStr = when {
+                    row.ab == 0 -> "---"
+                    avg >= 1f -> "1.000"
+                    else -> ".%03d".format((avg * 1000).toInt())
+                }
                 StatsDataRow(
                     columns = listOf(
                         Pair(name, 3f),
