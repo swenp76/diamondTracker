@@ -483,6 +483,23 @@ class DatabaseHelper(context: Context) {
             )
         }
 
+    /**
+     * Like getOwnLineup, but applies substitutions: for each slot that has subs,
+     * the player returned is the last substitute in (not the original starter).
+     * Use this wherever the *current* player on the field matters (e.g. BattingTrackActivity).
+     */
+    fun getEffectiveLineup(gameId: Long): Map<Int, Player> {
+        val base = getOwnLineup(gameId).toMutableMap()
+        getSubstitutionsForGame(gameId)
+            .groupBy { it.slot }
+            .forEach { (slot, slotSubs) ->
+                val lastSub = slotSubs.last()
+                val current = getPlayerById(lastSub.playerInId)
+                if (current != null) base[slot] = current
+            }
+        return base
+    }
+
     fun getOwnLineupStarters(gameId: Long): List<Player> =
         getOwnLineup(gameId).filter { it.key in 1..9 }.toSortedMap().values.toList()
 

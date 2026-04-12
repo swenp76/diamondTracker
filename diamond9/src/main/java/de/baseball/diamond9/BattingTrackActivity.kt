@@ -58,7 +58,7 @@ class BattingTrackActivity : ComponentActivity() {
         var lineup by remember { mutableStateOf(emptyMap<Int, Player>()) }
 
         fun refreshLineup() {
-            lineup = db.getOwnLineup(gameId)
+            lineup = db.getEffectiveLineup(gameId)
         }
 
         fun startNewAtBat(slot: Int): Long {
