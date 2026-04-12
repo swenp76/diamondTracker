@@ -218,22 +218,10 @@ class BattingTrackActivity : ComponentActivity() {
                             refreshAtBat(abId)
                         }
                     },
-                    onHit = {
-                        val abId = ensureAtBat()
-                        db.insertPitchForAtBat(abId, "H", inning)
-                        db.updateAtBatResult(abId, "H")
-                        nextBatter()
-                    },
                     onFoul = {
                         val abId = ensureAtBat()
                         db.insertPitchForAtBat(abId, "F", inning)
                         refreshAtBat(abId)
-                    },
-                    onHbp = {
-                        val abId = ensureAtBat()
-                        db.insertPitchForAtBat(abId, "HBP", inning)
-                        db.updateAtBatResult(abId, "HBP")
-                        nextBatter()
                     },
                     onUndo = {
                         val abId = currentAtBatId
@@ -249,7 +237,7 @@ class BattingTrackActivity : ComponentActivity() {
                                     if (currentAbIndex > 0) {
                                         val prevAb = allAb[currentAbIndex - 1]
 
-                                        if (prevAb.result == "K" || prevAb.result == "OUT") {
+                                        if (isOutResult(prevAb.result)) {
                                             if (outs > 0) {
                                                 outs--
                                             } else if (inning > 1) {
@@ -269,8 +257,15 @@ class BattingTrackActivity : ComponentActivity() {
                             }
                         }
                     },
-                    onOut = {
-                        incrementOuts()
+                    onResult = { result ->
+                        val abId = ensureAtBat()
+                        when (result) {
+                            "H"   -> db.insertPitchForAtBat(abId, "H", inning)
+                            "HBP" -> db.insertPitchForAtBat(abId, "HBP", inning)
+                        }
+                        db.updateAtBatResult(abId, result)
+                        if (isOutResult(result)) incrementOuts()
+                        nextBatter()
                     }
                 )
             }
@@ -424,89 +419,149 @@ class BattingTrackActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun ActionButtons(
         onBall: () -> Unit,
         onStrike: () -> Unit,
-        onHit: () -> Unit,
         onFoul: () -> Unit,
-        onHbp: () -> Unit,
         onUndo: () -> Unit,
-        onOut: () -> Unit
+        onResult: (String) -> Unit
     ) {
+        var outExpanded by remember { mutableStateOf(false) }
+        var showMoreSheet by remember { mutableStateOf(false) }
+
+        if (showMoreSheet) {
+            ModalBottomSheet(onDismissRequest = { showMoreSheet = false }) {
+                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth().height(60.dp)) {
+                        listOf(
+                            R.string.btn_result_hbp to colorResource(R.color.color_hbp),
+                            R.string.btn_result_kl  to colorResource(R.color.color_strike),
+                            R.string.btn_result_sac to colorResource(R.color.color_orange)
+                        ).forEachIndexed { i, (labelRes, color) ->
+                            if (i > 0) Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = { onResult(stringResource(labelRes)); showMoreSheet = false },
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                colors = ButtonDefaults.buttonColors(containerColor = color),
+                                shape = RoundedCornerShape(8.dp)
+                            ) { Text(stringResource(labelRes), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth().height(60.dp)) {
+                        listOf(
+                            R.string.btn_result_fc to colorResource(R.color.color_primary),
+                            R.string.btn_result_e  to colorResource(R.color.color_foul),
+                            R.string.btn_result_dp to colorResource(R.color.color_strike)
+                        ).forEachIndexed { i, (labelRes, color) ->
+                            if (i > 0) Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = { onResult(stringResource(labelRes)); showMoreSheet = false },
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                colors = ButtonDefaults.buttonColors(containerColor = color),
+                                shape = RoundedCornerShape(8.dp)
+                            ) { Text(stringResource(labelRes), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                        }
+                    }
+                }
+            }
+        }
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(modifier = Modifier.height(80.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+
+                // Row 1: BALL | STRIKE
+                Row(modifier = Modifier.fillMaxWidth().height(80.dp)) {
                     Button(
                         onClick = onBall,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)),
                         shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(stringResource(R.string.btn_ball), fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    ) { Text(stringResource(R.string.btn_ball), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                    Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = onStrike,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
                         shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(stringResource(R.string.btn_strike), fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    }
+                    ) { Text(stringResource(R.string.btn_strike), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.height(64.dp)) {
-                    Button(
-                        onClick = onHit,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(stringResource(R.string.btn_hit), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = onHbp,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hbp)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(stringResource(R.string.btn_hbp), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
+
+                Spacer(Modifier.height(8.dp))
+
+                // Row 2: FOUL | UNDO
+                Row(modifier = Modifier.fillMaxWidth().height(48.dp)) {
                     Button(
                         onClick = onFoul,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_foul)),
                         shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(stringResource(R.string.btn_foul), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.height(56.dp)) {
-                    Button(
-                        onClick = onOut,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(stringResource(R.string.btn_out), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    ) { Text(stringResource(R.string.btn_foul), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                    Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = onUndo,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)),
                         shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(stringResource(R.string.btn_undo), fontSize = 14.sp)
+                    ) { Text(stringResource(R.string.btn_undo), fontSize = 14.sp) }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = colorResource(R.color.color_divider_light))
+
+                // Row 3: H | K | BB | OUT▾ | ···
+                Row(modifier = Modifier.fillMaxWidth().height(72.dp)) {
+                    listOf(
+                        R.string.btn_result_h   to colorResource(R.color.color_green),
+                        R.string.btn_result_k   to colorResource(R.color.color_strike),
+                        R.string.btn_result_bb  to colorResource(R.color.color_primary)
+                    ).forEachIndexed { i, (labelRes, color) ->
+                        if (i > 0) Spacer(Modifier.width(6.dp))
+                        Button(
+                            onClick = { onResult(stringResource(labelRes)); outExpanded = false },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            colors = ButtonDefaults.buttonColors(containerColor = color),
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text(stringResource(labelRes), fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Button(
+                        onClick = { outExpanded = !outExpanded; showMoreSheet = false },
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (outExpanded) colorResource(R.color.color_orange) else colorResource(R.color.color_orange_bright)
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) { Text(stringResource(R.string.btn_result_out), fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                    Spacer(Modifier.width(6.dp))
+                    Button(
+                        onClick = { showMoreSheet = true; outExpanded = false },
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) { Text(stringResource(R.string.btn_result_more), fontSize = 18.sp) }
+                }
+
+                // Row 4: GO | FO | LO (only when OUT is expanded)
+                if (outExpanded) {
+                    Spacer(Modifier.height(6.dp))
+                    Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                        listOf(R.string.btn_result_go, R.string.btn_result_fo, R.string.btn_result_lo)
+                            .forEachIndexed { i, labelRes ->
+                                if (i > 0) Spacer(Modifier.width(6.dp))
+                                Button(
+                                    onClick = { onResult(stringResource(labelRes)); outExpanded = false },
+                                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) { Text(stringResource(labelRes), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                            }
                     }
                 }
             }
@@ -525,4 +580,7 @@ class BattingTrackActivity : ComponentActivity() {
         }
         return Pair(minOf(balls, 4), minOf(strikes, 3))
     }
+
+    private fun isOutResult(result: String?) =
+        result in setOf("K", "KL", "GO", "FO", "LO", "SAC", "DP", "OUT")
 }

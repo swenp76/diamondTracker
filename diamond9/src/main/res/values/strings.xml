@@ -57,6 +57,22 @@
     <string name="btn_add_batter">+ BATTER</string>
     <string name="btn_undo">↩ UNDO</string>
 
+    <!-- ── Result Buttons ────────────────────────────────────────────────── -->
+    <string name="btn_result_h">H</string>
+    <string name="btn_result_k">K</string>
+    <string name="btn_result_bb">BB</string>
+    <string name="btn_result_out">OUT</string>
+    <string name="btn_result_more">···</string>
+    <string name="btn_result_go">GO</string>
+    <string name="btn_result_fo">FO</string>
+    <string name="btn_result_lo">LO</string>
+    <string name="btn_result_hbp">HBP</string>
+    <string name="btn_result_kl">KL</string>
+    <string name="btn_result_sac">SAC</string>
+    <string name="btn_result_fc">FC</string>
+    <string name="btn_result_e">E</string>
+    <string name="btn_result_dp">DP</string>
+
     <!-- ── Pitch Log Labels ───────────────────────────────────────────────── -->
     <string name="pitch_label_ball">Ball</string>
     <string name="pitch_label_strike">Strike</string>
