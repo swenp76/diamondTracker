@@ -40,6 +40,13 @@ class TeamListActivity : ComponentActivity() {
     ) { uri ->
         uri ?: return@registerForActivityResult
         try {
+            val pfd = contentResolver.openFileDescriptor(uri, "r")
+            val size = pfd?.statSize ?: 0L
+            pfd?.close()
+            if (size > BackupManager.MAX_IMPORT_BYTES) {
+                Toast.makeText(this, getString(R.string.toast_import_file_too_large), Toast.LENGTH_LONG).show()
+                return@registerForActivityResult
+            }
             val json = contentResolver.openInputStream(uri)?.use {
                 it.readBytes().toString(Charsets.UTF_8)
             } ?: return@registerForActivityResult

@@ -133,6 +133,8 @@
     <string name="toast_team_imported">\"%s\" imported</string>
     <string name="toast_import_failed">Import failed: %s</string>
     <string name="toast_file_read_error">Could not read file</string>
+    <string name="toast_import_file_too_large">File too large (max 5 MB)</string>
+    <string name="toast_import_invalid_data">Import rejected: file contains invalid data</string>
     <string name="toast_invalid_json">Invalid format – not a valid JSON file</string>
     <string name="toast_invalid_team_format">Invalid format – no team found</string>
     <string name="team_tap_to_edit">Tap to edit</string>

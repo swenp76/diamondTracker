@@ -199,7 +199,7 @@ fun TeamDetailScreen(
                         var tempName by remember(teamName) { mutableStateOf(teamName) }
                         OutlinedTextField(
                             value = tempName,
-                            onValueChange = { tempName = it },
+                            onValueChange = { if (it.length <= 50) tempName = it },
                             modifier = Modifier.weight(1f).padding(end = 12.dp),
                             textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontSize = 18.sp),
                             singleLine = true,
@@ -474,8 +474,8 @@ fun PlayerEditDialog(
         title = { Text(stringResource(if (player == null) R.string.dialog_add_player_title else R.string.dialog_edit_player_title)) },
         text = {
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                DialogTextField(label = stringResource(R.string.label_name), value = name, onValueChange = { name = it }, hint = stringResource(R.string.hint_full_name))
-                DialogTextField(label = stringResource(R.string.label_jersey_number), value = number, onValueChange = { number = it }, hint = stringResource(R.string.hint_jersey_number), keyboardType = KeyboardType.Number)
+                DialogTextField(label = stringResource(R.string.label_name), value = name, onValueChange = { name = it }, hint = stringResource(R.string.hint_full_name), maxLength = 50)
+                DialogTextField(label = stringResource(R.string.label_jersey_number), value = number, onValueChange = { number = it }, hint = stringResource(R.string.hint_jersey_number), keyboardType = KeyboardType.Number, maxLength = 3)
 
                 Text(stringResource(R.string.label_primary_position), fontSize = 12.sp, color = Color.Gray)
                 PositionSpinner(
@@ -502,7 +502,7 @@ fun PlayerEditDialog(
                     Text(stringResource(R.string.label_is_pitcher), fontSize = 15.sp)
                 }
 
-                DialogTextField(label = stringResource(R.string.label_birth_year), value = birthYear, onValueChange = { birthYear = it }, hint = stringResource(R.string.hint_birth_year), keyboardType = KeyboardType.Number)
+                DialogTextField(label = stringResource(R.string.label_birth_year), value = birthYear, onValueChange = { birthYear = it }, hint = stringResource(R.string.hint_birth_year), keyboardType = KeyboardType.Number, maxLength = 4)
             }
         },
         confirmButton = {
@@ -528,12 +528,12 @@ fun PlayerEditDialog(
 }
 
 @Composable
-fun DialogTextField(label: String, value: String, onValueChange: (String) -> Unit, hint: String, keyboardType: KeyboardType = KeyboardType.Text) {
+fun DialogTextField(label: String, value: String, onValueChange: (String) -> Unit, hint: String, keyboardType: KeyboardType = KeyboardType.Text, maxLength: Int = Int.MAX_VALUE) {
     Column(modifier = Modifier.padding(bottom = 16.dp)) {
         Text(label, fontSize = 12.sp, color = Color.Gray)
         OutlinedTextField(
             value = value,
-            onValueChange = onValueChange,
+            onValueChange = { if (it.length <= maxLength) onValueChange(it) },
             placeholder = { Text(hint) },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(
