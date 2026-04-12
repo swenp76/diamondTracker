@@ -80,7 +80,7 @@ abstract class PitcherDao {
 
     @Query("""
         SELECT p.player_id AS player_id,
-            COUNT(CASE WHEN pi.type IN ('B', 'S', 'SO', 'F') THEN 1 END)      AS total_pitches,
+            COUNT(CASE WHEN pi.type IN ('B', 'S', 'SO', 'F', 'HBP') THEN 1 END) AS total_pitches,
             COUNT(CASE WHEN pi.type = 'BF'              THEN 1 END)            AS bf,
             COUNT(CASE WHEN pi.type = 'B'               THEN 1 END)            AS balls,
             COUNT(CASE WHEN pi.type IN ('S', 'SO')      THEN 1 END)            AS strikes,

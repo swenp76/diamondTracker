@@ -342,7 +342,7 @@ class DatabaseHelper(context: Context) {
             hbp = pitches.count { it.type == "HBP" },
             hits = pitches.count { it.type == "H" },
             strikeouts = pitches.count { it.type == "SO" },
-            totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "SO" || it.type == "F" },
+            totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "SO" || it.type == "F" || it.type == "HBP" },
             pitches = pitches,
             ip = formatIP(outs)
         )
