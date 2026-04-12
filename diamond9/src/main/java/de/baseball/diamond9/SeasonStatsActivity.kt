@@ -204,8 +204,8 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper) {
     val rawRows = remember(teamId) { db.getSeasonPitcherStats(teamId) }
     val players = remember(teamId) { db.getPlayersForTeam(teamId).associateBy { it.id } }
 
-    // Default: sort by BF descending (col index 1)
-    var sortCol by remember { mutableStateOf(1) }
+    // Default: sort by S% descending (col index 3)
+    var sortCol by remember { mutableStateOf(3) }
     var sortAsc by remember { mutableStateOf(false) }
 
     val rows = remember(rawRows, sortCol, sortAsc) {
