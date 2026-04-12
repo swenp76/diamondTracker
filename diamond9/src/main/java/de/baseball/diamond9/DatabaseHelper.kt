@@ -179,6 +179,7 @@ object BaseballPositions {
 
 data class GameBatterStatsRow(
     @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "pa")         val pa: Int,
     @ColumnInfo(name = "ab")         val ab: Int,
     @ColumnInfo(name = "hits")       val hits: Int,
     @ColumnInfo(name = "walks")      val walks: Int,
@@ -188,6 +189,7 @@ data class GameBatterStatsRow(
 
 data class SeasonBatterRow(
     @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "pa") val pa: Int,
     @ColumnInfo(name = "ab") val ab: Int,
     @ColumnInfo(name = "hits") val hits: Int,
     @ColumnInfo(name = "walks") val walks: Int,

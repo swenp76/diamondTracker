@@ -264,6 +264,7 @@
     <string name="season_stats_tab_batter">Batter</string>
     <string name="season_stats_tab_pitcher">Pitcher</string>
     <string name="season_stats_col_name">Name</string>
+    <string name="season_stats_col_pa">PA</string>
     <string name="season_stats_col_ab">AB</string>
     <string name="season_stats_col_h">H</string>
     <string name="season_stats_col_avg">AVG</string>

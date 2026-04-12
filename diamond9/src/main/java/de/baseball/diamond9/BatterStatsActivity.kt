@@ -110,6 +110,7 @@ private fun BatterStatsScreen(
                 ) {
                     listOf(
                         stringResource(R.string.season_stats_col_name) to 3f,
+                        stringResource(R.string.season_stats_col_pa)   to 1f,
                         stringResource(R.string.season_stats_col_ab)   to 1f,
                         stringResource(R.string.season_stats_col_h)    to 1f,
                         stringResource(R.string.season_stats_col_avg)  to 1.4f,
@@ -133,7 +134,11 @@ private fun BatterStatsScreen(
                         val name = player?.let { "#${it.number} ${it.name}" }
                             ?: stringResource(R.string.season_stats_unknown_player)
                         val avg = if (row.ab > 0) row.hits.toFloat() / row.ab else 0f
-                        val avgStr = if (row.ab > 0) ".%03d".format((avg * 1000).toInt()) else "---"
+                        val avgStr = when {
+                            row.ab == 0 -> "--"
+                            avg >= 1f -> "1.000"
+                            else -> ".%03d".format((avg * 1000).toInt())
+                        }
                         val isEven = rows.sortedByDescending { it.ab }.indexOf(row) % 2 == 0
 
                         Row(
@@ -144,11 +149,12 @@ private fun BatterStatsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             listOf(
-                                name            to 3f,
-                                row.ab.toString() to 1f,
-                                row.hits.toString() to 1f,
-                                avgStr          to 1.4f,
-                                row.walks.toString() to 1f,
+                                name                  to 3f,
+                                row.pa.toString()     to 1f,
+                                row.ab.toString()     to 1f,
+                                row.hits.toString()   to 1f,
+                                avgStr                to 1.4f,
+                                row.walks.toString()  to 1f,
                                 row.strikeouts.toString() to 1f
                             ).forEachIndexed { i, (text, weight) ->
                                 Text(

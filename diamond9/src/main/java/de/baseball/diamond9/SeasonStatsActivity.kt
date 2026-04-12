@@ -127,6 +127,7 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
         StatsHeaderRow(
             columns = listOf(
                 Pair(stringResource(R.string.season_stats_col_name), 3f),
+                Pair(stringResource(R.string.season_stats_col_pa), 1f),
                 Pair(stringResource(R.string.season_stats_col_ab), 1f),
                 Pair(stringResource(R.string.season_stats_col_h), 1f),
                 Pair(stringResource(R.string.season_stats_col_avg), 1.4f),
@@ -140,13 +141,14 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
                     ?: stringResource(R.string.season_stats_unknown_player)
                 val avg = if (row.ab > 0) row.hits.toFloat() / row.ab else 0f
                 val avgStr = when {
-                    row.ab == 0 -> "---"
+                    row.ab == 0 -> "--"
                     avg >= 1f -> "1.000"
                     else -> ".%03d".format((avg * 1000).toInt())
                 }
                 StatsDataRow(
                     columns = listOf(
                         Pair(name, 3f),
+                        Pair(row.pa.toString(), 1f),
                         Pair(row.ab.toString(), 1f),
                         Pair(row.hits.toString(), 1f),
                         Pair(avgStr, 1.4f),
