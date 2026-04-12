@@ -80,14 +80,14 @@ abstract class PitcherDao {
 
     @Query("""
         SELECT p.player_id AS player_id,
-            COUNT(CASE WHEN pi.type IN ('B', 'S', 'F') THEN 1 END) AS total_pitches,
-            COUNT(CASE WHEN pi.type = 'BF' THEN 1 END) AS bf,
-            COUNT(CASE WHEN pi.type = 'B'  THEN 1 END) AS balls,
-            COUNT(CASE WHEN pi.type = 'S'  THEN 1 END) AS strikes,
-            COUNT(CASE WHEN pi.type = 'F'  THEN 1 END) AS fouls,
-            COUNT(CASE WHEN pi.type = 'W'  THEN 1 END) AS walks,
-            COUNT(CASE WHEN pi.type = 'H'  THEN 1 END) AS hits,
-            COUNT(CASE WHEN pi.type = 'K'  THEN 1 END) AS ks
+            COUNT(CASE WHEN pi.type IN ('B', 'S', 'SO', 'F') THEN 1 END)      AS total_pitches,
+            COUNT(CASE WHEN pi.type = 'BF'              THEN 1 END)            AS bf,
+            COUNT(CASE WHEN pi.type = 'B'               THEN 1 END)            AS balls,
+            COUNT(CASE WHEN pi.type IN ('S', 'SO')      THEN 1 END)            AS strikes,
+            COUNT(CASE WHEN pi.type = 'F'               THEN 1 END)            AS fouls,
+            COUNT(CASE WHEN pi.type = 'W'               THEN 1 END)            AS walks,
+            COUNT(CASE WHEN pi.type = 'H'               THEN 1 END)            AS hits,
+            COUNT(CASE WHEN pi.type = 'SO'              THEN 1 END)            AS ks
         FROM pitches pi
         JOIN pitchers p ON p.id = pi.pitcher_id
         JOIN games g ON g.id = p.game_id
