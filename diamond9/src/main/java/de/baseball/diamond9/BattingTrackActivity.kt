@@ -160,6 +160,7 @@ class BattingTrackActivity : ComponentActivity() {
         fun strikeOut(abId: Long) {
             incrementOuts()
             if (abId != -1L) {
+                db.insertPitchForAtBat(abId, "SO", inning)
                 db.updateAtBatResult(abId, "K")
             }
             nextBatter()
@@ -262,6 +263,7 @@ class BattingTrackActivity : ComponentActivity() {
                         when (result) {
                             "H"   -> db.insertPitchForAtBat(abId, "H", inning)
                             "HBP" -> db.insertPitchForAtBat(abId, "HBP", inning)
+                            "K"   -> db.insertPitchForAtBat(abId, "SO", inning)
                         }
                         db.updateAtBatResult(abId, result)
                         if (isOutResult(result)) incrementOuts()
@@ -443,7 +445,97 @@ class BattingTrackActivity : ComponentActivity() {
                             val label = stringResource(labelRes)
                             if (i > 0) Spacer(Modifier.width(8.dp))
                             Button(
-                                onClick = { onResult(label); showMoreSheet = false },
+                                onClick = { onResult(# Fix: Pitcher Stats — Correct Pitch Type Handling
+
+                                    ## Background
+
+                                    The pitcher stats are calculated by iterating over a sequence of pitch events
+                                    stored per pitcher. Each pitch has a `type` field. There are currently multiple
+                                    bugs caused by incorrect inclusion/exclusion of certain pitch types.
+
+                                    ---
+
+                                    ## Pitch Type Reference
+
+                                    These are ALL pitch types that appear in the data:
+
+                                    | Type | Meaning | Is a thrown pitch? |
+                                    |------|---------|--------------------|
+                                    | `B`   | Ball              | ✅ Yes |
+                                    | `S`   | Strike (called/swinging) | ✅ Yes |
+                                    | `F`   | Foul ball         | ✅ Yes |
+                                    | `SO`  | Strikeout swing (final K pitch) | ✅ Yes |
+                                    | `W`   | Walk (ball 4 event marker) | ❌ No — event only |
+                                    | `H`   | Hit in play (event marker) | ❌ No — event only |
+                                    | `HBP` | Hit by Pitch (real thrown pitch) | ✅ Yes — adds to P, but NOT to S% numerator |
+                                    | `BF`  | Batter Faced (separator marker) | ❌ No — marker only |
+
+                                    ---
+
+                                    ## Correct Stat Definitions
+
+                                    ```
+                                    P   = count of (B + S + F + SO + HBP) ← actual pitches thrown (HBP is a real pitch)
+                                    BB  = count of W                       ← walks
+                                    K   = count of SO                      ← strikeouts
+                                    HBP = count of HBP                     ← hit by pitch
+                                    BF  = count of BF                      ← batters faced
+                                    S%  = (S + F + SO) / P * 100          ← strike percentage (HBP excluded from numerator)
+                                    ```
+
+                                    **W, H, BF must NEVER be added to P.** They are event markers, not pitched balls.
+                                    **HBP counts as a thrown pitch (adds to P) but NOT as a strike (excluded from S% numerator).**
+
+                                    ---
+
+                                    ## Bugs to Fix
+
+                                    **Bug 1 — `SO` not counted**
+                                    `SO` is a real thrown pitch and must be included in P.
+                                    It also counts as a strike for S% calculation.
+                                    It also increments K by 1.
+                                    Currently `SO` appears to be ignored entirely.
+
+                                    **Bug 2 — `W` likely counted as a pitch**
+                                    `W` marks the moment a walk is issued. It is not a thrown pitch.
+                                    It must only increment BB, never P.
+
+                                    **Bug 3 — `H` likely counted as a pitch**
+                                    `H` marks a hit-in-play event. The actual pitches in that at-bat
+                                    were already recorded as B/S/F before the H marker.
+                                    `H` must not be added to P.
+
+                                    **Bug 4 — `HBP` likely counted as a pitch**
+                                    Same as H — it is an outcome event, not a thrown pitch.
+                                    Must only increment HBP counter, never P.
+
+                                    ---
+
+                                    ## Expected Values (all 4 games combined, for verification)
+
+                                    | Pitcher | BF | P | BB | K | HBP | S% |
+                                    |---|---|---|---|---|---|---|
+                                    | Nuri Grade | 16 | 42 | 5 | 1 | 0 | 29% |
+                                    | Jonah Blaschke | 16 | 44 | 5 | 1 | 0 | 25% |
+                                    | Micah Hund | 14 | 33 | 4 | 1 | 1 | 24% |
+                                    | Mitja Hoehmann | 9 | 12 | 1 | 0 | 0 | 17% |
+                                    | Jonas Fellinger | 8 | 26 | 3 | 1 | 1 | 23% |
+                                    | Niklas Porschen | 8 | 31 | 3 | 0 | 1 | 29% |
+                                    | Pit Schmcker | 6 | 30 | 5 | 0 | 0 | 23% |
+                                    | Hugo Kuhlmann | 5 | 14 | 3 | 0 | 0 | 0% |
+                                    | Alexander Puetz | 3 | 11 | 2 | 0 | 0 | 27% |
+
+                                    ---
+
+                                    ## Where to look
+
+                                    Find the stats aggregation for pitchers — likely in `SeasonStatsActivity.kt`,
+                                    `DatabaseHelper.kt`, or a ViewModel/Repository class. Search for:
+                                    - Any loop or filter over pitcher pitches
+                                    - Any `count { it.type == "..." }` or `when (pitch.type)` block
+                                    - The place where `bf`, `balls`, `strikes`, `total`, `bb`, `k` are computed
+
+                                    Fix the logic so it matches the definitions above exactly.label); showMoreSheet = false },
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
                                 colors = ButtonDefaults.buttonColors(containerColor = color),
                                 shape = RoundedCornerShape(8.dp)
