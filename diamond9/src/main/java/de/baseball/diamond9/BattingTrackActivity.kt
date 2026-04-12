@@ -440,13 +440,14 @@ class BattingTrackActivity : ComponentActivity() {
                             R.string.btn_result_kl  to colorResource(R.color.color_strike),
                             R.string.btn_result_sac to colorResource(R.color.color_orange)
                         ).forEachIndexed { i, (labelRes, color) ->
+                            val label = stringResource(labelRes)
                             if (i > 0) Spacer(Modifier.width(8.dp))
                             Button(
-                                onClick = { onResult(stringResource(labelRes)); showMoreSheet = false },
+                                onClick = { onResult(label); showMoreSheet = false },
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
                                 colors = ButtonDefaults.buttonColors(containerColor = color),
                                 shape = RoundedCornerShape(8.dp)
-                            ) { Text(stringResource(labelRes), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                            ) { Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -456,13 +457,14 @@ class BattingTrackActivity : ComponentActivity() {
                             R.string.btn_result_e  to colorResource(R.color.color_foul),
                             R.string.btn_result_dp to colorResource(R.color.color_strike)
                         ).forEachIndexed { i, (labelRes, color) ->
+                            val label = stringResource(labelRes)
                             if (i > 0) Spacer(Modifier.width(8.dp))
                             Button(
-                                onClick = { onResult(stringResource(labelRes)); showMoreSheet = false },
+                                onClick = { onResult(label); showMoreSheet = false },
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
                                 colors = ButtonDefaults.buttonColors(containerColor = color),
                                 shape = RoundedCornerShape(8.dp)
-                            ) { Text(stringResource(labelRes), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                            ) { Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
                         }
                     }
                 }
@@ -522,13 +524,14 @@ class BattingTrackActivity : ComponentActivity() {
                         R.string.btn_result_k   to colorResource(R.color.color_strike),
                         R.string.btn_result_bb  to colorResource(R.color.color_primary)
                     ).forEachIndexed { i, (labelRes, color) ->
+                        val label = stringResource(labelRes)
                         if (i > 0) Spacer(Modifier.width(6.dp))
                         Button(
-                            onClick = { onResult(stringResource(labelRes)); outExpanded = false },
+                            onClick = { onResult(label); outExpanded = false },
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                             colors = ButtonDefaults.buttonColors(containerColor = color),
                             shape = RoundedCornerShape(8.dp)
-                        ) { Text(stringResource(labelRes), fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                        ) { Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                     }
                     Spacer(Modifier.width(6.dp))
                     Button(
@@ -554,13 +557,14 @@ class BattingTrackActivity : ComponentActivity() {
                     Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
                         listOf(R.string.btn_result_go, R.string.btn_result_fo, R.string.btn_result_lo)
                             .forEachIndexed { i, labelRes ->
+                                val label = stringResource(labelRes)
                                 if (i > 0) Spacer(Modifier.width(6.dp))
                                 Button(
-                                    onClick = { onResult(stringResource(labelRes)); outExpanded = false },
+                                    onClick = { onResult(label); outExpanded = false },
                                     modifier = Modifier.weight(1f).fillMaxHeight(),
                                     colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)),
                                     shape = RoundedCornerShape(8.dp)
-                                ) { Text(stringResource(labelRes), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                                ) { Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
                             }
                     }
                 }
