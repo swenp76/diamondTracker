@@ -57,6 +57,42 @@ class PitcherTrendHelperTest {
     }
 
     @Test
+    fun buildBatterStats_soPitchCountsAsStrike() {
+        // B, S, SO (strikeout pitch), BF → 1 ball, 2 strikes, total 3
+        val pitches = listOf(pitch("B"), pitch("S"), pitch("SO"), pitch("BF"))
+        val stats = buildBatterStats(pitches)
+        assertEquals(1, stats.size)
+        assertEquals(1, stats[0].balls)
+        assertEquals(2, stats[0].strikes)   // S + SO
+        assertEquals(3, stats[0].total)
+        assertEquals(2f / 3f, stats[0].strikePercent, 0.001f)
+    }
+
+    @Test
+    fun buildBatterStats_hbpCountsInTotalNotStrikes() {
+        // B, B, B, HBP, BF → 3 balls, 0 strikes, total 4
+        val pitches = listOf(pitch("B"), pitch("B"), pitch("B"), pitch("HBP"), pitch("BF"))
+        val stats = buildBatterStats(pitches)
+        assertEquals(1, stats.size)
+        assertEquals(3, stats[0].balls)
+        assertEquals(0, stats[0].strikes)
+        assertEquals(4, stats[0].total)
+        assertEquals(0f, stats[0].strikePercent, 0.001f)
+    }
+
+    @Test
+    fun buildBatterStats_hPitchCountsInTotalNotStrikes() {
+        // S, S, H, BF → 0 balls, 2 strikes, 1 H-pitch, total 3
+        val pitches = listOf(pitch("S"), pitch("S"), pitch("H"), pitch("BF"))
+        val stats = buildBatterStats(pitches)
+        assertEquals(1, stats.size)
+        assertEquals(0, stats[0].balls)
+        assertEquals(2, stats[0].strikes)
+        assertEquals(3, stats[0].total)
+        assertEquals(2f / 3f, stats[0].strikePercent, 0.001f)
+    }
+
+    @Test
     fun buildBatterStats_bfWithNoPrecedingPitches_skipped() {
         // Leading BF (no pitches before it) should not emit a BatterStats entry
         val pitches = listOf(pitch("BF"), pitch("B"), pitch("S"), pitch("BF"))

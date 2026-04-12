@@ -14,15 +14,19 @@ fun buildBatterStats(pitches: List<Pitch>): List<BatterStats> {
     var balls = 0
     var strikes = 0
     var fouls = 0
+    var other = 0  // HBP, H: real thrown pitches that end the at-bat
     var batterNr = 1
 
     pitches.forEach { pitch ->
         when (pitch.type) {
-            "B" -> balls++
-            "S" -> strikes++
-            "F" -> fouls++
+            "B"   -> balls++
+            "S"   -> strikes++
+            "SO"  -> strikes++   // strikeout pitch counts as a strike
+            "F"   -> fouls++
+            "HBP" -> other++     // hit by pitch counts in total, not strikes
+            "H"   -> other++     // ball-in-play counts in total, not strikes
             "BF" -> {
-                val total = balls + strikes + fouls
+                val total = balls + strikes + fouls + other
                 if (total > 0) {
                     batters.add(
                         BatterStats(
@@ -36,7 +40,7 @@ fun buildBatterStats(pitches: List<Pitch>): List<BatterStats> {
                     )
                 }
                 batterNr++
-                balls = 0; strikes = 0; fouls = 0
+                balls = 0; strikes = 0; fouls = 0; other = 0
             }
         }
     }
