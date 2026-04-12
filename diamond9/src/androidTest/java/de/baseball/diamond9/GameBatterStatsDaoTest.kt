@@ -184,4 +184,66 @@ class GameBatterStatsDaoTest {
         assertEquals(3, atBatDao.getOutsForGame(gId1))
         assertEquals(1, atBatDao.getOutsForGame(gId2))
     }
+
+    @Test
+    fun getOutsForGame_countsAllNewOutTypes() {
+        // KL, GO, FO, LO, DP are all in the SQL IN-list alongside K and OUT
+        val pId = newPlayer(); val gId = newGame()
+        ab(gId, pId, 1, "KL")
+        ab(gId, pId, 2, "GO")
+        ab(gId, pId, 3, "FO")
+        ab(gId, pId, 4, "LO")
+        ab(gId, pId, 5, "DP")
+
+        assertEquals(5, atBatDao.getOutsForGame(gId))
+    }
+
+    @Test
+    fun getOutsForGame_sacCountsAsOut() {
+        val pId = newPlayer(); val gId = newGame()
+        ab(gId, pId, 1, "SAC")
+
+        assertEquals(1, atBatDao.getOutsForGame(gId))
+    }
+
+    // ── New result types — AB / strikeout counting ────────────────────────────
+
+    @Test
+    fun getGameBatterStats_sacExcludedFromAb() {
+        // SAC is not an at-bat (like BB and HBP), but it is a plate appearance
+        val pId = newPlayer(); val gId = newGame()
+        ab(gId, pId, 1, "SAC")
+
+        val stats = atBatDao.getGameBatterStats(gId)
+        assertEquals(1, stats.size)
+        assertEquals(1, stats[0].pa)
+        assertEquals(0, stats[0].ab)
+    }
+
+    @Test
+    fun getGameBatterStats_klCountsAsStrikeout() {
+        // KL (strikeout looking) counts as AB and strikeout, same as K
+        val pId = newPlayer(); val gId = newGame()
+        ab(gId, pId, 1, "KL")
+
+        val stats = atBatDao.getGameBatterStats(gId)
+        assertEquals(1, stats.size)
+        assertEquals(1, stats[0].ab)
+        assertEquals(1, stats[0].strikeouts)
+    }
+
+    @Test
+    fun getGameBatterStats_goFoLoDpCountAsAb() {
+        // Ground/Fly/Line out and double play all count as at-bats
+        val pId = newPlayer(); val gId = newGame()
+        ab(gId, pId, 1, "GO")
+        ab(gId, pId, 2, "FO")
+        ab(gId, pId, 3, "LO")
+        ab(gId, pId, 4, "DP")
+
+        val stats = atBatDao.getGameBatterStats(gId)
+        assertEquals(1, stats.size)
+        assertEquals(4, stats[0].ab)
+        assertEquals(0, stats[0].strikeouts)
+    }
 }
