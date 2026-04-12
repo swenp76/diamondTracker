@@ -26,7 +26,7 @@ fun buildBatterStats(pitches: List<Pitch>): List<BatterStats> {
                 if (total > 0) {
                     batters.add(
                         BatterStats(
-                            batterNr = batterNr++,
+                            batterNr = batterNr,
                             balls = balls,
                             strikes = strikes,
                             fouls = fouls,
@@ -35,6 +35,7 @@ fun buildBatterStats(pitches: List<Pitch>): List<BatterStats> {
                         )
                     )
                 }
+                batterNr++
                 balls = 0; strikes = 0; fouls = 0
             }
         }
@@ -86,8 +87,8 @@ fun groupPitchesByBatter(pitches: List<Pitch>): List<BatterGroup> {
                     val groupInning = current.firstOrNull()?.inning ?: 1
                     groups.add(
                         BatterGroup(
-                            batterNr = batterNr++,
-                            battingSlot = ((batterNr - 2) % 9) + 1,
+                            batterNr = batterNr,
+                            battingSlot = ((batterNr - 1) % 9) + 1,
                             jerseyNumber = "",
                             pitches = current.toList(),
                             inning = groupInning
@@ -95,6 +96,7 @@ fun groupPitchesByBatter(pitches: List<Pitch>): List<BatterGroup> {
                     )
                     current = mutableListOf()
                 }
+                batterNr++
             }
         }
     }
