@@ -131,6 +131,7 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
                 Pair(stringResource(R.string.season_stats_col_ab), 1f),
                 Pair(stringResource(R.string.season_stats_col_h), 1f),
                 Pair(stringResource(R.string.season_stats_col_avg), 1.4f),
+                Pair(stringResource(R.string.season_stats_col_obp), 1.4f),
                 Pair(stringResource(R.string.season_stats_col_bb), 1f),
                 Pair(stringResource(R.string.season_stats_col_k), 1f)
             )
@@ -145,6 +146,13 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
                     avg >= 1f -> "1.000"
                     else -> ".%03d".format((avg * 1000).toInt())
                 }
+                val obpDenom = row.ab + row.walks + row.hbp
+                val obp = if (obpDenom > 0) (row.hits + row.walks + row.hbp).toFloat() / obpDenom else 0f
+                val obpStr = when {
+                    obpDenom == 0 -> "--"
+                    obp >= 1f -> "1.000"
+                    else -> ".%03d".format((obp * 1000).toInt())
+                }
                 StatsDataRow(
                     columns = listOf(
                         Pair(name, 3f),
@@ -152,6 +160,7 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
                         Pair(row.ab.toString(), 1f),
                         Pair(row.hits.toString(), 1f),
                         Pair(avgStr, 1.4f),
+                        Pair(obpStr, 1.4f),
                         Pair(row.walks.toString(), 1f),
                         Pair(row.strikeouts.toString(), 1f)
                     ),

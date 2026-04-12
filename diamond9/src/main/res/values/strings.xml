@@ -284,6 +284,7 @@
     <string name="season_stats_col_ab">AB</string>
     <string name="season_stats_col_h">H</string>
     <string name="season_stats_col_avg">AVG</string>
+    <string name="season_stats_col_obp">OBP</string>
     <string name="season_stats_col_bb">BB</string>
     <string name="season_stats_col_k">K</string>
     <string name="season_stats_col_bf">BF</string>

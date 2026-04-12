@@ -114,6 +114,7 @@ private fun BatterStatsScreen(
                         stringResource(R.string.season_stats_col_ab)   to 1f,
                         stringResource(R.string.season_stats_col_h)    to 1f,
                         stringResource(R.string.season_stats_col_avg)  to 1.4f,
+                        stringResource(R.string.season_stats_col_obp)  to 1.4f,
                         stringResource(R.string.season_stats_col_bb)   to 1f,
                         stringResource(R.string.season_stats_col_k)    to 1f
                     ).forEachIndexed { i, (label, weight) ->
@@ -139,6 +140,13 @@ private fun BatterStatsScreen(
                             avg >= 1f -> "1.000"
                             else -> ".%03d".format((avg * 1000).toInt())
                         }
+                        val obpDenom = row.ab + row.walks + row.hbp
+                        val obp = if (obpDenom > 0) (row.hits + row.walks + row.hbp).toFloat() / obpDenom else 0f
+                        val obpStr = when {
+                            obpDenom == 0 -> "--"
+                            obp >= 1f -> "1.000"
+                            else -> ".%03d".format((obp * 1000).toInt())
+                        }
                         val isEven = rows.sortedByDescending { it.ab }.indexOf(row) % 2 == 0
 
                         Row(
@@ -154,6 +162,7 @@ private fun BatterStatsScreen(
                                 row.ab.toString()     to 1f,
                                 row.hits.toString()   to 1f,
                                 avgStr                to 1.4f,
+                                obpStr                to 1.4f,
                                 row.walks.toString()  to 1f,
                                 row.strikeouts.toString() to 1f
                             ).forEachIndexed { i, (text, weight) ->
