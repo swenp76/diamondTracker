@@ -1,14 +1,14 @@
 plugins {
-    id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
-    id 'org.jetbrains.kotlin.plugin.compose'
-    id 'com.google.devtools.ksp'
-    id 'com.mikepenz.aboutlibraries.plugin'
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.jetbrains.kotlin.plugin.compose)
+    alias(libs.plugins.google.devtools.ksp)
+    alias(libs.plugins.mikepenz.aboutlibraries.plugin)
 }
 
 android {
     namespace 'de.baseball.diamond9'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "de.baseball.diamond9"
@@ -35,35 +35,33 @@ android {
     }
     buildFeatures {
         viewBinding true
-        compose true
         buildConfig true
     }
 }
 
 dependencies {
-    implementation platform('androidx.compose:compose-bom:2024.12.01')
-    implementation 'androidx.compose.ui:ui'
-    implementation 'androidx.compose.material3:material3'
-    implementation 'androidx.compose.material:material-icons-core'
-    implementation 'androidx.compose.material:material-icons-extended'
-    implementation 'androidx.activity:activity-compose:1.10.1'
-    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
-    implementation 'com.mikepenz:aboutlibraries-compose:11.2.3'
-    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+    implementation platform(libs.compose.bom)
+    implementation libs.compose.ui
+    implementation libs.compose.material3
+    implementation libs.compose.material
+    implementation libs.androidx.compose.material
+    implementation libs.activity.compose
+    implementation libs.lifecycle.runtime.compose
+    implementation libs.aboutlibraries.compose
+    implementation libs.mpandroidchart
 
-    implementation 'androidx.core:core-ktx:1.15.0'
-    implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'com.google.android.material:material:1.12.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
-    implementation 'androidx.recyclerview:recyclerview:1.4.0'
+    implementation libs.core.ktx
+    implementation libs.appcompat
+    implementation libs.material
+    implementation libs.constraintlayout
+    implementation libs.recyclerview
 
-    def room_version = "2.6.1"
-    implementation "androidx.room:room-runtime:$room_version"
-    implementation "androidx.room:room-ktx:$room_version"
-    ksp "androidx.room:room-compiler:$room_version"
+    implementation libs.room.runtime
+    implementation libs.room.ktx
+    ksp libs.room.compiler
 
-    androidTestImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test:runner:1.5.2'
-    androidTestImplementation "androidx.room:room-testing:$room_version"
+    androidTestImplementation libs.junit
+    androidTestImplementation libs.ext.junit
+    androidTestImplementation libs.runner
+    androidTestImplementation libs.room.testing
 }
