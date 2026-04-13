@@ -240,6 +240,65 @@ class SeasonStatsDaoTest {
         assertEquals(1, s2.balls)
     }
 
+    // ── PA / AB / hbp field coverage ─────────────────────────────────────────
+
+    @Test
+    fun batterStats_paIncludesBBAndHBP() {
+        // PA = COUNT(*); BB and HBP count as PA but not AB
+        val playerId = playerDao.insertPlayer(Player(teamId = teamId, name = "Müller", number = "7", primaryPosition = 3))
+        val gameId = gameDao.insertGame(Game(date = "01.04.2026", opponent = "Bears", teamId = teamId))
+        atBatDao.insertAtBat(AtBat(gameId = gameId, playerId = playerId, slot = 1, inning = 1, result = "H"))
+        atBatDao.insertAtBat(AtBat(gameId = gameId, playerId = playerId, slot = 1, inning = 2, result = "BB"))
+        atBatDao.insertAtBat(AtBat(gameId = gameId, playerId = playerId, slot = 1, inning = 3, result = "HBP"))
+
+        val stats = atBatDao.getSeasonBatterStats(teamId)
+        assertEquals(1, stats.size)
+        assertEquals(3, stats[0].pa)   // all three count as PA
+        assertEquals(1, stats[0].ab)   // only H counts as AB
+    }
+
+    @Test
+    fun batterStats_sacExcludedFromAb() {
+        // SAC is a PA but not an AB (same rule as BB and HBP)
+        val playerId = playerDao.insertPlayer(Player(teamId = teamId, name = "Weber", number = "4", primaryPosition = 4))
+        val gameId = gameDao.insertGame(Game(date = "01.04.2026", opponent = "Bears", teamId = teamId))
+        atBatDao.insertAtBat(AtBat(gameId = gameId, playerId = playerId, slot = 1, inning = 1, result = "SAC"))
+
+        val stats = atBatDao.getSeasonBatterStats(teamId)
+        assertEquals(1, stats.size)
+        assertEquals(1, stats[0].pa)
+        assertEquals(0, stats[0].ab)
+    }
+
+    @Test
+    fun batterStats_klCountsAsStrikeout() {
+        // KL (strikeout looking) increments strikeouts just like K
+        val playerId = playerDao.insertPlayer(Player(teamId = teamId, name = "Schmidt", number = "9", primaryPosition = 7))
+        val gameId = gameDao.insertGame(Game(date = "01.04.2026", opponent = "Bears", teamId = teamId))
+        atBatDao.insertAtBat(AtBat(gameId = gameId, playerId = playerId, slot = 1, inning = 1, result = "KL"))
+
+        val stats = atBatDao.getSeasonBatterStats(teamId)
+        assertEquals(1, stats.size)
+        assertEquals(1, stats[0].ab)
+        assertEquals(1, stats[0].strikeouts)
+    }
+
+    @Test
+    fun batterStats_hbpFieldCorrect() {
+        // hbp field is used to compute OBP; verify it is counted separately
+        val playerId = playerDao.insertPlayer(Player(teamId = teamId, name = "Braun", number = "2", primaryPosition = 5))
+        val gameId = gameDao.insertGame(Game(date = "01.04.2026", opponent = "Bears", teamId = teamId))
+        atBatDao.insertAtBat(AtBat(gameId = gameId, playerId = playerId, slot = 1, inning = 1, result = "HBP"))
+        atBatDao.insertAtBat(AtBat(gameId = gameId, playerId = playerId, slot = 1, inning = 2, result = "HBP"))
+        atBatDao.insertAtBat(AtBat(gameId = gameId, playerId = playerId, slot = 1, inning = 3, result = "H"))
+
+        val stats = atBatDao.getSeasonBatterStats(teamId)
+        assertEquals(1, stats.size)
+        assertEquals(3, stats[0].pa)
+        assertEquals(2, stats[0].hbp)
+        assertEquals(1, stats[0].hits)
+    }
+
     // ── empty cases ───────────────────────────────────────────────────────────
 
     @Test

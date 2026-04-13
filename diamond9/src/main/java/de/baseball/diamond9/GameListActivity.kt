@@ -83,17 +83,24 @@ class GameListActivity : ComponentActivity() {
     private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
             try {
+                val pfd = contentResolver.openFileDescriptor(it, "r")
+                val size = pfd?.statSize ?: 0L
+                pfd?.close()
+                if (size > BackupManager.MAX_IMPORT_BYTES) {
+                    Toast.makeText(this, getString(R.string.toast_import_file_too_large), Toast.LENGTH_LONG).show()
+                    return@let
+                }
                 contentResolver.openInputStream(it)?.use { isStream ->
                     val json = JSONObject(isStream.bufferedReader().readText())
                     if (json.optString("type") == "single_game") {
                         pendingImportJson = json
                         onImportConfirmed?.invoke(json)
                     } else {
-                        Toast.makeText(this, "Invalid game file", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.toast_game_invalid_format), Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(this, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.toast_game_import_failed, e.message), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -262,8 +269,12 @@ private fun GameListScreen(
             text = { Text(stringResource(R.string.dialog_import_game_confirm, date, opp)) },
             confirmButton = {
                 Button(onClick = {
-                    backupManager.importGame(teamId, json)
-                    refresh()
+                    try {
+                        backupManager.importGame(teamId, json)
+                        refresh()
+                    } catch (e: IllegalArgumentException) {
+                        Toast.makeText(context, context.getString(R.string.toast_import_invalid_data), Toast.LENGTH_LONG).show()
+                    }
                     pendingImport = null
                 }) { Text(stringResource(R.string.btn_import)) }
             },
@@ -317,7 +328,7 @@ private fun GameListScreen(
             text = {
                 OutlinedTextField(
                     value = newOpponent,
-                    onValueChange = { newOpponent = it; error = false },
+                    onValueChange = { if (it.length <= 50) { newOpponent = it; error = false } },
                     label = { Text(stringResource(R.string.label_opponent)) },
                     isError = error,
                     supportingText = if (error) { { Text(stringResource(R.string.error_required_field)) } } else null,
@@ -593,9 +604,11 @@ private fun GameDialog(
                 OutlinedTextField(
                     value = opponentText,
                     onValueChange = {
-                        opponentText = it
-                        if (it.isNotEmpty()) selectedOpponent = null
-                        opponentError = false
+                        if (it.length <= 50) {
+                            opponentText = it
+                            if (it.isNotEmpty()) selectedOpponent = null
+                            opponentError = false
+                        }
                     },
                     label = { Text(stringResource(R.string.hint_opponent)) },
                     isError = opponentError,

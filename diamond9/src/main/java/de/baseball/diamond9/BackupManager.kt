@@ -24,6 +24,17 @@ class BackupManager(private val context: Context) {
 
     companion object {
         const val DB_VERSION = 11
+
+        /** Maximum file size accepted for any import (5 MB). */
+        const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
+
+        /** Valid pitch type strings stored in the database. */
+        val VALID_PITCH_TYPES = setOf("B", "S", "F", "BF", "SO", "H", "HBP", "W")
+
+        /** Valid at-bat result strings stored in the database. */
+        val VALID_AT_BAT_RESULTS = setOf(
+            "K", "KL", "GO", "FO", "LO", "BB", "H", "HBP", "SAC", "FC", "E", "DP", "OUT"
+        )
     }
 
     private val db = DatabaseHelper(context)
@@ -340,12 +351,14 @@ class BackupManager(private val context: Context) {
 
     fun importGame(teamId: Long, json: JSONObject): Long {
         val gData = json.optJSONObject("game") ?: return -1
+        val isHome = gData.optInt("is_home", 1)
+        require(isHome in 0..1) { "Invalid is_home value: $isHome" }
         val gameId = db.insertGame(
-            date = gData.getString("date"),
-            opponent = gData.getString("opponent"),
+            date = gData.getString("date").take(10),
+            opponent = gData.getString("opponent").take(50),
             teamId = teamId,
-            gameTime = gData.optString("game_time", ""),
-            isHome = gData.optInt("is_home", 1)
+            gameTime = gData.optString("game_time", "").take(5),
+            isHome = isHome
         )
         db.updateGameState(gameId, gData.optInt("inning", 1), gData.optInt("outs", 0))
         db.updateLeadoffSlot(gameId, gData.optInt("leadoff_slot", 1))
@@ -356,8 +369,8 @@ class BackupManager(private val context: Context) {
         val teamPlayers = db.getPlayersForTeam(teamId)
         fun findOrCreatePlayer(pObj: JSONObject?): Long {
             if (pObj == null) return 0L
-            val name = pObj.getString("name")
-            val number = pObj.getString("number")
+            val name = pObj.getString("name").take(50)
+            val number = pObj.getString("number").take(3)
             val existing = teamPlayers.find { it.name == name && it.number == number }
             if (existing != null) return existing.id
             return db.insertPlayer(teamId, name, number, 1) // Default pos 1 (P)
@@ -368,7 +381,13 @@ class BackupManager(private val context: Context) {
         if (sbArr != null) {
             for (i in 0 until sbArr.length()) {
                 val r = sbArr.getJSONObject(i)
-                db.upsertScoreboardRun(gameId, r.getInt("inning"), r.getInt("is_home"), r.getInt("runs"))
+                val inning = r.getInt("inning")
+                val isHome = r.getInt("is_home")
+                val runs = r.getInt("runs")
+                require(inning in 1..20) { "Invalid scoreboard inning: $inning" }
+                require(isHome in 0..1) { "Invalid is_home value: $isHome" }
+                require(runs in 0..99) { "Invalid runs value: $runs" }
+                db.upsertScoreboardRun(gameId, inning, isHome, runs)
             }
         }
 
@@ -377,8 +396,10 @@ class BackupManager(private val context: Context) {
         if (lineupArr != null) {
             for (i in 0 until lineupArr.length()) {
                 val entry = lineupArr.getJSONObject(i)
+                val slot = entry.getInt("slot")
+                require(slot in 1..10) { "Invalid lineup slot: $slot" }
                 val pid = findOrCreatePlayer(entry.getJSONObject("player"))
-                db.setOwnLineupPlayer(gameId, entry.getInt("slot"), pid)
+                db.setOwnLineupPlayer(gameId, slot, pid)
             }
         }
 
@@ -387,9 +408,11 @@ class BackupManager(private val context: Context) {
         if (subArr != null) {
             for (i in 0 until subArr.length()) {
                 val s = subArr.getJSONObject(i)
+                val slot = s.getInt("slot")
+                require(slot in 1..10) { "Invalid substitution slot: $slot" }
                 val pOut = findOrCreatePlayer(s.optJSONObject("player_out"))
                 val pIn = findOrCreatePlayer(s.optJSONObject("player_in"))
-                db.addSubstitution(gameId, s.getInt("slot"), pOut, pIn)
+                db.addSubstitution(gameId, slot, pOut, pIn)
             }
         }
 
@@ -398,15 +421,24 @@ class BackupManager(private val context: Context) {
         if (abArr != null) {
             for (i in 0 until abArr.length()) {
                 val abObj = abArr.getJSONObject(i)
+                val abSlot = abObj.getInt("slot")
+                val abInning = abObj.getInt("inning")
+                require(abSlot in 1..10) { "Invalid at-bat slot: $abSlot" }
+                require(abInning in 1..20) { "Invalid at-bat inning: $abInning" }
                 val pid = findOrCreatePlayer(abObj.optJSONObject("player"))
-                val abId = db.insertAtBat(gameId, pid, abObj.getInt("slot"), abObj.getInt("inning"))
+                val abId = db.insertAtBat(gameId, pid, abSlot, abInning)
                 val result = if (abObj.isNull("result")) null else abObj.getString("result")
+                require(result == null || result in VALID_AT_BAT_RESULTS) { "Invalid at-bat result: $result" }
                 db.updateAtBatResult(abId, result)
                 val pArr = abObj.optJSONArray("pitches")
                 if (pArr != null) {
                     for (j in 0 until pArr.length()) {
                         val p = pArr.getJSONObject(j)
-                        db.insertPitchForAtBat(abId, p.getString("type"), p.getInt("inning"))
+                        val pitchType = p.getString("type")
+                        val pitchInning = p.getInt("inning")
+                        require(pitchType in VALID_PITCH_TYPES) { "Invalid pitch type: $pitchType" }
+                        require(pitchInning in 1..20) { "Invalid pitch inning: $pitchInning" }
+                        db.insertPitchForAtBat(abId, pitchType, pitchInning)
                     }
                 }
             }
@@ -418,12 +450,16 @@ class BackupManager(private val context: Context) {
             for (i in 0 until pitcherArr.length()) {
                 val pObj = pitcherArr.getJSONObject(i)
                 val pid = findOrCreatePlayer(pObj.optJSONObject("player"))
-                val pitcherId = db.insertPitcher(gameId, pObj.getString("name"), pid)
+                val pitcherId = db.insertPitcher(gameId, pObj.getString("name").take(50), pid)
                 val pArr = pObj.optJSONArray("pitches")
                 if (pArr != null) {
                     for (j in 0 until pArr.length()) {
                         val p = pArr.getJSONObject(j)
-                        db.insertPitch(pitcherId, p.getString("type"), p.getInt("inning"))
+                        val pitchType = p.getString("type")
+                        val pitchInning = p.getInt("inning")
+                        require(pitchType in VALID_PITCH_TYPES) { "Invalid pitch type: $pitchType" }
+                        require(pitchInning in 1..20) { "Invalid pitch inning: $pitchInning" }
+                        db.insertPitch(pitcherId, pitchType, pitchInning)
                     }
                 }
             }
@@ -434,20 +470,24 @@ class BackupManager(private val context: Context) {
         if (oppLArr != null) {
             for (i in 0 until oppLArr.length()) {
                 val l = oppLArr.getJSONObject(i)
-                db.upsertLineupEntry(gameId, l.getInt("batting_order"), l.getString("jersey_number"))
+                val order = l.getInt("batting_order")
+                require(order in 1..10) { "Invalid batting order: $order" }
+                db.upsertLineupEntry(gameId, order, l.getString("jersey_number").take(3))
             }
         }
         val oppBArr = json.optJSONArray("opponent_bench")
         if (oppBArr != null) {
             for (i in 0 until oppBArr.length()) {
-                db.insertBenchPlayer(gameId, oppBArr.getJSONObject(i).getString("jersey_number"))
+                db.insertBenchPlayer(gameId, oppBArr.getJSONObject(i).getString("jersey_number").take(3))
             }
         }
         val oppSArr = json.optJSONArray("opponent_substitutions")
         if (oppSArr != null) {
             for (i in 0 until oppSArr.length()) {
                 val os = oppSArr.getJSONObject(i)
-                db.addOpponentSubstitution(gameId, os.getInt("slot"), os.getString("jersey_out"), os.getString("jersey_in"))
+                val slot = os.getInt("slot")
+                require(slot in 1..10) { "Invalid opponent substitution slot: $slot" }
+                db.addOpponentSubstitution(gameId, slot, os.getString("jersey_out").take(3), os.getString("jersey_in").take(3))
             }
         }
 
