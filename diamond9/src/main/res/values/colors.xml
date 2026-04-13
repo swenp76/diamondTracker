@@ -10,6 +10,7 @@
     <!-- Pitch / result colors -->
     <color name="color_ball">#1a5fa8</color>
     <color name="color_strike">#c0392b</color>
+    <color name="color_strike_looking">#7b241c</color>
     <color name="color_foul">#f39c12</color>
     <color name="color_hit">#e74c3c</color>
     <color name="color_walk">#d35400</color>

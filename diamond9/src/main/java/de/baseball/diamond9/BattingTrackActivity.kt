@@ -264,6 +264,7 @@ class BattingTrackActivity : ComponentActivity() {
                             "H"   -> db.insertPitchForAtBat(abId, "H", inning)
                             "HBP" -> db.insertPitchForAtBat(abId, "HBP", inning)
                             "K"   -> db.insertPitchForAtBat(abId, "SO", inning)
+                            "KL"  -> db.insertPitchForAtBat(abId, "S", inning)
                         }
                         db.updateAtBatResult(abId, result)
                         if (isOutResult(result)) incrementOuts()
@@ -432,6 +433,32 @@ class BattingTrackActivity : ComponentActivity() {
     ) {
         var outExpanded by remember { mutableStateOf(false) }
         var showMoreSheet by remember { mutableStateOf(false) }
+        var showKSheet by remember { mutableStateOf(false) }
+
+        if (showKSheet) {
+            ModalBottomSheet(onDismissRequest = { showKSheet = false }) {
+                Row(
+                    modifier = Modifier
+                        .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
+                        .fillMaxWidth()
+                        .height(72.dp)
+                ) {
+                    Button(
+                        onClick = { onResult("K"); showKSheet = false },
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) { Text(stringResource(R.string.btn_strikeout_swinging), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = { onResult("KL"); showKSheet = false },
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike_looking)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) { Text(stringResource(R.string.btn_strikeout_looking), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                }
+            }
+        }
 
         if (showMoreSheet) {
             ModalBottomSheet(onDismissRequest = { showMoreSheet = false }) {
@@ -439,7 +466,6 @@ class BattingTrackActivity : ComponentActivity() {
                     Row(modifier = Modifier.fillMaxWidth().height(60.dp)) {
                         listOf(
                             R.string.btn_result_hbp to colorResource(R.color.color_hbp),
-                            R.string.btn_result_kl  to colorResource(R.color.color_strike),
                             R.string.btn_result_sac to colorResource(R.color.color_orange)
                         ).forEachIndexed { i, (labelRes, color) ->
                             val label = stringResource(labelRes)
@@ -529,7 +555,13 @@ class BattingTrackActivity : ComponentActivity() {
                         val label = stringResource(labelRes)
                         if (i > 0) Spacer(Modifier.width(6.dp))
                         Button(
-                            onClick = { onResult(label); outExpanded = false },
+                            onClick = {
+                                if (labelRes == R.string.btn_result_k) {
+                                    showKSheet = true; outExpanded = false
+                                } else {
+                                    onResult(label); outExpanded = false
+                                }
+                            },
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                             colors = ButtonDefaults.buttonColors(containerColor = color),
                             shape = RoundedCornerShape(8.dp)
