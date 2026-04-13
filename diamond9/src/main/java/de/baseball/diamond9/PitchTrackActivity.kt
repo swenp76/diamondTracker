@@ -72,6 +72,8 @@ class PitchTrackActivity : ComponentActivity() {
         var outs by remember { mutableStateOf(0) }
         var showInningSnackbar by remember { mutableStateOf(false) }
         var showTrendSheet by remember { mutableStateOf(false) }
+        var showHitSheet by remember { mutableStateOf(false) }
+        var showOutSheet by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
 
@@ -190,11 +192,7 @@ class PitchTrackActivity : ComponentActivity() {
                         }
                         refresh()
                     },
-                    onHit = {
-                        db.insertPitch(pitcherId, "H", inning)
-                        db.insertPitch(pitcherId, "BF", inning)
-                        refresh()
-                    },
+                    onShowHitSheet = { showHitSheet = true },
                     onFoul = {
                         db.insertPitch(pitcherId, "F", inning)
                         refresh()
@@ -212,7 +210,7 @@ class PitchTrackActivity : ComponentActivity() {
                         db.undoLastPitch(pitcherId)
                         refresh()
                     },
-                    onOut = { addOut() },
+                    onShowOutSheet = { showOutSheet = true },
                     onShowTrend = { showTrendSheet = true }
                 )
             }
@@ -224,6 +222,75 @@ class PitchTrackActivity : ComponentActivity() {
                 containerColor = Color.White
             ) {
                 PitcherTrendSheet(stats)
+            }
+        }
+
+        if (showHitSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showHitSheet = false },
+                containerColor = Color.White
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 32.dp)
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth().height(64.dp)) {
+                        listOf("1B", "2B", "3B", "HR").forEachIndexed { i, type ->
+                            if (i > 0) Spacer(modifier = Modifier.width(8.dp))
+                            val color = if (type == "HR") colorResource(R.color.color_hit_homer) else colorResource(R.color.color_hit)
+                            Button(
+                                onClick = {
+                                    db.insertPitch(pitcherId, type, inning)
+                                    db.insertPitch(pitcherId, "BF", inning)
+                                    refresh()
+                                    showHitSheet = false
+                                },
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                colors = ButtonDefaults.buttonColors(containerColor = color),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(type, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showOutSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showOutSheet = false },
+                containerColor = Color.White
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 32.dp)
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth().height(64.dp)) {
+                        listOf("GO", "FO", "K").forEachIndexed { i, label ->
+                            if (i > 0) Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    val pitchType = if (label == "K") "SO" else label
+                                    db.insertPitch(pitcherId, pitchType, inning)
+                                    db.insertPitch(pitcherId, "BF", inning)
+                                    addOut()
+                                    refresh()
+                                    showOutSheet = false
+                                },
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -375,8 +442,14 @@ class PitchTrackActivity : ComponentActivity() {
                         bfCount--
                     }
                     "HBP" -> Text(stringResource(R.string.pitch_label_hbp), color = colorResource(R.color.color_hbp), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    "H" -> Text(stringResource(R.string.pitch_label_hit), color = colorResource(R.color.color_hit), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    "W" -> Text(stringResource(R.string.pitch_label_walk), color = colorResource(R.color.color_walk), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "H"  -> Text(stringResource(R.string.pitch_label_hit), color = colorResource(R.color.color_hit), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "1B" -> Text(stringResource(R.string.pitch_label_1b), color = colorResource(R.color.color_hit), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "2B" -> Text(stringResource(R.string.pitch_label_2b), color = colorResource(R.color.color_hit), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "3B" -> Text(stringResource(R.string.pitch_label_3b), color = colorResource(R.color.color_hit), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "HR" -> Text(stringResource(R.string.pitch_label_hr), color = colorResource(R.color.color_hit_homer), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "GO" -> Text(stringResource(R.string.pitch_label_go), color = colorResource(R.color.color_text_secondary), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "FO" -> Text(stringResource(R.string.pitch_label_fo), color = colorResource(R.color.color_text_secondary), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "W"  -> Text(stringResource(R.string.pitch_label_walk), color = colorResource(R.color.color_walk), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "SO" -> Text(stringResource(R.string.pitch_label_strikeout), color = colorResource(R.color.color_green_bright), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "B", "S", "F" -> {
                         val currentNum = pitchNumber
@@ -416,12 +489,12 @@ class PitchTrackActivity : ComponentActivity() {
     fun ActionButtons(
         onBall: () -> Unit,
         onStrike: () -> Unit,
-        onHit: () -> Unit,
+        onShowHitSheet: () -> Unit,
         onFoul: () -> Unit,
         onHbp: () -> Unit,
         onBf: () -> Unit,
         onUndo: () -> Unit,
-        onOut: () -> Unit,
+        onShowOutSheet: () -> Unit,
         onShowTrend: () -> Unit
     ) {
         Card(
@@ -465,7 +538,7 @@ class PitchTrackActivity : ComponentActivity() {
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.height(64.dp)) {
                     Button(
-                        onClick = onHit,
+                        onClick = onShowHitSheet,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit)),
                         shape = RoundedCornerShape(8.dp)
@@ -503,7 +576,7 @@ class PitchTrackActivity : ComponentActivity() {
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = onOut,
+                        onClick = onShowOutSheet,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
                         shape = RoundedCornerShape(8.dp)

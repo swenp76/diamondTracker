@@ -294,13 +294,17 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper) {
         fun spct(r: SeasonPitcherRow) =
             if (r.totalPitches > 0) (r.strikes + r.fouls).toFloat() / r.totalPitches else -1f
         val sorted = when (sortCol) {
-            0 -> rawRows.sortedBy { name(it) }
-            1 -> rawRows.sortedBy { it.bf }
-            2 -> rawRows.sortedBy { it.totalPitches }
-            3 -> rawRows.sortedBy { spct(it) }
-            4 -> rawRows.sortedBy { it.walks }
-            5 -> rawRows.sortedBy { it.ks }
-            else -> rawRows.sortedBy { it.bf }
+            0  -> rawRows.sortedBy { name(it) }
+            1  -> rawRows.sortedBy { it.bf }
+            2  -> rawRows.sortedBy { it.totalPitches }
+            3  -> rawRows.sortedBy { spct(it) }
+            4  -> rawRows.sortedBy { it.walks }
+            5  -> rawRows.sortedBy { it.ks }
+            6  -> rawRows.sortedBy { it.hits }
+            7  -> rawRows.sortedBy { it.homers }
+            8  -> rawRows.sortedBy { it.gos }
+            9  -> rawRows.sortedBy { it.fos }
+            else -> rawRows.sortedBy { spct(it) }
         }
         if (sortAsc) sorted else sorted.reversed()
     }
@@ -312,101 +316,96 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper) {
         return
     }
 
-    val columns = listOf(
-        Pair(stringResource(R.string.season_stats_col_name), 3f),
-        Pair(stringResource(R.string.season_stats_col_bf), 1f),
-        Pair(stringResource(R.string.season_stats_col_p), 1f),
-        Pair(stringResource(R.string.season_stats_col_strike_pct), 1.4f),
-        Pair(stringResource(R.string.season_stats_col_bb), 1f),
-        Pair(stringResource(R.string.season_stats_col_k), 1f)
+    val hScroll = rememberScrollState()
+    val colName = 100.dp
+    val colStat = 36.dp
+    val colPct  = 46.dp
+
+    val colDefs = listOf(
+        stringResource(R.string.season_stats_col_name)       to colName,
+        stringResource(R.string.season_stats_col_bf)         to colStat,
+        stringResource(R.string.season_stats_col_p)          to colStat,
+        stringResource(R.string.season_stats_col_strike_pct) to colPct,
+        stringResource(R.string.season_stats_col_bb)         to colStat,
+        stringResource(R.string.season_stats_col_k)          to colStat,
+        stringResource(R.string.season_stats_col_h)          to colStat,
+        stringResource(R.string.season_stats_col_hr)         to colStat,
+        stringResource(R.string.season_stats_col_go)         to colStat,
+        stringResource(R.string.season_stats_col_fo)         to colStat
     )
 
     Column(modifier = Modifier.fillMaxSize()) {
-        SortableHeaderRow(
-            columns = columns,
-            sortColIndex = sortCol,
-            sortAsc = sortAsc,
-            onColumnClick = { idx ->
-                if (sortCol == idx) sortAsc = !sortAsc
-                else { sortCol = idx; sortAsc = idx == 0 }
+        // Sortable header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(colorResource(R.color.color_primary))
+                .horizontalScroll(hScroll)
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+        ) {
+            colDefs.forEachIndexed { index, (label, width) ->
+                val isActive = index == sortCol
+                val indicator = if (isActive) if (sortAsc) " ▲" else " ▼" else ""
+                Box(
+                    modifier = Modifier
+                        .width(width)
+                        .clickable {
+                            if (sortCol == index) sortAsc = !sortAsc
+                            else { sortCol = index; sortAsc = index == 0 }
+                        },
+                    contentAlignment = if (index == 0) Alignment.CenterStart else Alignment.Center
+                ) {
+                    Text(
+                        text = label + indicator,
+                        color = if (isActive) Color.Yellow else Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = if (index == 0) TextAlign.Start else TextAlign.Center
+                    )
+                }
             }
-        )
+        }
+
         LazyColumn {
             itemsIndexed(rows) { index, row ->
                 val name = players[row.playerId]?.let { "#${it.number} ${it.name}" }
                     ?: stringResource(R.string.season_stats_unknown_player)
-                val strikePct = if (row.totalPitches > 0)
-                    (row.strikes + row.fouls).toFloat() / row.totalPitches * 100 else 0f
-                val strikePctStr = if (row.totalPitches > 0) "%.0f%%".format(strikePct) else "---"
-                StatsDataRow(
-                    columns = listOf(
-                        Pair(name, 3f),
-                        Pair(row.bf.toString(), 1f),
-                        Pair(row.totalPitches.toString(), 1f),
-                        Pair(strikePctStr, 1.4f),
-                        Pair(row.walks.toString(), 1f),
-                        Pair(row.ks.toString(), 1f)
-                    ),
-                    isEven = index % 2 == 0
-                )
-            }
-        }
-    }
-}
+                val strikePctStr = if (row.totalPitches > 0)
+                    "%.0f%%".format((row.strikes + row.fouls).toFloat() / row.totalPitches * 100)
+                else "---"
 
-@Composable
-private fun SortableHeaderRow(
-    columns: List<Pair<String, Float>>,
-    sortColIndex: Int,
-    sortAsc: Boolean,
-    onColumnClick: (Int) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colorResource(R.color.color_primary))
-            .padding(horizontal = 8.dp, vertical = 6.dp)
-    ) {
-        columns.forEachIndexed { index, (label, weight) ->
-            val isActive = index == sortColIndex
-            val indicator = if (isActive) if (sortAsc) " ▲" else " ▼" else ""
-            Box(
-                modifier = Modifier
-                    .weight(weight)
-                    .clickable { onColumnClick(index) },
-                contentAlignment = if (index == 0) Alignment.CenterStart else Alignment.Center
-            ) {
-                Text(
-                    text = label + indicator,
-                    color = if (isActive) Color.Yellow else Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = if (index == 0) TextAlign.Start else TextAlign.Center
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(if (index % 2 == 0) Color.White else colorResource(R.color.color_background))
+                        .horizontalScroll(hScroll)
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    listOf(
+                        name                       to colName,
+                        row.bf.toString()          to colStat,
+                        row.totalPitches.toString() to colStat,
+                        strikePctStr               to colPct,
+                        row.walks.toString()       to colStat,
+                        row.ks.toString()          to colStat,
+                        row.hits.toString()        to colStat,
+                        row.homers.toString()      to colStat,
+                        row.gos.toString()         to colStat,
+                        row.fos.toString()         to colStat
+                    ).forEachIndexed { i, (text, width) ->
+                        Text(
+                            text = text,
+                            modifier = Modifier.width(width),
+                            fontSize = 12.sp,
+                            color = colorResource(R.color.color_text_primary),
+                            textAlign = if (i == 0) TextAlign.Start else TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
-        }
-    }
-}
-
-@Composable
-private fun StatsDataRow(columns: List<Pair<String, Float>>, isEven: Boolean) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(if (isEven) Color.White else colorResource(R.color.color_background))
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        columns.forEachIndexed { index, (text, weight) ->
-            Text(
-                text = text,
-                modifier = Modifier.weight(weight),
-                fontSize = 13.sp,
-                color = colorResource(R.color.color_text_primary),
-                textAlign = if (index == 0) TextAlign.Start else TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }

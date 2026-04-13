@@ -24,7 +24,8 @@ fun buildBatterStats(pitches: List<Pitch>): List<BatterStats> {
             "SO"  -> strikes++   // strikeout pitch counts as a strike
             "F"   -> fouls++
             "HBP" -> other++     // hit by pitch counts in total, not strikes
-            "H"   -> other++     // ball-in-play counts in total, not strikes
+            "H", "1B", "2B", "3B", "HR" -> other++  // ball-in-play counts in total, not strikes
+            "GO", "FO" -> other++  // ground out / fly out counts in total
             "BF" -> {
                 val total = balls + strikes + fouls + other
                 if (total > 0) {
@@ -85,7 +86,7 @@ fun groupPitchesByBatter(pitches: List<Pitch>): List<BatterGroup> {
 
     pitches.forEach { pitch ->
         when (pitch.type) {
-            "B", "S", "F", "W", "HBP", "H", "SO" -> current.add(pitch)
+            "B", "S", "F", "W", "HBP", "H", "1B", "2B", "3B", "HR", "SO", "GO", "FO" -> current.add(pitch)
             "BF" -> {
                 if (current.isNotEmpty()) {
                     val groupInning = current.firstOrNull()?.inning ?: 1

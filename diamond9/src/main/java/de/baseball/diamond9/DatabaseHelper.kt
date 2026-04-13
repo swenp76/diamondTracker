@@ -212,7 +212,10 @@ data class SeasonPitcherRow(
     @ColumnInfo(name = "fouls") val fouls: Int,
     @ColumnInfo(name = "walks") val walks: Int,
     @ColumnInfo(name = "hits") val hits: Int,
-    @ColumnInfo(name = "ks") val ks: Int
+    @ColumnInfo(name = "ks") val ks: Int,
+    @ColumnInfo(name = "homers") val homers: Int,
+    @ColumnInfo(name = "gos") val gos: Int,
+    @ColumnInfo(name = "fos") val fos: Int
 )
 
 data class PitcherStats(
@@ -346,7 +349,7 @@ class DatabaseHelper(context: Context) {
             strikes = strikes,
             walks = pitches.count { it.type == "W" },
             hbp = pitches.count { it.type == "HBP" },
-            hits = pitches.count { it.type == "H" },
+            hits = pitches.count { it.type in setOf("H", "1B", "2B", "3B", "HR") },
             strikeouts = pitches.count { it.type == "SO" },
             totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "SO" || it.type == "F" || it.type == "HBP" },
             pitches = pitches,

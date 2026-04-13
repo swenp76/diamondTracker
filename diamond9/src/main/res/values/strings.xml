@@ -85,6 +85,12 @@
     <string name="pitch_label_strike">Strike</string>
     <string name="pitch_label_foul">Foul</string>
     <string name="pitch_label_hit">── Hit ──────────────────────────</string>
+    <string name="pitch_label_1b">── Single (1B) ──────────────────</string>
+    <string name="pitch_label_2b">── Double (2B) ──────────────────</string>
+    <string name="pitch_label_3b">── Triple (3B) ──────────────────</string>
+    <string name="pitch_label_hr">── Home Run (HR) ────────────────</string>
+    <string name="pitch_label_go">── Ground Out (GO) ──────────────</string>
+    <string name="pitch_label_fo">── Fly Out (FO) ─────────────────</string>
     <string name="pitch_label_hbp">── Hit by Pitch ─────────────────</string>
     <string name="pitch_label_walk">── Walk ─────────────────────────</string>
     <string name="pitch_label_strikeout">── Strike-Out (K) ───────────────</string>
@@ -304,6 +310,8 @@
     <string name="season_stats_col_bf">BF</string>
     <string name="season_stats_col_p">P</string>
     <string name="season_stats_col_strike_pct">S%</string>
+    <string name="season_stats_col_go">GO</string>
+    <string name="season_stats_col_fo">FO</string>
     <string name="season_stats_empty_batter">No batting data yet.</string>
     <string name="season_stats_empty_pitcher">No pitching data yet.</string>
     <string name="season_stats_unknown_player">Unknown</string>
