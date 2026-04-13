@@ -27,6 +27,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 class BattingTrackActivity : ComponentActivity() {
 
@@ -52,8 +55,21 @@ class BattingTrackActivity : ComponentActivity() {
         var currentSlot by remember { mutableStateOf(1) }
         var currentAtBatId by remember { mutableStateOf<Long>(-1) }
         var pitches by remember { mutableStateOf(emptyList<Pitch>()) }
+        var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
+        var showHalfInningSheet by remember { mutableStateOf(false) }
 
         val snackbarHostState = remember { SnackbarHostState() }
+
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    halfInningState = db.getHalfInningState(gameId)
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
 
         var lineup by remember { mutableStateOf(emptyMap<Int, Player>()) }
 
@@ -103,6 +119,7 @@ class BattingTrackActivity : ComponentActivity() {
                 val (i, o) = db.getGameState(gameId)
                 inning = i
                 outs = o
+                halfInningState = db.getHalfInningState(gameId)
 
                 val existingAtBats = db.getAtBatsForGame(gameId)
                 if (existingAtBats.isEmpty()) {
@@ -151,6 +168,7 @@ class BattingTrackActivity : ComponentActivity() {
             if (newOuts >= 3) {
                 inning++
                 outs = 0
+                showHalfInningSheet = true
             } else {
                 outs = newOuts
             }
@@ -160,11 +178,59 @@ class BattingTrackActivity : ComponentActivity() {
         var showKSheet by remember { mutableStateOf(false) }
         var showBBSheet by remember { mutableStateOf(false) }
 
+        // Half-inning suggestion sheet (triggered after 3 outs)
+        if (showHalfInningSheet) {
+            val suggested = HalfInningManager.next(halfInningState)
+            ModalBottomSheet(onDismissRequest = { showHalfInningSheet = false }) {
+                Column(
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.half_inning_change_title),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = stringResource(R.string.half_inning_next_label, suggested.label),
+                        fontSize = 16.sp
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                db.updateHalfInning(gameId, suggested.inning, suggested.isTopHalf)
+                                halfInningState = suggested
+                                showHalfInningSheet = false
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary))
+                        ) { Text(stringResource(R.string.half_inning_confirm), fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = { showHalfInningSheet = false },
+                            modifier = Modifier.weight(1f)
+                        ) { Text(stringResource(R.string.half_inning_keep_going)) }
+                    }
+                }
+            }
+        }
+
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
-                    title = { Text(stringResource(R.string.gamehub_offense)) },
+                    title = {
+                        Column {
+                            Text(stringResource(R.string.gamehub_offense))
+                            Text(
+                                text = halfInningState.shortLabel,
+                                fontSize = 13.sp,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+                    },
                     navigationIcon = {
                         IconButton(onClick = { finish() }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))

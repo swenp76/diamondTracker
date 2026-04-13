@@ -18,7 +18,9 @@ data class Game(
     @ColumnInfo(name = "start_time", defaultValue = "0") val startTime: Long = 0L,
     @ColumnInfo(name = "elapsed_time_ms", defaultValue = "0") val elapsedTimeMs: Long = 0L,
     @ColumnInfo(name = "game_time", defaultValue = "") val gameTime: String = "",
-    @ColumnInfo(name = "is_home", defaultValue = "1") val isHome: Int = 1  // 1 = home, 0 = away
+    @ColumnInfo(name = "is_home", defaultValue = "1") val isHome: Int = 1,  // 1 = home, 0 = away
+    @ColumnInfo(name = "current_inning", defaultValue = "1") val currentInning: Int = 1,
+    @ColumnInfo(name = "is_top_half", defaultValue = "1") val isTopHalf: Int = 1  // 1 = top, 0 = bottom
 )
 
 @Entity(tableName = "pitchers")
@@ -287,6 +289,17 @@ class DatabaseHelper(context: Context) {
 
     fun setElapsedTime(gameId: Long, elapsedMs: Long) =
         gameDao.updateElapsedTime(gameId, elapsedMs)
+
+    fun getHalfInningState(gameId: Long): HalfInningState {
+        val game = gameDao.getGame(gameId)
+        return HalfInningState(
+            inning = game?.currentInning ?: 1,
+            isTopHalf = (game?.isTopHalf ?: 1) == 1
+        )
+    }
+
+    fun updateHalfInning(gameId: Long, inning: Int, isTopHalf: Boolean) =
+        gameDao.updateHalfInning(gameId, inning, if (isTopHalf) 1 else 0)
 
     fun copyGame(sourceGameId: Long, newOpponent: String): Long {
         val source = getGame(sourceGameId) ?: return -1

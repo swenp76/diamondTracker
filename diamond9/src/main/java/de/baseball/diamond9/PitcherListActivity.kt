@@ -23,6 +23,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 class PitcherListActivity : ComponentActivity() {
 
@@ -39,14 +42,29 @@ class PitcherListActivity : ComponentActivity() {
 
         setContent {
             var pitchers by remember { mutableStateOf(db.getPitchersForGame(gameId)) }
+            var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
+
+            val lifecycleOwner = LocalLifecycleOwner.current
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        halfInningState = db.getHalfInningState(gameId)
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
 
             fun refreshPitchers() {
                 pitchers = db.getPitchersForGame(gameId)
             }
 
+            val subtitle = if (gameDate.isNotEmpty()) "$gameDate  •  ${halfInningState.shortLabel}"
+                           else halfInningState.shortLabel
+
             PitcherListScreen(
                 title = gameOpponent,
-                subtitle = gameDate,
+                subtitle = subtitle,
                 pitchers = pitchers,
                 onTrack = { pitcher ->
                     val intent = Intent(this, PitchTrackActivity::class.java)

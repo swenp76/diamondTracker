@@ -10,14 +10,14 @@ Sie hilft beim Verwalten von Teams, Erstellen von Aufstellungen und Tracken von 
 - **Datenbank:** Room (SQLite) über DAOs + DatabaseHelper-Wrapper
 - **UI:** Jetpack Compose (Material 3)
 - **Package:** de.baseball.diamond9
-- **DB-Datei:** `pitcher.db`
+- **DB-Datei:** `pitcher.db` (Version 12)
 - **Lokalisierung:** Deutsch (Fallback, `values/`), Englisch (`values-en/`)
 
 ## Projektstruktur
 ```
 diamond9/src/main/java/de/baseball/diamond9/
 ├── db/
-│   ├── AppDatabase.kt        ← Room-Datenbank, Migrations, Version 11
+│   ├── AppDatabase.kt        ← Room-Datenbank, Migrations, Version 12
 │   ├── AtBatDao.kt
 │   ├── GameDao.kt
 │   ├── LineupDao.kt
@@ -33,7 +33,8 @@ diamond9/src/main/java/de/baseball/diamond9/
 ├── BattingTrackActivity.kt   ← Offense / Batting
 ├── CoachAct.kt               ← Startseite
 ├── DatabaseHelper.kt         ← Wrapper über alle DAOs + Entities
-├── GameHubActivity.kt        ← Spiel-Hub (Offense/Defense/Lineup + Scoreboard + Spieluhr)
+├── GameHubActivity.kt        ← Spiel-Hub (Offense/Defense/Lineup + Scoreboard + Spieluhr + Half-Inning Bar)
+├── HalfInningManager.kt      ← Half-Inning State + Logic (pure, no Android deps)
 ├── GameListActivity.kt       ← Spielliste mit Import/Export pro Spiel
 ├── ManageOpponentsActivity.kt
 ├── OpponentLineupActivity.kt
@@ -238,7 +239,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | `teams` | id, name |
 | `team_positions` | team_id, position |
 | `players` | id, team_id, name, number, primary_position, secondary_position, is_pitcher, birth_year |
-| `games` | id, date, opponent, team_id, inning, outs, leadoff_slot, **start_time**, **elapsed_time_ms**, **game_time**, **is_home** |
+| `games` | id, date, opponent, team_id, inning, outs, leadoff_slot, **start_time**, **elapsed_time_ms**, **game_time**, **is_home**, **current_inning**, **is_top_half** |
 | `pitchers` | id, game_id, name, player_id |
 | `pitches` | id, pitcher_id, at_bat_id, type, sequence_nr, inning |
 | `at_bats` | id, game_id, player_id, slot, inning, result |
@@ -272,7 +273,8 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | 8 → 9 | `game_time` in `games` (Spieluhrzeit) | ✅ |
 | 9 → 10 | `is_home` in `games` | ✅ |
 | 10 → 11 | `elapsed_time_ms` in `games` | ✅ |
-| 11 → 12 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
-| 12 → 13 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
+| 11 → 12 | `current_inning`, `is_top_half` in `games` (Half-Inning Tracking) | ✅ |
+| 12 → 13 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
+| 13 → 14 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
 
 **Hinweis:** Jede Migration hier eintragen und gleichzeitig `BackupManager` aktualisieren.

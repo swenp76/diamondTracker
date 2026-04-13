@@ -17,13 +17,14 @@ import org.json.JSONObject
  *  9 → game_time column added to games
  *  10 → is_home column added to games (1 = home, 0 = away)
  *  11 → elapsed_time_ms column added to games
+ *  12 → current_inning and is_top_half columns added to games
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
 class BackupManager(private val context: Context) {
 
     companion object {
-        const val DB_VERSION = 11
+        const val DB_VERSION = 12
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
@@ -68,6 +69,8 @@ class BackupManager(private val context: Context) {
                 put("elapsed_time_ms", g.elapsedTimeMs)
                 put("game_time", g.gameTime)
                 put("is_home", g.isHome)
+                put("current_inning", g.currentInning)
+                put("is_top_half", g.isTopHalf)
             }
         }))
 
@@ -201,6 +204,19 @@ class BackupManager(private val context: Context) {
             v = 11
         }
 
+        // Migration 11 → 12: current_inning and is_top_half added to games – defaults 1 for older backups.
+        if (v < 12 && toVersion >= 12) {
+            val games = current.optJSONArray("games")
+            if (games != null) {
+                for (i in 0 until games.length()) {
+                    val g = games.getJSONObject(i)
+                    if (!g.has("current_inning")) g.put("current_inning", 1)
+                    if (!g.has("is_top_half")) g.put("is_top_half", 1)
+                }
+            }
+            v = 12
+        }
+
         return current
     }
 
@@ -247,6 +263,8 @@ class BackupManager(private val context: Context) {
             put("elapsed_time_ms", game.elapsedTimeMs)
             put("game_time", game.gameTime)
             put("is_home", game.isHome)
+            put("current_inning", game.currentInning)
+            put("is_top_half", game.isTopHalf)
         }
         root.put("game", gObj)
 

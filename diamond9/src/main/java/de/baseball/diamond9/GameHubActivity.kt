@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -139,6 +140,8 @@ private fun GameHubScreen(
             Scoreboard(gameId, ownTeam, opponent, isHome, db)
 
             GameTimer(gameId, db)
+
+            HalfInningBar(gameId, db)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -413,4 +416,114 @@ private fun HubButton(text: String, color: Color, onClick: () -> Unit) {
     ) {
         Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HalfInningBar(gameId: Long, db: DatabaseHelper) {
+    var state by remember { mutableStateOf(db.getHalfInningState(gameId)) }
+    var showEditDialog by remember { mutableStateOf(false) }
+
+    if (showEditDialog) {
+        ManualHalfInningDialog(
+            current = state,
+            onConfirm = { newState ->
+                db.updateHalfInning(gameId, newState.inning, newState.isTopHalf)
+                state = newState
+                showEditDialog = false
+            },
+            onDismiss = { showEditDialog = false }
+        )
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .background(
+                color = colorResource(R.color.color_primary),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = state.label,
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+        IconButton(onClick = { showEditDialog = true }) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = stringResource(R.string.content_desc_edit_half_inning),
+                tint = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+private fun ManualHalfInningDialog(
+    current: HalfInningState,
+    onConfirm: (HalfInningState) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var inning by remember { mutableStateOf(current.inning) }
+    var isTop by remember { mutableStateOf(current.isTopHalf) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.half_inning_edit_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Inning stepper
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { if (inning > 1) inning-- },
+                        modifier = Modifier.size(40.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("−", fontSize = 20.sp) }
+                    Text(
+                        text = "Inning $inning",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedButton(
+                        onClick = { if (inning < 15) inning++ },
+                        modifier = Modifier.size(40.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("+", fontSize = 20.sp) }
+                }
+                // Top / Bottom toggle
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { isTop = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isTop) colorResource(R.color.color_primary) else Color.LightGray
+                        )
+                    ) { Text(stringResource(R.string.half_inning_label_top), color = Color.White) }
+                    Button(
+                        onClick = { isTop = false },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (!isTop) colorResource(R.color.color_primary) else Color.LightGray
+                        )
+                    ) { Text(stringResource(R.string.half_inning_label_bot), color = Color.White) }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(HalfInningState(inning, isTop)) }) {
+                Text(stringResource(R.string.btn_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }
+        }
+    )
 }

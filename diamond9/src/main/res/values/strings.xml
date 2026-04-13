@@ -334,6 +334,16 @@
     <string name="scoreboard_runs_label">Runs</string>
     <string name="scoreboard_dialog_title">Inning %1$d – %2$s</string>
 
+    <!-- ── Half-Inning ────────────────────────────────────────────────────── -->
+    <string name="half_inning_change_title">3 Outs – Switch Half-Inning?</string>
+    <string name="half_inning_next_label">Next: %s</string>
+    <string name="half_inning_confirm">Switch ✓</string>
+    <string name="half_inning_keep_going">Keep Going</string>
+    <string name="half_inning_edit_title">Set Half-Inning</string>
+    <string name="half_inning_label_top">▲ TOP</string>
+    <string name="half_inning_label_bot">▼ BOT</string>
+    <string name="content_desc_edit_half_inning">Edit half-inning</string>
+
     <!-- ── Empty States ──────────────────────────────────────────────────── -->
     <string name="empty_games">No games yet.\nAdd a new game first.</string>
     <string name="empty_pitchers">No pitchers yet.\nAdd a new pitcher first.</string>

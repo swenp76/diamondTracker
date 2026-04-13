@@ -43,11 +43,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -119,6 +123,18 @@ private fun OwnLineupScreen(
     var subStatuses by remember { mutableStateOf(emptyMap<Long, SubStatus>()) }
     var substitutions by remember { mutableStateOf(emptyList<Substitution>()) }
     var lineup by remember { mutableStateOf(emptyMap<Int, Player>()) }
+    var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                halfInningState = db.getHalfInningState(gameId)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
 
     var activeDialogSlot by remember { mutableStateOf<Int?>(null) }
@@ -210,7 +226,11 @@ private fun OwnLineupScreen(
                 title = {
                     Column {
                         Text(gameOpponent, style = MaterialTheme.typography.titleLarge)
-                        Text(gameDate, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                        val dateAndHalf = buildString {
+                            if (gameDate.isNotEmpty()) { append(gameDate); append("  •  ") }
+                            append(halfInningState.shortLabel)
+                        }
+                        Text(dateAndHalf, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                     }
                 },
                 navigationIcon = {
