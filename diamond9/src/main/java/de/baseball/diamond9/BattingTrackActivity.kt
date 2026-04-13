@@ -523,38 +523,26 @@ class BattingTrackActivity : ComponentActivity() {
 
         if (showMoreSheet) {
             ModalBottomSheet(onDismissRequest = { showMoreSheet = false }) {
-                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth().height(60.dp)) {
-                        listOf(
-                            R.string.btn_result_hbp to colorResource(R.color.color_hbp),
-                            R.string.btn_result_sac to colorResource(R.color.color_orange)
-                        ).forEachIndexed { i, (labelRes, color) ->
-                            val label = stringResource(labelRes)
-                            if (i > 0) Spacer(Modifier.width(8.dp))
-                            Button(
-                                onClick = { onResult(label); showMoreSheet = false },
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                                colors = ButtonDefaults.buttonColors(containerColor = color),
-                                shape = RoundedCornerShape(8.dp)
-                            ) { Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth().height(60.dp)) {
-                        listOf(
-                            R.string.btn_result_fc to colorResource(R.color.color_primary),
-                            R.string.btn_result_e  to colorResource(R.color.color_foul),
-                            R.string.btn_result_dp to colorResource(R.color.color_strike)
-                        ).forEachIndexed { i, (labelRes, color) ->
-                            val label = stringResource(labelRes)
-                            if (i > 0) Spacer(Modifier.width(8.dp))
-                            Button(
-                                onClick = { onResult(label); showMoreSheet = false },
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                                colors = ButtonDefaults.buttonColors(containerColor = color),
-                                shape = RoundedCornerShape(8.dp)
-                            ) { Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-                        }
+                Row(
+                    modifier = Modifier
+                        .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
+                        .fillMaxWidth()
+                        .height(60.dp)
+                ) {
+                    listOf(
+                        R.string.btn_result_hbp to colorResource(R.color.color_hbp),
+                        R.string.btn_result_sac to colorResource(R.color.color_orange),
+                        R.string.btn_result_fc  to colorResource(R.color.color_primary),
+                        R.string.btn_result_e   to colorResource(R.color.color_foul)
+                    ).forEachIndexed { i, (labelRes, color) ->
+                        val label = stringResource(labelRes)
+                        if (i > 0) Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = { onResult(label); showMoreSheet = false },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            colors = ButtonDefaults.buttonColors(containerColor = color),
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                     }
                 }
             }
