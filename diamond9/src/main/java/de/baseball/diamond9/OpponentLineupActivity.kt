@@ -273,7 +273,7 @@ fun OpponentLineupScreen(
             text = {
                 OutlinedTextField(
                     value = text,
-                    onValueChange = { text = it },
+                    onValueChange = { if (it.length <= 3) text = it },
                     label = { Text(stringResource(R.string.dialog_jersey_title)) },
                     singleLine = true
                 )
