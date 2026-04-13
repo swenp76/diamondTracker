@@ -182,6 +182,9 @@ data class GameBatterStatsRow(
     @ColumnInfo(name = "pa")         val pa: Int,
     @ColumnInfo(name = "ab")         val ab: Int,
     @ColumnInfo(name = "hits")       val hits: Int,
+    @ColumnInfo(name = "doubles")    val doubles: Int,
+    @ColumnInfo(name = "triples")    val triples: Int,
+    @ColumnInfo(name = "homers")     val homers: Int,
     @ColumnInfo(name = "walks")      val walks: Int,
     @ColumnInfo(name = "strikeouts") val strikeouts: Int,
     @ColumnInfo(name = "hbp")        val hbp: Int
@@ -192,6 +195,9 @@ data class SeasonBatterRow(
     @ColumnInfo(name = "pa") val pa: Int,
     @ColumnInfo(name = "ab") val ab: Int,
     @ColumnInfo(name = "hits") val hits: Int,
+    @ColumnInfo(name = "doubles") val doubles: Int,
+    @ColumnInfo(name = "triples") val triples: Int,
+    @ColumnInfo(name = "homers") val homers: Int,
     @ColumnInfo(name = "walks") val walks: Int,
     @ColumnInfo(name = "strikeouts") val strikeouts: Int,
     @ColumnInfo(name = "hbp") val hbp: Int

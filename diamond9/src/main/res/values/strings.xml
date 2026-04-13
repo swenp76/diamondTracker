@@ -59,6 +59,10 @@
 
     <!-- ── Result Buttons ────────────────────────────────────────────────── -->
     <string name="btn_result_h">H</string>
+    <string name="btn_result_1b">1B</string>
+    <string name="btn_result_2b">2B</string>
+    <string name="btn_result_3b">3B</string>
+    <string name="btn_result_hr">HR</string>
     <string name="btn_result_k">K</string>
     <string name="btn_result_bb">BB</string>
     <string name="btn_result_out">OUT</string>
@@ -287,8 +291,13 @@
     <string name="season_stats_col_pa">PA</string>
     <string name="season_stats_col_ab">AB</string>
     <string name="season_stats_col_h">H</string>
+    <string name="season_stats_col_2b">2B</string>
+    <string name="season_stats_col_3b">3B</string>
+    <string name="season_stats_col_hr">HR</string>
     <string name="season_stats_col_avg">AVG</string>
     <string name="season_stats_col_obp">OBP</string>
+    <string name="season_stats_col_slg">SLG</string>
+    <string name="season_stats_col_ops">OPS</string>
     <string name="season_stats_col_bb">BB</string>
     <string name="season_stats_col_k">K</string>
     <string name="season_stats_col_bf">BF</string>

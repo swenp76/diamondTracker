@@ -6,7 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -111,8 +113,8 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
     val rawRows = remember(teamId) { db.getSeasonBatterStats(teamId) }
     val players = remember(teamId) { db.getPlayersForTeam(teamId).associateBy { it.id } }
 
-    // Default: sort by AVG descending (col index 4)
-    var sortCol by remember { mutableStateOf(4) }
+    // Default: sort by AVG descending (col index 7)
+    var sortCol by remember { mutableStateOf(7) }
     var sortAsc by remember { mutableStateOf(false) }
 
     val rows = remember(rawRows, sortCol, sortAsc) {
@@ -122,15 +124,29 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
             val d = r.ab + r.walks + r.hbp
             return if (d > 0) (r.hits + r.walks + r.hbp).toFloat() / d else -1f
         }
+        fun slg(r: SeasonBatterRow): Float {
+            if (r.ab == 0) return -1f
+            val s = r.hits - r.doubles - r.triples - r.homers
+            return (s + 2 * r.doubles + 3 * r.triples + 4 * r.homers).toFloat() / r.ab
+        }
+        fun ops(r: SeasonBatterRow): Float {
+            val o = obp(r); val s = slg(r)
+            return if (o < 0 && s < 0) -1f else maxOf(0f, o) + maxOf(0f, s)
+        }
         val sorted = when (sortCol) {
-            0 -> rawRows.sortedBy { name(it) }
-            1 -> rawRows.sortedBy { it.pa }
-            2 -> rawRows.sortedBy { it.ab }
-            3 -> rawRows.sortedBy { it.hits }
-            4 -> rawRows.sortedBy { avg(it) }
-            5 -> rawRows.sortedBy { obp(it) }
-            6 -> rawRows.sortedBy { it.walks }
-            7 -> rawRows.sortedBy { it.strikeouts }
+            0  -> rawRows.sortedBy { name(it) }
+            1  -> rawRows.sortedBy { it.pa }
+            2  -> rawRows.sortedBy { it.ab }
+            3  -> rawRows.sortedBy { it.hits }
+            4  -> rawRows.sortedBy { it.doubles }
+            5  -> rawRows.sortedBy { it.triples }
+            6  -> rawRows.sortedBy { it.homers }
+            7  -> rawRows.sortedBy { avg(it) }
+            8  -> rawRows.sortedBy { obp(it) }
+            9  -> rawRows.sortedBy { slg(it) }
+            10 -> rawRows.sortedBy { ops(it) }
+            11 -> rawRows.sortedBy { it.walks }
+            12 -> rawRows.sortedBy { it.strikeouts }
             else -> rawRows.sortedBy { avg(it) }
         }
         if (sortAsc) sorted else sorted.reversed()
@@ -143,27 +159,59 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
         return
     }
 
-    val columns = listOf(
-        Pair(stringResource(R.string.season_stats_col_name), 3f),
-        Pair(stringResource(R.string.season_stats_col_pa), 1f),
-        Pair(stringResource(R.string.season_stats_col_ab), 1f),
-        Pair(stringResource(R.string.season_stats_col_h), 1f),
-        Pair(stringResource(R.string.season_stats_col_avg), 1.4f),
-        Pair(stringResource(R.string.season_stats_col_obp), 1.4f),
-        Pair(stringResource(R.string.season_stats_col_bb), 1f),
-        Pair(stringResource(R.string.season_stats_col_k), 1f)
+    val hScroll = rememberScrollState()
+    val colName = 100.dp
+    val colStat = 36.dp
+    val colDec  = 46.dp
+
+    val colDefs = listOf(
+        stringResource(R.string.season_stats_col_name) to colName,
+        stringResource(R.string.season_stats_col_pa)   to colStat,
+        stringResource(R.string.season_stats_col_ab)   to colStat,
+        stringResource(R.string.season_stats_col_h)    to colStat,
+        stringResource(R.string.season_stats_col_2b)   to colStat,
+        stringResource(R.string.season_stats_col_3b)   to colStat,
+        stringResource(R.string.season_stats_col_hr)   to colStat,
+        stringResource(R.string.season_stats_col_avg)  to colDec,
+        stringResource(R.string.season_stats_col_obp)  to colDec,
+        stringResource(R.string.season_stats_col_slg)  to colDec,
+        stringResource(R.string.season_stats_col_ops)  to colDec,
+        stringResource(R.string.season_stats_col_bb)   to colStat,
+        stringResource(R.string.season_stats_col_k)    to colStat
     )
 
     Column(modifier = Modifier.fillMaxSize()) {
-        SortableHeaderRow(
-            columns = columns,
-            sortColIndex = sortCol,
-            sortAsc = sortAsc,
-            onColumnClick = { idx ->
-                if (sortCol == idx) sortAsc = !sortAsc
-                else { sortCol = idx; sortAsc = idx == 0 } // name sorts A→Z by default
+        // Sortable header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(colorResource(R.color.color_primary))
+                .horizontalScroll(hScroll)
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+        ) {
+            colDefs.forEachIndexed { index, (label, width) ->
+                val isActive = index == sortCol
+                val indicator = if (isActive) if (sortAsc) " ▲" else " ▼" else ""
+                Box(
+                    modifier = Modifier
+                        .width(width)
+                        .clickable {
+                            if (sortCol == index) sortAsc = !sortAsc
+                            else { sortCol = index; sortAsc = index == 0 }
+                        },
+                    contentAlignment = if (index == 0) Alignment.CenterStart else Alignment.Center
+                ) {
+                    Text(
+                        text = label + indicator,
+                        color = if (isActive) Color.Yellow else Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = if (index == 0) TextAlign.Start else TextAlign.Center
+                    )
+                }
             }
-        )
+        }
+
         LazyColumn {
             itemsIndexed(rows) { index, row ->
                 val name = players[row.playerId]?.let { "#${it.number} ${it.name}" }
@@ -181,19 +229,52 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
                     obp >= 1f     -> "1.000"
                     else          -> ".%03d".format((obp * 1000).toInt())
                 }
-                StatsDataRow(
-                    columns = listOf(
-                        Pair(name, 3f),
-                        Pair(row.pa.toString(), 1f),
-                        Pair(row.ab.toString(), 1f),
-                        Pair(row.hits.toString(), 1f),
-                        Pair(avgStr, 1.4f),
-                        Pair(obpStr, 1.4f),
-                        Pair(row.walks.toString(), 1f),
-                        Pair(row.strikeouts.toString(), 1f)
-                    ),
-                    isEven = index % 2 == 0
-                )
+                val singles = row.hits - row.doubles - row.triples - row.homers
+                val slgNumer = singles + 2 * row.doubles + 3 * row.triples + 4 * row.homers
+                val slg = if (row.ab > 0) slgNumer.toFloat() / row.ab else 0f
+                val slgStr = when {
+                    row.ab == 0 -> "--"
+                    slg >= 1f   -> "%.3f".format(slg)
+                    else        -> ".%03d".format((slg * 1000).toInt())
+                }
+                val opsVal = maxOf(0f, obp) + maxOf(0f, slg)
+                val opsStr = if (obpDenom == 0 && row.ab == 0) "--"
+                             else "%.3f".format(opsVal).trimStart('0').ifEmpty { ".000" }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(if (index % 2 == 0) Color.White else colorResource(R.color.color_background))
+                        .horizontalScroll(hScroll)
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    listOf(
+                        name                      to colName,
+                        row.pa.toString()         to colStat,
+                        row.ab.toString()         to colStat,
+                        row.hits.toString()       to colStat,
+                        row.doubles.toString()    to colStat,
+                        row.triples.toString()    to colStat,
+                        row.homers.toString()     to colStat,
+                        avgStr                    to colDec,
+                        obpStr                    to colDec,
+                        slgStr                    to colDec,
+                        opsStr                    to colDec,
+                        row.walks.toString()      to colStat,
+                        row.strikeouts.toString() to colStat
+                    ).forEachIndexed { i, (text, width) ->
+                        Text(
+                            text = text,
+                            modifier = Modifier.width(width),
+                            fontSize = 12.sp,
+                            color = colorResource(R.color.color_text_primary),
+                            textAlign = if (i == 0) TextAlign.Start else TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }

@@ -261,7 +261,7 @@ class BattingTrackActivity : ComponentActivity() {
                     onResult = { result ->
                         val abId = ensureAtBat()
                         when (result) {
-                            "H"   -> db.insertPitchForAtBat(abId, "H", inning)
+                            "H", "1B", "2B", "3B", "HR" -> db.insertPitchForAtBat(abId, "H", inning)
                             "HBP" -> db.insertPitchForAtBat(abId, "HBP", inning)
                             "K"   -> db.insertPitchForAtBat(abId, "SO", inning)
                             "KL"  -> db.insertPitchForAtBat(abId, "S", inning)
@@ -434,6 +434,45 @@ class BattingTrackActivity : ComponentActivity() {
         var outExpanded by remember { mutableStateOf(false) }
         var showMoreSheet by remember { mutableStateOf(false) }
         var showKSheet by remember { mutableStateOf(false) }
+        var showHSheet by remember { mutableStateOf(false) }
+
+        if (showHSheet) {
+            ModalBottomSheet(onDismissRequest = { showHSheet = false }) {
+                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth().height(72.dp)) {
+                        Button(
+                            onClick = { onResult("1B"); showHSheet = false },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_bright)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text(stringResource(R.string.btn_result_1b), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = { onResult("2B"); showHSheet = false },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text(stringResource(R.string.btn_result_2b), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth().height(72.dp)) {
+                        Button(
+                            onClick = { onResult("3B"); showHSheet = false },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_dark)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text(stringResource(R.string.btn_result_3b), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = { onResult("HR"); showHSheet = false },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit_homer)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text(stringResource(R.string.btn_result_hr), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                    }
+                }
+            }
+        }
 
         if (showKSheet) {
             ModalBottomSheet(onDismissRequest = { showKSheet = false }) {
@@ -556,10 +595,10 @@ class BattingTrackActivity : ComponentActivity() {
                         if (i > 0) Spacer(Modifier.width(6.dp))
                         Button(
                             onClick = {
-                                if (labelRes == R.string.btn_result_k) {
-                                    showKSheet = true; outExpanded = false
-                                } else {
-                                    onResult(label); outExpanded = false
+                                when (labelRes) {
+                                    R.string.btn_result_h -> { showHSheet = true; outExpanded = false }
+                                    R.string.btn_result_k -> { showKSheet = true; outExpanded = false }
+                                    else -> { onResult(label); outExpanded = false }
                                 }
                             },
                             modifier = Modifier.weight(1f).fillMaxHeight(),

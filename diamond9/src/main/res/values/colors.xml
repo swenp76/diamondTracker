@@ -13,6 +13,7 @@
     <color name="color_strike_looking">#7b241c</color>
     <color name="color_foul">#f39c12</color>
     <color name="color_hit">#e74c3c</color>
+    <color name="color_hit_homer">#c9a227</color>
     <color name="color_walk">#d35400</color>
     <color name="color_hbp">#8e44ad</color>
     <color name="color_strikeout_green">#27ae60</color>
