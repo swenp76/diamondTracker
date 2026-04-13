@@ -157,14 +157,7 @@ class BattingTrackActivity : ComponentActivity() {
             db.updateGameState(gameId, inning, outs)
         }
 
-        fun strikeOut(abId: Long) {
-            incrementOuts()
-            if (abId != -1L) {
-                db.insertPitchForAtBat(abId, "SO", inning)
-                db.updateAtBatResult(abId, "K")
-            }
-            nextBatter()
-        }
+        var showKSheet by remember { mutableStateOf(false) }
 
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -196,6 +189,9 @@ class BattingTrackActivity : ComponentActivity() {
                     PitchLog(pitches)
                 }
                 ActionButtons(
+                    showKSheet = showKSheet,
+                    onShowKSheet = { showKSheet = true },
+                    onKSheetDismiss = { showKSheet = false },
                     onBall = {
                         val abId = ensureAtBat()
                         db.insertPitchForAtBat(abId, "B", inning)
@@ -210,12 +206,12 @@ class BattingTrackActivity : ComponentActivity() {
                     },
                     onStrike = {
                         val abId = ensureAtBat()
-                        db.insertPitchForAtBat(abId, "S", inning)
-                        val updatedPitches = db.getPitchesForAtBat(abId)
-                        val (_, strikes) = currentAtBatCount(updatedPitches)
-                        if (strikes >= 3) {
-                            strikeOut(abId)
+                        val currentPitches = db.getPitchesForAtBat(abId)
+                        val (_, currentStrikes) = currentAtBatCount(currentPitches)
+                        if (currentStrikes >= 2) {
+                            showKSheet = true  // auto-trigger: let the sheet handle the final pitch
                         } else {
+                            db.insertPitchForAtBat(abId, "S", inning)
                             refreshAtBat(abId)
                         }
                     },
@@ -425,6 +421,9 @@ class BattingTrackActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun ActionButtons(
+        showKSheet: Boolean,
+        onShowKSheet: () -> Unit,
+        onKSheetDismiss: () -> Unit,
         onBall: () -> Unit,
         onStrike: () -> Unit,
         onFoul: () -> Unit,
@@ -433,7 +432,6 @@ class BattingTrackActivity : ComponentActivity() {
     ) {
         var outExpanded by remember { mutableStateOf(false) }
         var showMoreSheet by remember { mutableStateOf(false) }
-        var showKSheet by remember { mutableStateOf(false) }
         var showHSheet by remember { mutableStateOf(false) }
 
         if (showHSheet) {
@@ -475,7 +473,7 @@ class BattingTrackActivity : ComponentActivity() {
         }
 
         if (showKSheet) {
-            ModalBottomSheet(onDismissRequest = { showKSheet = false }) {
+            ModalBottomSheet(onDismissRequest = onKSheetDismiss) {
                 Row(
                     modifier = Modifier
                         .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
@@ -483,14 +481,14 @@ class BattingTrackActivity : ComponentActivity() {
                         .height(72.dp)
                 ) {
                     Button(
-                        onClick = { onResult("K"); showKSheet = false },
+                        onClick = { onResult("K"); onKSheetDismiss() },
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
                         shape = RoundedCornerShape(8.dp)
                     ) { Text(stringResource(R.string.btn_strikeout_swinging), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
                     Spacer(Modifier.width(8.dp))
                     Button(
-                        onClick = { onResult("KL"); showKSheet = false },
+                        onClick = { onResult("KL"); onKSheetDismiss() },
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike_looking)),
                         shape = RoundedCornerShape(8.dp)
@@ -597,7 +595,7 @@ class BattingTrackActivity : ComponentActivity() {
                             onClick = {
                                 when (labelRes) {
                                     R.string.btn_result_h -> { showHSheet = true; outExpanded = false }
-                                    R.string.btn_result_k -> { showKSheet = true; outExpanded = false }
+                                    R.string.btn_result_k -> { onShowKSheet(); outExpanded = false }
                                     else -> { onResult(label); outExpanded = false }
                                 }
                             },
