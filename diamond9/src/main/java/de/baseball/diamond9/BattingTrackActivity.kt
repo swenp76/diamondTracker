@@ -158,6 +158,7 @@ class BattingTrackActivity : ComponentActivity() {
         }
 
         var showKSheet by remember { mutableStateOf(false) }
+        var showBBSheet by remember { mutableStateOf(false) }
 
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -192,14 +193,16 @@ class BattingTrackActivity : ComponentActivity() {
                     showKSheet = showKSheet,
                     onShowKSheet = { showKSheet = true },
                     onKSheetDismiss = { showKSheet = false },
+                    showBBSheet = showBBSheet,
+                    onShowBBSheet = { showBBSheet = true },
+                    onBBSheetDismiss = { showBBSheet = false },
                     onBall = {
                         val abId = ensureAtBat()
                         db.insertPitchForAtBat(abId, "B", inning)
                         val updatedPitches = db.getPitchesForAtBat(abId)
                         val (balls, _) = currentAtBatCount(updatedPitches)
                         if (balls >= 4) {
-                            db.updateAtBatResult(abId, "BB")
-                            nextBatter()
+                            showBBSheet = true  // auto-trigger: B pitch already inserted
                         } else {
                             refreshAtBat(abId)
                         }
@@ -424,6 +427,9 @@ class BattingTrackActivity : ComponentActivity() {
         showKSheet: Boolean,
         onShowKSheet: () -> Unit,
         onKSheetDismiss: () -> Unit,
+        showBBSheet: Boolean,
+        onShowBBSheet: () -> Unit,
+        onBBSheetDismiss: () -> Unit,
         onBall: () -> Unit,
         onStrike: () -> Unit,
         onFoul: () -> Unit,
@@ -468,6 +474,24 @@ class BattingTrackActivity : ComponentActivity() {
                             shape = RoundedCornerShape(8.dp)
                         ) { Text(stringResource(R.string.btn_result_hr), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                     }
+                }
+            }
+        }
+
+        if (showBBSheet) {
+            ModalBottomSheet(onDismissRequest = onBBSheetDismiss) {
+                Row(
+                    modifier = Modifier
+                        .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
+                        .fillMaxWidth()
+                        .height(72.dp)
+                ) {
+                    Button(
+                        onClick = { onResult("BB"); onBBSheetDismiss() },
+                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) { Text(stringResource(R.string.btn_walk_confirm), fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                 }
             }
         }
@@ -594,8 +618,9 @@ class BattingTrackActivity : ComponentActivity() {
                         Button(
                             onClick = {
                                 when (labelRes) {
-                                    R.string.btn_result_h -> { showHSheet = true; outExpanded = false }
-                                    R.string.btn_result_k -> { onShowKSheet(); outExpanded = false }
+                                    R.string.btn_result_h  -> { showHSheet = true; outExpanded = false }
+                                    R.string.btn_result_k  -> { onShowKSheet(); outExpanded = false }
+                                    R.string.btn_result_bb -> { onShowBBSheet(); outExpanded = false }
                                     else -> { onResult(label); outExpanded = false }
                                 }
                             },

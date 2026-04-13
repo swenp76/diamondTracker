@@ -72,6 +72,7 @@
     <string name="btn_result_lo">LO</string>
     <string name="btn_result_hbp">HBP</string>
     <string name="btn_result_kl">KL</string>
+    <string name="btn_walk_confirm">Walk (BB)</string>
     <string name="btn_strikeout_swinging">Swinging</string>
     <string name="btn_strikeout_looking">Looking</string>
     <string name="btn_result_sac">SAC</string>
