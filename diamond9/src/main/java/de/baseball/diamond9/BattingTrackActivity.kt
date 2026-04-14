@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,6 +60,11 @@ class BattingTrackActivity : ComponentActivity() {
         var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
         var showHalfInningSheet by remember { mutableStateOf(false) }
 
+        // Saved before the 3rd out is recorded; used by HalfInningChange undo
+        var prevLeadoffForHalfInning by remember { mutableStateOf(1) }
+        var prevInningForHalfInning by remember { mutableStateOf(1) }
+
+        val actionStack = remember { GameActionStack() }
         val snackbarHostState = remember { SnackbarHostState() }
 
         val lifecycleOwner = LocalLifecycleOwner.current
@@ -73,9 +80,7 @@ class BattingTrackActivity : ComponentActivity() {
 
         var lineup by remember { mutableStateOf(emptyMap<Int, Player>()) }
 
-        fun refreshLineup() {
-            lineup = db.getEffectiveLineup(gameId)
-        }
+        fun refreshLineup() { lineup = db.getEffectiveLineup(gameId) }
 
         fun startNewAtBat(slot: Int): Long {
             val player = lineup[slot]
@@ -96,11 +101,8 @@ class BattingTrackActivity : ComponentActivity() {
                     val currentAb = db.getAtBat(currentAtBatId)
                     if (currentAb != null && currentAb.result == null) {
                         val pitchesCount = db.getPitchesForAtBat(currentAtBatId).size
-                        if (pitchesCount == 0) {
-                            db.deleteAtBat(currentAtBatId)
-                        } else {
-                            db.updateAtBatResult(currentAtBatId, "OUT") // Treat as out if skipped? Or just leave it?
-                        }
+                        if (pitchesCount == 0) db.deleteAtBat(currentAtBatId)
+                        else db.updateAtBatResult(currentAtBatId, "OUT")
                     }
                     startNewAtBat(jumpToSlot)
                 }
@@ -108,9 +110,7 @@ class BattingTrackActivity : ComponentActivity() {
         }
 
         fun refreshAtBat(id: Long) {
-            if (id != -1L) {
-                pitches = db.getPitchesForAtBat(id)
-            }
+            if (id != -1L) pitches = db.getPitchesForAtBat(id)
         }
 
         LaunchedEffect(gameId) {
@@ -143,29 +143,39 @@ class BattingTrackActivity : ComponentActivity() {
 
         fun ensureAtBat(): Long {
             return if (currentAtBatId == -1L) {
-                val existingAtBats = db.getAtBatsForGame(gameId)
-                if (existingAtBats.isNotEmpty() && existingAtBats.last().result == null) {
-                    currentAtBatId = existingAtBats.last().id
-                    currentSlot = existingAtBats.last().slot
+                val existing = db.getAtBatsForGame(gameId)
+                if (existing.isNotEmpty() && existing.last().result == null) {
+                    currentAtBatId = existing.last().id
+                    currentSlot = existing.last().slot
                     refreshAtBat(currentAtBatId)
                     currentAtBatId
                 } else {
                     startNewAtBat(currentSlot)
                 }
-            } else {
-                currentAtBatId
-            }
+            } else currentAtBatId
         }
 
         fun nextBatter() {
             val maxSlot = if (lineup.containsKey(10)) 10 else 9
-            val nextSlot = (currentSlot % maxSlot) + 1
-            startNewAtBat(nextSlot)
+            startNewAtBat((currentSlot % maxSlot) + 1)
         }
 
-        fun incrementOuts() {
-            val newOuts = outs + 1
+        /** Called when the Out-button path records an out (batter out, advance batter). */
+        fun recordBatterOut(result: String) {
+            val abId = ensureAtBat()
+            val slot = currentSlot
+            val savedInning = inning
+            val savedOuts = outs
+
+            db.updateAtBatResult(abId, result)
+
+            val newOuts = savedOuts + 1
             if (newOuts >= 3) {
+                prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
+                prevInningForHalfInning = savedInning
+                val maxSlot = if (lineup.containsKey(10)) 10 else 9
+                val nextLeadoff = (slot % maxSlot) + 1
+                db.updateLeadoffSlot(gameId, nextLeadoff)
                 inning++
                 outs = 0
                 showHalfInningSheet = true
@@ -173,12 +183,53 @@ class BattingTrackActivity : ComponentActivity() {
                 outs = newOuts
             }
             db.updateGameState(gameId, inning, outs)
+
+            actionStack.push(GameAction.BatterOut(
+                completedAtBatId = abId,
+                completedSlot = slot,
+                prevInning = savedInning,
+                prevOuts = savedOuts
+            ))
+            nextBatter()
+        }
+
+        /** Called when the outs-indicator is tapped (runner out, batter stays, count resets). */
+        fun recordRunnerOut() {
+            val savedAtBatId = currentAtBatId
+            val savedSlot = currentSlot
+            val savedInning = inning
+            val savedOuts = outs
+
+            // batter stays but count resets — start fresh at-bat for same slot
+            val newAtBatId = startNewAtBat(currentSlot)
+
+            val newOuts = savedOuts + 1
+            if (newOuts >= 3) {
+                prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
+                prevInningForHalfInning = savedInning
+                // leadoff = current batter (runner was out, not this batter)
+                db.updateLeadoffSlot(gameId, savedSlot)
+                inning++
+                outs = 0
+                showHalfInningSheet = true
+            } else {
+                outs = newOuts
+            }
+            db.updateGameState(gameId, inning, outs)
+
+            actionStack.push(GameAction.RunnerOut(
+                prevInning = savedInning,
+                prevOuts = savedOuts,
+                newAtBatId = newAtBatId,
+                prevAtBatId = savedAtBatId,
+                prevSlot = savedSlot
+            ))
         }
 
         var showKSheet by remember { mutableStateOf(false) }
         var showBBSheet by remember { mutableStateOf(false) }
 
-        // Half-inning suggestion sheet (triggered after 3 outs)
+        // Half-inning suggestion sheet
         if (showHalfInningSheet) {
             val suggested = HalfInningManager.next(halfInningState)
             ModalBottomSheet(onDismissRequest = { showHalfInningSheet = false }) {
@@ -201,9 +252,15 @@ class BattingTrackActivity : ComponentActivity() {
                     ) {
                         Button(
                             onClick = {
+                                val prevState = halfInningState
                                 db.updateHalfInning(gameId, suggested.inning, suggested.isTopHalf)
                                 halfInningState = suggested
                                 showHalfInningSheet = false
+                                actionStack.push(GameAction.HalfInningChange(
+                                    prevState = prevState,
+                                    prevLeadoffSlot = prevLeadoffForHalfInning,
+                                    prevInning = prevInningForHalfInning
+                                ))
                             },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary))
@@ -250,7 +307,7 @@ class BattingTrackActivity : ComponentActivity() {
                     .fillMaxSize()
                     .background(colorResource(R.color.color_background))
             ) {
-                StatsBar(inning, outs, pitches)
+                StatsBar(inning, outs, pitches, onRunnerOut = { recordRunnerOut() })
                 BatterStrip(currentSlot, lineup[currentSlot], launcher)
                 Box(modifier = Modifier.weight(1f)) {
                     PitchLog(pitches)
@@ -265,75 +322,93 @@ class BattingTrackActivity : ComponentActivity() {
                     onBall = {
                         val abId = ensureAtBat()
                         db.insertPitchForAtBat(abId, "B", inning)
+                        actionStack.push(GameAction.Pitch(abId))
                         val updatedPitches = db.getPitchesForAtBat(abId)
                         val (balls, _) = currentAtBatCount(updatedPitches)
-                        if (balls >= 4) {
-                            showBBSheet = true  // auto-trigger: B pitch already inserted
-                        } else {
-                            refreshAtBat(abId)
-                        }
+                        if (balls >= 4) showBBSheet = true
+                        else refreshAtBat(abId)
                     },
                     onStrike = {
                         val abId = ensureAtBat()
                         val currentPitches = db.getPitchesForAtBat(abId)
                         val (_, currentStrikes) = currentAtBatCount(currentPitches)
                         if (currentStrikes >= 2) {
-                            showKSheet = true  // auto-trigger: let the sheet handle the final pitch
+                            showKSheet = true
                         } else {
                             db.insertPitchForAtBat(abId, "S", inning)
+                            actionStack.push(GameAction.Pitch(abId))
                             refreshAtBat(abId)
                         }
                     },
                     onFoul = {
                         val abId = ensureAtBat()
                         db.insertPitchForAtBat(abId, "F", inning)
+                        actionStack.push(GameAction.Pitch(abId))
                         refreshAtBat(abId)
                     },
                     onUndo = {
-                        val abId = currentAtBatId
-                        if (abId != -1L) {
-                            val currentPitches = db.getPitchesForAtBat(abId)
-                            if (currentPitches.isNotEmpty()) {
-                                db.undoLastPitchForAtBat(abId)
-                                refreshAtBat(abId)
-                            } else {
-                                val allAb = db.getAtBatsForGame(gameId)
-                                if (allAb.size > 1) {
-                                    val currentAbIndex = allAb.indexOfFirst { it.id == abId }
-                                    if (currentAbIndex > 0) {
-                                        val prevAb = allAb[currentAbIndex - 1]
-
-                                        if (isOutResult(prevAb.result)) {
-                                            if (outs > 0) {
-                                                outs--
-                                            } else if (inning > 1) {
-                                                inning--
-                                                outs = 2
-                                            }
-                                            db.updateGameState(gameId, inning, outs)
-                                        }
-
-                                        db.deleteAtBat(abId)
-                                        currentAtBatId = prevAb.id
-                                        currentSlot = prevAb.slot
-                                        db.updateAtBatResult(prevAb.id, null)
-                                        refreshAtBat(prevAb.id)
-                                    }
-                                }
+                        when (val action = actionStack.pop()) {
+                            is GameAction.Pitch -> {
+                                db.undoLastPitchForAtBat(action.atBatId)
+                                currentAtBatId = action.atBatId
+                                refreshAtBat(action.atBatId)
                             }
+                            is GameAction.BatterOut -> {
+                                // Delete the empty at-bat created by nextBatter()
+                                if (currentAtBatId != -1L) db.deleteAtBat(currentAtBatId)
+                                // Restore previous at-bat
+                                db.updateAtBatResult(action.completedAtBatId, null)
+                                currentAtBatId = action.completedAtBatId
+                                currentSlot = action.completedSlot
+                                inning = action.prevInning
+                                outs = action.prevOuts
+                                db.updateGameState(gameId, inning, outs)
+                                refreshAtBat(currentAtBatId)
+                            }
+                            is GameAction.RunnerOut -> {
+                                // Delete the reset at-bat, restore previous
+                                if (action.newAtBatId != -1L) db.deleteAtBat(action.newAtBatId)
+                                currentAtBatId = action.prevAtBatId
+                                currentSlot = action.prevSlot
+                                inning = action.prevInning
+                                outs = action.prevOuts
+                                db.updateGameState(gameId, inning, outs)
+                                refreshAtBat(action.prevAtBatId)
+                            }
+                            is GameAction.HalfInningChange -> {
+                                db.updateHalfInning(gameId, action.prevState.inning, action.prevState.isTopHalf)
+                                db.updateLeadoffSlot(gameId, action.prevLeadoffSlot)
+                                inning = action.prevInning
+                                outs = 2  // 3rd out was what triggered the change
+                                db.updateGameState(gameId, inning, outs)
+                                halfInningState = action.prevState
+                            }
+                            null -> { /* nothing to undo */ }
                         }
                     },
                     onResult = { result ->
                         val abId = ensureAtBat()
                         when (result) {
-                            "H", "1B", "2B", "3B", "HR" -> db.insertPitchForAtBat(abId, "H", inning)
-                            "HBP" -> db.insertPitchForAtBat(abId, "HBP", inning)
-                            "K"   -> db.insertPitchForAtBat(abId, "SO", inning)
-                            "KL"  -> db.insertPitchForAtBat(abId, "S", inning)
+                            "H", "1B", "2B", "3B", "HR" -> {
+                                db.insertPitchForAtBat(abId, "H", inning)
+                                actionStack.push(GameAction.Pitch(abId))
+                            }
+                            "HBP" -> {
+                                db.insertPitchForAtBat(abId, "HBP", inning)
+                                actionStack.push(GameAction.Pitch(abId))
+                            }
+                            "K"  -> {
+                                db.insertPitchForAtBat(abId, "SO", inning)
+                                actionStack.push(GameAction.Pitch(abId))
+                            }
+                            "KL" -> {
+                                db.insertPitchForAtBat(abId, "S", inning)
+                                actionStack.push(GameAction.Pitch(abId))
+                            }
                         }
                         db.updateAtBatResult(abId, result)
-                        if (isOutResult(result)) incrementOuts()
-                        nextBatter()
+                        if (isOutResult(result)) recordBatterOut(result)
+                        else nextBatter()
                     }
                 )
             }
@@ -341,8 +416,9 @@ class BattingTrackActivity : ComponentActivity() {
     }
 
     @Composable
-    fun StatsBar(inning: Int, outs: Int, pitches: List<Pitch>) {
+    fun StatsBar(inning: Int, outs: Int, pitches: List<Pitch>, onRunnerOut: () -> Unit) {
         val (balls, strikes) = currentAtBatCount(pitches)
+        val outsDesc = stringResource(R.string.content_desc_outs_indicator)
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -375,7 +451,14 @@ class BattingTrackActivity : ComponentActivity() {
                     fontWeight = FontWeight.Bold,
                     color = colorResource(R.color.color_text_primary)
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Outs dots — tappable for runner-out
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clickable(onClick = onRunnerOut)
+                        .semantics { contentDescription = outsDesc }
+                        .padding(vertical = 4.dp, horizontal = 4.dp)
+                ) {
                     Text(
                         text = stringResource(R.string.label_outs),
                         fontSize = 14.sp,
@@ -510,35 +593,15 @@ class BattingTrackActivity : ComponentActivity() {
             ModalBottomSheet(onDismissRequest = { showHSheet = false }) {
                 Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp)) {
                     Row(modifier = Modifier.fillMaxWidth().height(72.dp)) {
-                        Button(
-                            onClick = { onResult("1B"); showHSheet = false },
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_bright)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) { Text(stringResource(R.string.btn_result_1b), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        Button(onClick = { onResult("1B"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_bright)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_1b), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = { onResult("2B"); showHSheet = false },
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) { Text(stringResource(R.string.btn_result_2b), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        Button(onClick = { onResult("2B"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_2b), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth().height(72.dp)) {
-                        Button(
-                            onClick = { onResult("3B"); showHSheet = false },
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_dark)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) { Text(stringResource(R.string.btn_result_3b), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        Button(onClick = { onResult("3B"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_dark)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_3b), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = { onResult("HR"); showHSheet = false },
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit_homer)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) { Text(stringResource(R.string.btn_result_hr), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        Button(onClick = { onResult("HR"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit_homer)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_hr), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                     }
                 }
             }
@@ -546,55 +609,25 @@ class BattingTrackActivity : ComponentActivity() {
 
         if (showBBSheet) {
             ModalBottomSheet(onDismissRequest = onBBSheetDismiss) {
-                Row(
-                    modifier = Modifier
-                        .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
-                        .fillMaxWidth()
-                        .height(72.dp)
-                ) {
-                    Button(
-                        onClick = { onResult("BB"); onBBSheetDismiss() },
-                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) { Text(stringResource(R.string.btn_walk_confirm), fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                Row(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp).fillMaxWidth().height(72.dp)) {
+                    Button(onClick = { onResult("BB"); onBBSheetDismiss() }, modifier = Modifier.fillMaxWidth().fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_walk_confirm), fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                 }
             }
         }
 
         if (showKSheet) {
             ModalBottomSheet(onDismissRequest = onKSheetDismiss) {
-                Row(
-                    modifier = Modifier
-                        .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
-                        .fillMaxWidth()
-                        .height(72.dp)
-                ) {
-                    Button(
-                        onClick = { onResult("K"); onKSheetDismiss() },
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) { Text(stringResource(R.string.btn_strikeout_swinging), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                Row(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp).fillMaxWidth().height(72.dp)) {
+                    Button(onClick = { onResult("K"); onKSheetDismiss() }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_strikeout_swinging), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
                     Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = { onResult("KL"); onKSheetDismiss() },
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike_looking)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) { Text(stringResource(R.string.btn_strikeout_looking), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                    Button(onClick = { onResult("KL"); onKSheetDismiss() }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike_looking)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_strikeout_looking), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
                 }
             }
         }
 
         if (showMoreSheet) {
             ModalBottomSheet(onDismissRequest = { showMoreSheet = false }) {
-                Row(
-                    modifier = Modifier
-                        .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
-                        .fillMaxWidth()
-                        .height(60.dp)
-                ) {
+                Row(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp).fillMaxWidth().height(60.dp)) {
                     listOf(
                         R.string.btn_result_hbp to colorResource(R.color.color_hbp),
                         R.string.btn_result_sac to colorResource(R.color.color_orange),
@@ -603,12 +636,7 @@ class BattingTrackActivity : ComponentActivity() {
                     ).forEachIndexed { i, (labelRes, color) ->
                         val label = stringResource(labelRes)
                         if (i > 0) Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = { onResult(label); showMoreSheet = false },
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            colors = ButtonDefaults.buttonColors(containerColor = color),
-                            shape = RoundedCornerShape(8.dp)
-                        ) { Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                        Button(onClick = { onResult(label); showMoreSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = color), shape = RoundedCornerShape(8.dp)) { Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                     }
                 }
             }
@@ -621,87 +649,42 @@ class BattingTrackActivity : ComponentActivity() {
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-
-                // Row 1: BALL | STRIKE
                 Row(modifier = Modifier.fillMaxWidth().height(80.dp)) {
-                    Button(
-                        onClick = onBall,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) { Text(stringResource(R.string.btn_ball), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                    Button(onClick = onBall, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_ball), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                     Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = onStrike,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) { Text(stringResource(R.string.btn_strike), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                    Button(onClick = onStrike, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_strike), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                 }
-
                 Spacer(Modifier.height(8.dp))
-
-                // Row 2: FOUL | UNDO
                 Row(modifier = Modifier.fillMaxWidth().height(48.dp)) {
-                    Button(
-                        onClick = onFoul,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_foul)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) { Text(stringResource(R.string.btn_foul), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                    Button(onClick = onFoul, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_foul)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_foul), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                     Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = onUndo,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) { Text(stringResource(R.string.btn_undo), fontSize = 14.sp) }
+                    Button(onClick = onUndo, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_undo), fontSize = 14.sp) }
                 }
-
                 HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = colorResource(R.color.color_divider_light))
-
-                // Row 3: H | K | BB | OUT▾ | ···
                 Row(modifier = Modifier.fillMaxWidth().height(72.dp)) {
-                    listOf(
-                        R.string.btn_result_h   to colorResource(R.color.color_green),
-                        R.string.btn_result_k   to colorResource(R.color.color_strike),
-                        R.string.btn_result_bb  to colorResource(R.color.color_primary)
-                    ).forEachIndexed { i, (labelRes, color) ->
-                        val label = stringResource(labelRes)
-                        if (i > 0) Spacer(Modifier.width(6.dp))
-                        Button(
-                            onClick = {
-                                when (labelRes) {
-                                    R.string.btn_result_h  -> { showHSheet = true; outExpanded = false }
-                                    R.string.btn_result_k  -> { onShowKSheet(); outExpanded = false }
-                                    R.string.btn_result_bb -> { onShowBBSheet(); outExpanded = false }
-                                    else -> { onResult(label); outExpanded = false }
-                                }
-                            },
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            colors = ButtonDefaults.buttonColors(containerColor = color),
-                            shape = RoundedCornerShape(8.dp)
-                        ) { Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
-                    }
+                    listOf(R.string.btn_result_h to colorResource(R.color.color_green), R.string.btn_result_k to colorResource(R.color.color_strike), R.string.btn_result_bb to colorResource(R.color.color_primary))
+                        .forEachIndexed { i, (labelRes, color) ->
+                            val label = stringResource(labelRes)
+                            if (i > 0) Spacer(Modifier.width(6.dp))
+                            Button(
+                                onClick = {
+                                    when (labelRes) {
+                                        R.string.btn_result_h  -> { showHSheet = true; outExpanded = false }
+                                        R.string.btn_result_k  -> { onShowKSheet(); outExpanded = false }
+                                        R.string.btn_result_bb -> { onShowBBSheet(); outExpanded = false }
+                                        else -> { onResult(label); outExpanded = false }
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                colors = ButtonDefaults.buttonColors(containerColor = color),
+                                shape = RoundedCornerShape(8.dp)
+                            ) { Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                        }
                     Spacer(Modifier.width(6.dp))
-                    Button(
-                        onClick = { outExpanded = !outExpanded; showMoreSheet = false },
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (outExpanded) colorResource(R.color.color_orange) else colorResource(R.color.color_orange_bright)
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    ) { Text(stringResource(R.string.btn_result_out), fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                    Button(onClick = { outExpanded = !outExpanded; showMoreSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = if (outExpanded) colorResource(R.color.color_orange) else colorResource(R.color.color_orange_bright)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_out), fontSize = 14.sp, fontWeight = FontWeight.Bold) }
                     Spacer(Modifier.width(6.dp))
-                    Button(
-                        onClick = { showMoreSheet = true; outExpanded = false },
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) { Text(stringResource(R.string.btn_result_more), fontSize = 18.sp) }
+                    Button(onClick = { showMoreSheet = true; outExpanded = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_more), fontSize = 18.sp) }
                 }
-
-                // Row 4: GO | FO | LO (only when OUT is expanded)
                 if (outExpanded) {
                     Spacer(Modifier.height(6.dp))
                     Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
@@ -709,12 +692,7 @@ class BattingTrackActivity : ComponentActivity() {
                             .forEachIndexed { i, labelRes ->
                                 val label = stringResource(labelRes)
                                 if (i > 0) Spacer(Modifier.width(6.dp))
-                                Button(
-                                    onClick = { onResult(label); outExpanded = false },
-                                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                                    colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)),
-                                    shape = RoundedCornerShape(8.dp)
-                                ) { Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                                Button(onClick = { onResult(label); outExpanded = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)), shape = RoundedCornerShape(8.dp)) { Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
                             }
                     }
                 }

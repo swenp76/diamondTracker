@@ -343,6 +343,8 @@
     <string name="half_inning_label_top">▲ TOP</string>
     <string name="half_inning_label_bot">▼ BOT</string>
     <string name="content_desc_edit_half_inning">Edit half-inning</string>
+    <string name="content_desc_outs_indicator">Record runner out</string>
+    <string name="pitch_label_runner_out">── Runner Out ───────────────────</string>
 
     <!-- ── Empty States ──────────────────────────────────────────────────── -->
     <string name="empty_games">No games yet.\nAdd a new game first.</string>

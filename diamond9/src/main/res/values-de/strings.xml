@@ -234,6 +234,8 @@
     <string name="label_inning">Inning %d</string>
     <string name="label_outs">Outs: </string>
     <string name="snackbar_inning_starts">Inning %d beginnt</string>
+    <string name="content_desc_outs_indicator">Läufer-Out erfassen</string>
+    <string name="pitch_label_runner_out">── Läufer-Out ───────────────────</string>
 
     <!-- FAB Labels -->
     <string name="fab_add_game">Spiel hinzufügen</string>

@@ -28,6 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -77,9 +79,15 @@ class PitchTrackActivity : ComponentActivity() {
         var showTrendSheet by remember { mutableStateOf(false) }
         var showHitSheet by remember { mutableStateOf(false) }
         var showOutSheet by remember { mutableStateOf(false) }
+        var showHalfInningSheet by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
         var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
+        val actionStack = remember { GameActionStack() }
+
+        // Captured before 3rd out, used by HalfInningChange undo
+        var prevLeadoffForHalfInning by remember { mutableStateOf(1) }
+        var prevInningForHalfInning by remember { mutableStateOf(1) }
 
         val lifecycleOwner = LocalLifecycleOwner.current
         DisposableEffect(lifecycleOwner) {
@@ -96,20 +104,48 @@ class PitchTrackActivity : ComponentActivity() {
             stats = db.getStatsForPitcher(pitcherId)
         }
 
-        fun addOut() {
-            val newOuts = outs + 1
+        /** Out-button: batter was put out (BF already inserted before this call). */
+        fun recordBatterOut() {
+            val savedInning = inning
+            val savedOuts = outs
+            val newOuts = savedOuts + 1
             if (newOuts >= 3) {
-                // When 3 outs are reached, the next inning for the OWN team starts.
-                // We should NOT overwrite leadoff_slot here because leadoff_slot tracks
-                // which OWN player starts the next offense.
-                // The opponent's batter progress is not tracked via leadoff_slot.
+                prevLeadoffForHalfInning = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
+                prevInningForHalfInning = savedInning
                 inning++
                 outs = 0
-                showInningSnackbar = true
+                showHalfInningSheet = true
             } else {
                 outs = newOuts
             }
             if (gameId != -1L) db.updateGameState(gameId, inning, outs)
+            actionStack.push(GameAction.BatterOut(
+                completedAtBatId = -1L,  // defense doesn't use at-bat IDs
+                completedSlot = -1,
+                prevInning = savedInning,
+                prevOuts = savedOuts
+            ))
+        }
+
+        /** Outs-indicator tap: runner was put out, batter stays, count resets. */
+        fun recordRunnerOut() {
+            val savedInning = inning
+            val savedOuts = outs
+            // Insert "RO" marker to reset the current at-bat pitch count display
+            db.insertPitch(pitcherId, "RO", inning)
+            val newOuts = savedOuts + 1
+            if (newOuts >= 3) {
+                prevLeadoffForHalfInning = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
+                prevInningForHalfInning = savedInning
+                inning++
+                outs = 0
+                showHalfInningSheet = true
+            } else {
+                outs = newOuts
+            }
+            if (gameId != -1L) db.updateGameState(gameId, inning, outs)
+            actionStack.push(GameAction.RunnerOut(prevInning = savedInning, prevOuts = savedOuts))
+            refresh()
         }
 
         val opponentLineupLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -125,7 +161,7 @@ class PitchTrackActivity : ComponentActivity() {
                         val lastPitches = stats.pitches.takeLastWhile { it.type != "BF" }
                         if (lastPitches.isNotEmpty()) {
                             db.insertPitch(pitcherId, "BF", inning)
-                            addOut()
+                            recordBatterOut()
                         }
 
                         var newGameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
@@ -191,7 +227,7 @@ class PitchTrackActivity : ComponentActivity() {
                     .fillMaxSize()
                     .background(colorResource(R.color.color_background))
             ) {
-                StatsBar(stats, inning, outs)
+                StatsBar(stats, inning, outs, onRunnerOut = { recordRunnerOut() })
                 BatterStrip(stats, opponentLineupLauncher)
                 Box(modifier = Modifier.weight(1f)) {
                     PitchLog(stats, listState)
@@ -200,6 +236,7 @@ class PitchTrackActivity : ComponentActivity() {
                     onBall = {
                         val (ballsBefore, _) = currentAtBatCount(stats.pitches)
                         db.insertPitch(pitcherId, "B", inning)
+                        actionStack.push(GameAction.Pitch(-1L))
                         if (ballsBefore >= 3) {
                             db.insertPitch(pitcherId, "W", inning)
                             db.insertPitch(pitcherId, "BF", inning)
@@ -209,34 +246,115 @@ class PitchTrackActivity : ComponentActivity() {
                     onStrike = {
                         val (_, strikesBefore) = currentAtBatCount(stats.pitches)
                         db.insertPitch(pitcherId, "S", inning)
+                        actionStack.push(GameAction.Pitch(-1L))
                         if (strikesBefore >= 2) {
                             db.insertPitch(pitcherId, "SO", inning)
                             db.insertPitch(pitcherId, "BF", inning)
-                            addOut()
+                            recordBatterOut()
                         }
                         refresh()
                     },
                     onShowHitSheet = { showHitSheet = true },
                     onFoul = {
                         db.insertPitch(pitcherId, "F", inning)
+                        actionStack.push(GameAction.Pitch(-1L))
                         refresh()
                     },
                     onHbp = {
                         db.insertPitch(pitcherId, "HBP", inning)
                         db.insertPitch(pitcherId, "BF", inning)
+                        actionStack.push(GameAction.Pitch(-1L))
                         refresh()
                     },
                     onBf = {
                         db.insertPitch(pitcherId, "BF", inning)
+                        actionStack.push(GameAction.Pitch(-1L))
                         refresh()
                     },
                     onUndo = {
-                        db.undoLastPitch(pitcherId)
-                        refresh()
+                        when (val action = actionStack.pop()) {
+                            is GameAction.Pitch -> {
+                                db.undoLastPitch(pitcherId)
+                                refresh()
+                            }
+                            is GameAction.BatterOut -> {
+                                // undo the BF + out-type pitch, restore out counter
+                                db.undoLastPitch(pitcherId) // BF
+                                db.undoLastPitch(pitcherId) // GO/FO/SO
+                                inning = action.prevInning
+                                outs = action.prevOuts
+                                if (gameId != -1L) db.updateGameState(gameId, inning, outs)
+                                refresh()
+                            }
+                            is GameAction.RunnerOut -> {
+                                // undo the RO marker, restore out counter
+                                db.undoLastPitch(pitcherId) // RO
+                                inning = action.prevInning
+                                outs = action.prevOuts
+                                if (gameId != -1L) db.updateGameState(gameId, inning, outs)
+                                refresh()
+                            }
+                            is GameAction.HalfInningChange -> {
+                                db.updateHalfInning(gameId, action.prevState.inning, action.prevState.isTopHalf)
+                                inning = action.prevInning
+                                outs = 2
+                                if (gameId != -1L) db.updateGameState(gameId, inning, outs)
+                                halfInningState = action.prevState
+                            }
+                            null -> {
+                                // fallback: plain pitch undo
+                                db.undoLastPitch(pitcherId)
+                                refresh()
+                            }
+                        }
                     },
                     onShowOutSheet = { showOutSheet = true },
                     onShowTrend = { showTrendSheet = true }
                 )
+            }
+        }
+
+        if (showHalfInningSheet) {
+            val suggested = HalfInningManager.next(halfInningState)
+            ModalBottomSheet(onDismissRequest = { showHalfInningSheet = false }) {
+                Column(
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.half_inning_change_title),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = stringResource(R.string.half_inning_next_label, suggested.label),
+                        fontSize = 16.sp
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                val prevState = halfInningState
+                                db.updateHalfInning(gameId, suggested.inning, suggested.isTopHalf)
+                                halfInningState = suggested
+                                showHalfInningSheet = false
+                                actionStack.push(GameAction.HalfInningChange(
+                                    prevState = prevState,
+                                    prevLeadoffSlot = prevLeadoffForHalfInning,
+                                    prevInning = prevInningForHalfInning
+                                ))
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary))
+                        ) { Text(stringResource(R.string.half_inning_confirm), fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = { showHalfInningSheet = false },
+                            modifier = Modifier.weight(1f)
+                        ) { Text(stringResource(R.string.half_inning_keep_going)) }
+                    }
+                }
             }
         }
 
@@ -302,7 +420,7 @@ class PitchTrackActivity : ComponentActivity() {
                                     val pitchType = if (label == "K") "SO" else label
                                     db.insertPitch(pitcherId, pitchType, inning)
                                     db.insertPitch(pitcherId, "BF", inning)
-                                    addOut()
+                                    recordBatterOut()
                                     refresh()
                                     showOutSheet = false
                                 },
@@ -320,7 +438,8 @@ class PitchTrackActivity : ComponentActivity() {
     }
 
     @Composable
-    fun StatsBar(stats: PitcherStats, inning: Int, outs: Int) {
+    fun StatsBar(stats: PitcherStats, inning: Int, outs: Int, onRunnerOut: () -> Unit) {
+        val outsDesc = stringResource(R.string.content_desc_outs_indicator)
         val date = if (gameId != -1L) db.getGame(gameId)?.date ?: "" else ""
         val totalBF = if (stats.pitcher.playerId > 0 && date.isNotEmpty())
             db.getTotalBFForPlayerOnDate(stats.pitcher.playerId, date)
@@ -363,7 +482,14 @@ class PitchTrackActivity : ComponentActivity() {
                     fontWeight = FontWeight.Bold,
                     color = colorResource(R.color.color_text_primary)
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Outs dots — tappable for runner-out
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clickable(onClick = onRunnerOut)
+                        .semantics { contentDescription = outsDesc }
+                        .padding(vertical = 4.dp, horizontal = 4.dp)
+                ) {
                     Text(
                         text = stringResource(R.string.label_outs),
                         fontSize = 14.sp,
@@ -474,6 +600,7 @@ class PitchTrackActivity : ComponentActivity() {
                     "GO" -> Text(stringResource(R.string.pitch_label_go), color = colorResource(R.color.color_text_secondary), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "FO" -> Text(stringResource(R.string.pitch_label_fo), color = colorResource(R.color.color_text_secondary), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "W"  -> Text(stringResource(R.string.pitch_label_walk), color = colorResource(R.color.color_walk), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    "RO" -> Text(stringResource(R.string.pitch_label_runner_out), color = colorResource(R.color.color_text_secondary), fontSize = 11.sp)
                     "SO" -> Text(stringResource(R.string.pitch_label_strikeout), color = colorResource(R.color.color_green_bright), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     "B", "S", "F" -> {
                         val currentNum = pitchNumber
@@ -622,7 +749,7 @@ class PitchTrackActivity : ComponentActivity() {
     }
 
     private fun currentAtBatCount(pitches: List<Pitch>): Pair<Int, Int> {
-        val lastBf = pitches.indexOfLast { it.type == "BF" }
+        val lastBf = pitches.indexOfLast { it.type == "BF" || it.type == "RO" }
         val current = if (lastBf == -1) pitches else pitches.drop(lastBf + 1)
         var balls = 0
         var strikes = 0
