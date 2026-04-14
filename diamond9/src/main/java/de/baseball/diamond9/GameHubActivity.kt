@@ -13,13 +13,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -75,17 +79,11 @@ class GameHubActivity : ComponentActivity() {
                     }
                     startActivity(intent)
                 },
-                onBatterStats = {
+                onStats = {
                     startActivity(Intent(this, BatterStatsActivity::class.java).apply {
                         putExtra("gameId", gameId)
                         putExtra("gameOpponent", opponent)
                         putExtra("gameDate", date)
-                    })
-                },
-                onSeasonStats = {
-                    startActivity(Intent(this, SeasonStatsActivity::class.java).apply {
-                        putExtra("teamId", ownTeamId)
-                        putExtra("teamName", ownTeam)
                     })
                 }
             )
@@ -108,8 +106,7 @@ private fun GameHubScreen(
     onDefense: () -> Unit,
     onLineup: () -> Unit,
     onOpponentLineup: () -> Unit,
-    onBatterStats: () -> Unit,
-    onSeasonStats: () -> Unit
+    onStats: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -123,6 +120,11 @@ private fun GameHubScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onStats) {
+                        Icon(Icons.Default.ShowChart, contentDescription = stringResource(R.string.btn_stats))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -141,7 +143,7 @@ private fun GameHubScreen(
 
             GameTimer(gameId, db)
 
-            HalfInningBar(gameId, db)
+            HalfInningBar(gameId, db, isHome, onOffense, onDefense)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -149,8 +151,6 @@ private fun GameHubScreen(
             HubButton(stringResource(R.string.gamehub_defense), colorResource(R.color.color_primary), onDefense)
             HubButton(stringResource(R.string.gamehub_lineup), colorResource(R.color.color_primary), onLineup)
             HubButton(stringResource(R.string.gamehub_oppo_lineup), colorResource(R.color.color_primary), onOpponentLineup)
-            HubButton(stringResource(R.string.gamehub_batter_stats), colorResource(R.color.color_primary), onBatterStats)
-            HubButton(stringResource(R.string.season_stats_btn), colorResource(R.color.color_primary), onSeasonStats)
 
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -420,9 +420,26 @@ private fun HubButton(text: String, color: Color, onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HalfInningBar(gameId: Long, db: DatabaseHelper) {
+private fun HalfInningBar(
+    gameId: Long,
+    db: DatabaseHelper,
+    isHome: Int,
+    onOffense: () -> Unit,
+    onDefense: () -> Unit
+) {
     var state by remember { mutableStateOf(db.getHalfInningState(gameId)) }
     var showEditDialog by remember { mutableStateOf(false) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                state = db.getHalfInningState(gameId)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     if (showEditDialog) {
         ManualHalfInningDialog(
@@ -435,6 +452,8 @@ private fun HalfInningBar(gameId: Long, db: DatabaseHelper) {
             onDismiss = { showEditDialog = false }
         )
     }
+
+    val isOurOffense = (state.isTopHalf && isHome == 0) || (!state.isTopHalf && isHome == 1)
 
     Row(
         modifier = Modifier
@@ -452,8 +471,22 @@ private fun HalfInningBar(gameId: Long, db: DatabaseHelper) {
             text = state.label,
             color = Color.White,
             fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f)
         )
+        OutlinedButton(
+            onClick = if (isOurOffense) onOffense else onDefense,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.7f)),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            modifier = Modifier.height(32.dp)
+        ) {
+            Text(
+                text = stringResource(if (isOurOffense) R.string.gamehub_offense else R.string.gamehub_defense),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
         IconButton(onClick = { showEditDialog = true }) {
             Icon(
                 imageVector = Icons.Default.Edit,

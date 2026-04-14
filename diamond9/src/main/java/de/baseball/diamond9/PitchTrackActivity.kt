@@ -33,6 +33,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import kotlinx.coroutines.launch
 
 class PitchTrackActivity : ComponentActivity() {
@@ -76,6 +79,18 @@ class PitchTrackActivity : ComponentActivity() {
         var showOutSheet by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
+        var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
+
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    halfInningState = db.getHalfInningState(gameId)
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
 
         fun refresh() {
             stats = db.getStatsForPitcher(pitcherId)
@@ -147,7 +162,16 @@ class PitchTrackActivity : ComponentActivity() {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
-                    title = { Text(pitcherName) },
+                    title = {
+                        Column {
+                            Text(pitcherName)
+                            Text(
+                                text = halfInningState.shortLabel,
+                                fontSize = 13.sp,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+                    },
                     navigationIcon = {
                         IconButton(onClick = { finish() }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))

@@ -583,6 +583,9 @@ class DatabaseHelper(context: Context) {
     fun getGameBatterStats(gameId: Long): List<GameBatterStatsRow> =
         atBatDao.getGameBatterStats(gameId)
 
+    fun getGamePitcherStats(gameId: Long): List<PitcherStats> =
+        getPitchersForGame(gameId).map { getStatsForPitcher(it.id) }
+
     fun getSeasonBatterStats(teamId: Long): List<SeasonBatterRow> =
         atBatDao.getSeasonBatterStats(teamId)
 
