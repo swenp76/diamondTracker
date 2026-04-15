@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -175,6 +176,17 @@ private fun Scoreboard(
 
     // teamIndex: 0 = guest, 1 = home
     var editCell by remember { mutableStateOf<Pair<Int, Int>?>(null) } // teamIndex to inning
+    var currentInning by remember { mutableStateOf(db.getHalfInningState(gameId).inning) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                currentInning = db.getHalfInningState(gameId).inning
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     // runs[teamIndex][inning-1]
     val runs = remember { mutableStateOf(Array(2) { t -> IntArray(innings) { inn -> db.getScoreboardRuns(gameId, inn + 1, t) } }) }
     val hasEntry = remember { mutableStateOf(Array(2) { t -> BooleanArray(innings) { inn -> db.hasScoreboardEntry(gameId, inn + 1, t) } }) }
@@ -230,7 +242,7 @@ private fun Scoreboard(
             // Header Row
             Row(modifier = Modifier.background(colorResource(R.color.color_primary))) {
                 ScoreCell("", 100.dp, true)
-                (1..innings).forEach { ScoreCell(it.toString(), 30.dp, true) }
+                (1..innings).forEach { ScoreCell(it.toString(), 30.dp, true, highlight = it == currentInning) }
                 ScoreCell(stringResource(R.string.scoreboard_total_label), 40.dp, true)
             }
             // Guest Row
@@ -238,7 +250,7 @@ private fun Scoreboard(
                 ScoreCell(guestTeam, 100.dp, false, FontWeight.Bold)
                 (1..innings).forEach { inn ->
                     val r = if (hasEntry.value[0][inn - 1]) runs.value[0][inn - 1].toString() else "-"
-                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(0, inn) })
+                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(0, inn) }, highlight = inn == currentInning)
                 }
                 ScoreCell(totalFor(0).toString(), 40.dp, false, FontWeight.Bold)
             }
@@ -248,7 +260,7 @@ private fun Scoreboard(
                 ScoreCell(homeTeam, 100.dp, false, FontWeight.Bold)
                 (1..innings).forEach { inn ->
                     val r = if (hasEntry.value[1][inn - 1]) runs.value[1][inn - 1].toString() else "-"
-                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(1, inn) })
+                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(1, inn) }, highlight = inn == currentInning)
                 }
                 ScoreCell(totalFor(1).toString(), 40.dp, false, FontWeight.Bold)
             }
@@ -400,12 +412,15 @@ private fun ScoreCell(
     isHeader: Boolean,
     fontWeight: FontWeight = FontWeight.Normal,
     textColor: Color = Color.Unspecified,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    highlight: Boolean = false
 ) {
+    val borderColor = if (isHeader) Color.White else colorResource(R.color.color_primary)
     Box(
         modifier = Modifier
             .width(width)
             .height(40.dp)
+            .then(if (highlight) Modifier.border(2.dp, borderColor) else Modifier)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center
     ) {
