@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,7 +50,7 @@ class GameHubActivity : ComponentActivity() {
                 date = date,
                 opponent = opponent,
                 ownTeam = ownTeam,
-                ownTeamId = ownTeamId.toString(),
+                ownTeamId = ownTeamId,
                 isHome = isHome,
                 db = db,
                 onBack = { finish() },
@@ -98,7 +99,7 @@ private fun GameHubScreen(
     date: String,
     opponent: String,
     ownTeam: String,
-    ownTeamId: String,
+    ownTeamId: Long,
     isHome: Int,
     db: DatabaseHelper,
     onBack: () -> Unit,
@@ -108,6 +109,8 @@ private fun GameHubScreen(
     onOpponentLineup: () -> Unit,
     onStats: () -> Unit
 ) {
+    val leagueSettings = remember { db.getLeagueSettings(ownTeamId) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -139,11 +142,11 @@ private fun GameHubScreen(
                 .background(colorResource(R.color.color_background)),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Scoreboard(gameId, ownTeam, opponent, isHome, db)
+            Scoreboard(gameId, ownTeam, opponent, isHome, leagueSettings.innings, db)
 
             GameTimer(gameId, db)
 
-            HalfInningBar(gameId, db, isHome, onOffense, onDefense)
+            HalfInningBar(gameId, db, isHome, leagueSettings.timeLimitMinutes, onOffense, onDefense)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -158,19 +161,26 @@ private fun GameHubScreen(
 }
 
 @Composable
-private fun Scoreboard(gameId: Long, ownTeam: String, opponent: String, isHome: Int, db: DatabaseHelper) {
+private fun Scoreboard(
+    gameId: Long,
+    ownTeam: String,
+    opponent: String,
+    isHome: Int,
+    innings: Int,
+    db: DatabaseHelper
+) {
     val guestTeam = if (isHome == 1) opponent else ownTeam
     val homeTeam = if (isHome == 1) ownTeam else opponent
 
     // teamIndex: 0 = guest, 1 = home
     var editCell by remember { mutableStateOf<Pair<Int, Int>?>(null) } // teamIndex to inning
     // runs[teamIndex][inning-1]
-    val runs = remember { mutableStateOf(Array(2) { t -> IntArray(9) { inn -> db.getScoreboardRuns(gameId, inn + 1, t) } }) }
-    val hasEntry = remember { mutableStateOf(Array(2) { t -> BooleanArray(9) { inn -> db.hasScoreboardEntry(gameId, inn + 1, t) } }) }
+    val runs = remember { mutableStateOf(Array(2) { t -> IntArray(innings) { inn -> db.getScoreboardRuns(gameId, inn + 1, t) } }) }
+    val hasEntry = remember { mutableStateOf(Array(2) { t -> BooleanArray(innings) { inn -> db.hasScoreboardEntry(gameId, inn + 1, t) } }) }
 
     fun reload() {
-        runs.value = Array(2) { t -> IntArray(9) { inn -> db.getScoreboardRuns(gameId, inn + 1, t) } }
-        hasEntry.value = Array(2) { t -> BooleanArray(9) { inn -> db.hasScoreboardEntry(gameId, inn + 1, t) } }
+        runs.value = Array(2) { t -> IntArray(innings) { inn -> db.getScoreboardRuns(gameId, inn + 1, t) } }
+        hasEntry.value = Array(2) { t -> BooleanArray(innings) { inn -> db.hasScoreboardEntry(gameId, inn + 1, t) } }
     }
 
     fun totalFor(teamIndex: Int): Int = runs.value[teamIndex].sum()
@@ -211,17 +221,21 @@ private fun Scoreboard(gameId: Long, ownTeam: String, opponent: String, isHome: 
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column(modifier = Modifier.padding(bottom = 8.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(bottom = 8.dp)
+                .horizontalScroll(rememberScrollState())
+        ) {
             // Header Row
             Row(modifier = Modifier.background(colorResource(R.color.color_primary))) {
                 ScoreCell("", 100.dp, true)
-                (1..9).forEach { ScoreCell(it.toString(), 30.dp, true) }
+                (1..innings).forEach { ScoreCell(it.toString(), 30.dp, true) }
                 ScoreCell(stringResource(R.string.scoreboard_total_label), 40.dp, true)
             }
             // Guest Row
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ScoreCell(guestTeam, 100.dp, false, FontWeight.Bold)
-                (1..9).forEach { inn ->
+                (1..innings).forEach { inn ->
                     val r = if (hasEntry.value[0][inn - 1]) runs.value[0][inn - 1].toString() else "-"
                     ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(0, inn) })
                 }
@@ -231,7 +245,7 @@ private fun Scoreboard(gameId: Long, ownTeam: String, opponent: String, isHome: 
             // Home Row
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ScoreCell(homeTeam, 100.dp, false, FontWeight.Bold)
-                (1..9).forEach { inn ->
+                (1..innings).forEach { inn ->
                     val r = if (hasEntry.value[1][inn - 1]) runs.value[1][inn - 1].toString() else "-"
                     ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(1, inn) })
                 }
@@ -424,11 +438,14 @@ private fun HalfInningBar(
     gameId: Long,
     db: DatabaseHelper,
     isHome: Int,
+    timeLimitMinutes: Int?,
     onOffense: () -> Unit,
     onDefense: () -> Unit
 ) {
     var state by remember { mutableStateOf(db.getHalfInningState(gameId)) }
     var showEditDialog by remember { mutableStateOf(false) }
+    var pendingState by remember { mutableStateOf<HalfInningState?>(null) }
+    var showTimeLimitSheet by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -441,16 +458,82 @@ private fun HalfInningBar(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    fun applyState(newState: HalfInningState) {
+        db.updateHalfInning(gameId, newState.inning, newState.isTopHalf)
+        state = newState
+    }
+
     if (showEditDialog) {
         ManualHalfInningDialog(
             current = state,
             onConfirm = { newState ->
-                db.updateHalfInning(gameId, newState.inning, newState.isTopHalf)
-                state = newState
                 showEditDialog = false
+                if (timeLimitMinutes != null && newState.inning > state.inning) {
+                    val limitMs = timeLimitMinutes * 60_000L
+                    if (db.getTotalElapsedMs(gameId) >= limitMs) {
+                        pendingState = newState
+                        showTimeLimitSheet = true
+                        return@ManualHalfInningDialog
+                    }
+                }
+                applyState(newState)
             },
             onDismiss = { showEditDialog = false }
         )
+    }
+
+    if (showTimeLimitSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = {
+                showTimeLimitSheet = false
+                pendingState = null
+            },
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.gamehub_time_limit_title),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colorResource(R.color.color_strike)
+                )
+                Text(
+                    text = stringResource(R.string.gamehub_time_limit_message, timeLimitMinutes!!),
+                    fontSize = 14.sp,
+                    color = colorResource(R.color.color_text_primary)
+                )
+                Button(
+                    onClick = {
+                        pendingState?.let { applyState(it) }
+                        showTimeLimitSheet = false
+                        pendingState = null
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colorResource(R.color.color_strike),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(stringResource(R.string.gamehub_time_limit_override), fontWeight = FontWeight.Bold)
+                }
+                OutlinedButton(
+                    onClick = {
+                        showTimeLimitSheet = false
+                        pendingState = null
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.gamehub_time_limit_cancel))
+                }
+            }
+        }
     }
 
     val isOurOffense = (state.isTopHalf && isHome == 0) || (!state.isTopHalf && isHome == 1)

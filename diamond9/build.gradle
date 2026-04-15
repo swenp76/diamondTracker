@@ -6,6 +6,12 @@ plugins {
     alias(libs.plugins.mikepenz.aboutlibraries.plugin)
 }
 
+// On Linux (likely eCryptfs home), D8's long synthetic lambda .globals filenames
+// exceed the ~140-char encrypted-filename limit. Move build output to /tmp to fix.
+if (System.getProperty('os.name').toLowerCase().contains('linux')) {
+    layout.buildDirectory = file('/tmp/d9b')
+}
+
 android {
     namespace 'de.baseball.diamond9'
     compileSdk 36
@@ -14,8 +20,8 @@ android {
         applicationId "de.baseball.diamond9"
         minSdk 26
         targetSdk 35
-        versionCode 12
-        versionName "0.12-alpha"
+        versionCode 13
+        versionName "0.13-alpha"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 

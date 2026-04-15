@@ -10,7 +10,7 @@ Sie hilft beim Verwalten von Teams, Erstellen von Aufstellungen und Tracken von 
 - **Datenbank:** Room (SQLite) über DAOs + DatabaseHelper-Wrapper
 - **UI:** Jetpack Compose (Material 3)
 - **Package:** de.baseball.diamond9
-- **DB-Datei:** `pitcher.db` (Version 12)
+- **DB-Datei:** `pitcher.db` (Version 13)
 - **Lokalisierung:** Deutsch (Fallback, `values/`), Englisch (`values-en/`)
 
 ## Projektstruktur
@@ -232,7 +232,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 
 ---
 
-## Datenbankschema (Version 11)
+## Datenbankschema (Version 13)
 
 | Tabelle | Wichtige Felder |
 |---------|----------------|
@@ -251,6 +251,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | `opponent_substitutions` | id, game_id, slot, jersey_out, jersey_in |
 | `opponent_teams` | id, name, **team_id** |
 | **`scoreboard_runs`** | **id, game_id, inning, is_home, runs** |
+| **`league_settings`** | **id, team_id (UNIQUE), innings (default 9), time_limit_minutes** |
 
 **Pitch-Typen:** `B` = Ball, `S` = Strike, `F` = Foul, `BF` = Batter Faced,
 `SO` = Strikeout-Pitch, `H` = Hit, `HBP` = Hit by Pitch, `W` = Walk
@@ -274,7 +275,9 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | 9 → 10 | `is_home` in `games` | ✅ |
 | 10 → 11 | `elapsed_time_ms` in `games` | ✅ |
 | 11 → 12 | `current_inning`, `is_top_half` in `games` (Half-Inning Tracking) | ✅ |
-| 12 → 13 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
-| 13 → 14 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
+| 12 → 13 | `league_settings`-Tabelle (Team Hub / Liga-Settings) | ✅ |
+| 13 → 14 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
+| 13 → 14 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
+| 14 → 15 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
 
 **Hinweis:** Jede Migration hier eintragen und gleichzeitig `BackupManager` aktualisieren.

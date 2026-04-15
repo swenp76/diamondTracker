@@ -343,6 +343,10 @@
     <string name="half_inning_label_top">▲ TOP</string>
     <string name="half_inning_label_bot">▼ BOT</string>
     <string name="content_desc_edit_half_inning">Edit half-inning</string>
+    <string name="gamehub_time_limit_title">Time Limit Reached</string>
+    <string name="gamehub_time_limit_message">The time limit of %d min has been reached. No new inning should be started.</string>
+    <string name="gamehub_time_limit_override">Override – start new inning anyway</string>
+    <string name="gamehub_time_limit_cancel">Don\'t start new inning</string>
     <string name="content_desc_outs_indicator">Record runner out</string>
     <string name="pitch_label_runner_out">── Runner Out ───────────────────</string>
 
@@ -359,6 +363,35 @@
     <string name="nav_opponents">Opponents</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_about">About</string>
+
+    <!-- ── Team Hub ─────────────────────────────────────────────────────────── -->
+    <string name="teamhub_games">Games</string>
+    <string name="teamhub_stats">Stats</string>
+    <string name="teamhub_edit_roster">Edit Roster</string>
+    <string name="teamhub_settings">Settings</string>
+    <string name="teamhub_stats_coming_soon">Stats – coming soon</string>
+    <string name="team_tap_to_open">Tap to open</string>
+
+    <!-- ── Team Settings ───────────────────────────────────────────────────── -->
+    <string name="teamsettings_league_section">League Settings</string>
+    <string name="teamsettings_innings_label">Innings</string>
+    <string name="teamsettings_innings_value">%d Innings</string>
+    <string name="teamsettings_time_limit_label">Time Limit</string>
+    <string name="teamsettings_time_limit_value">Max. %d min (no new inning after)</string>
+    <string name="teamsettings_no_time_limit">No time limit</string>
+    <string name="teamsettings_set_time_limit">Set Time Limit</string>
+    <string name="teamsettings_import_league">Import League Settings (JSON)</string>
+    <string name="teamsettings_league_imported">League settings imported ✓</string>
+    <string name="teamsettings_import_error">Import failed: %s</string>
+    <string name="teamsettings_export_league">Export (JSON)</string>
+    <string name="teamsettings_league_exported">League settings exported ✓</string>
+    <string name="teamsettings_export_error">Export failed: %s</string>
+    <string name="teamsettings_team_section">Team Settings</string>
+    <string name="teamsettings_team_coming_soon">Team-specific settings (Import/Export – coming soon)</string>
+    <string name="teamsettings_import_team">Import Team Settings</string>
+    <string name="teamsettings_export_team">Export Team Settings</string>
+    <string name="teamsettings_saved">Settings saved</string>
+    <string name="teamsettings_minutes_suffix">min</string>
 
     <!-- ── About Screen ──────────────────────────────────────────────────── -->
     <string name="about_title">About</string>

@@ -291,4 +291,39 @@
     <string name="timer_label_paused">pausiert</string>
     <string name="dialog_timer_reset_title">Timer zurücksetzen</string>
     <string name="dialog_timer_reset_message">Möchtest du den Spiel-Timer auf 00:00:00 zurücksetzen?</string>
+
+    <!-- ── Team Hub ─────────────────────────────────────────────────────── -->
+    <string name="teamhub_games">Spiele</string>
+    <string name="teamhub_stats">Statistiken</string>
+    <string name="teamhub_edit_roster">Kader bearbeiten</string>
+    <string name="teamhub_settings">Einstellungen</string>
+    <string name="teamhub_stats_coming_soon">Statistiken – demnächst</string>
+    <string name="team_tap_to_open">Antippen zum Öffnen</string>
+
+    <!-- ── Team Settings ────────────────────────────────────────────────── -->
+    <string name="teamsettings_league_section">Liga-Einstellungen</string>
+    <string name="teamsettings_innings_label">Innings</string>
+    <string name="teamsettings_innings_value">%d Innings</string>
+    <string name="teamsettings_time_limit_label">Zeitlimit</string>
+    <string name="teamsettings_time_limit_value">Max. %d min (kein neues Inning danach)</string>
+    <string name="teamsettings_no_time_limit">Kein Zeitlimit</string>
+    <string name="teamsettings_set_time_limit">Zeitlimit festlegen</string>
+    <string name="teamsettings_import_league">Liga-Einstellungen importieren (JSON)</string>
+    <string name="teamsettings_league_imported">Liga-Einstellungen importiert ✓</string>
+    <string name="teamsettings_import_error">Import fehlgeschlagen: %s</string>
+    <string name="teamsettings_export_league">Exportieren (JSON)</string>
+    <string name="teamsettings_league_exported">Liga-Einstellungen exportiert ✓</string>
+    <string name="teamsettings_export_error">Export fehlgeschlagen: %s</string>
+    <string name="teamsettings_team_section">Team-Einstellungen</string>
+    <string name="teamsettings_team_coming_soon">Teamspezifische Einstellungen (Import/Export – demnächst)</string>
+    <string name="teamsettings_import_team">Team-Einstellungen importieren</string>
+    <string name="teamsettings_export_team">Team-Einstellungen exportieren</string>
+    <string name="teamsettings_saved">Einstellungen gespeichert</string>
+    <string name="teamsettings_minutes_suffix">min</string>
+
+    <!-- ── Game Hub – Time Limit ─────────────────────────────────────────── -->
+    <string name="gamehub_time_limit_title">Zeitlimit erreicht</string>
+    <string name="gamehub_time_limit_message">Das Zeitlimit von %d min ist abgelaufen. Es sollte kein neues Inning mehr begonnen werden.</string>
+    <string name="gamehub_time_limit_override">Überschreiben – neues Inning trotzdem starten</string>
+    <string name="gamehub_time_limit_cancel">Kein neues Inning starten</string>
 </resources>

@@ -125,6 +125,14 @@ data class ScoreboardRun(
     @ColumnInfo(name = "runs") val runs: Int = 0
 )
 
+@Entity(tableName = "league_settings")
+data class LeagueSettings(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "team_id") val teamId: Long,
+    @ColumnInfo(name = "innings", defaultValue = "9") val innings: Int = 9,
+    @ColumnInfo(name = "time_limit_minutes") val timeLimitMinutes: Int? = null
+)
+
 @Entity(tableName = "opponent_substitutions")
 data class OppSubstitution(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -247,6 +255,7 @@ class DatabaseHelper(context: Context) {
     private val lineupDao = db.lineupDao()
     private val opponentTeamDao = db.opponentTeamDao()
     private val scoreboardDao = db.scoreboardDao()
+    private val leagueSettingsDao = db.leagueSettingsDao()
 
     // ── Games ──────────────────────────────────────────────────────────────────
 
@@ -289,6 +298,13 @@ class DatabaseHelper(context: Context) {
 
     fun setElapsedTime(gameId: Long, elapsedMs: Long) =
         gameDao.updateElapsedTime(gameId, elapsedMs)
+
+    fun getTotalElapsedMs(gameId: Long): Long {
+        val game = gameDao.getGame(gameId) ?: return 0L
+        val startTime = game.startTime
+        val elapsed = game.elapsedTimeMs
+        return if (startTime > 0L) elapsed + (System.currentTimeMillis() - startTime) else elapsed
+    }
 
     fun getHalfInningState(gameId: Long): HalfInningState {
         val game = gameDao.getGame(gameId)
@@ -612,4 +628,12 @@ class DatabaseHelper(context: Context) {
     }
 
     fun getTeamById(teamId: Long): Team? = teamDao.getAllTeams().find { it.id == teamId }
+
+    // ── League Settings ────────────────────────────────────────────────────────
+
+    fun getLeagueSettings(teamId: Long): LeagueSettings =
+        leagueSettingsDao.get(teamId) ?: LeagueSettings(teamId = teamId)
+
+    fun saveLeagueSettings(settings: LeagueSettings) =
+        leagueSettingsDao.upsert(settings)
 }

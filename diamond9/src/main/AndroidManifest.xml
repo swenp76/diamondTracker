@@ -34,6 +34,8 @@
         <activity android:name=".SeasonStatsActivity" android:exported="false" />
         <activity android:name=".BatterStatsActivity" android:exported="false" />
         <activity android:name=".AboutActivity" android:exported="false" />
+        <activity android:name=".TeamHubActivity" android:exported="false" />
+        <activity android:name=".TeamSettingsActivity" android:exported="false" />
 
     </application>
 

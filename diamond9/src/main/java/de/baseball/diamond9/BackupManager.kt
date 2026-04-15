@@ -18,13 +18,14 @@ import org.json.JSONObject
  *  10 → is_home column added to games (1 = home, 0 = away)
  *  11 → elapsed_time_ms column added to games
  *  12 → current_inning and is_top_half columns added to games
+ *  13 → league_settings table introduced
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
 class BackupManager(private val context: Context) {
 
     companion object {
-        const val DB_VERSION = 12
+        const val DB_VERSION = 13
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
@@ -102,6 +103,19 @@ class BackupManager(private val context: Context) {
         }
         root.put("opponent_teams", allOpponentTeams)
 
+        // league_settings (added in DB version 13)
+        val allLeagueSettings = JSONArray()
+        db.getAllTeams().forEach { team ->
+            val ls = db.getLeagueSettings(team.id)
+            allLeagueSettings.put(JSONObject().apply {
+                put("team_id", ls.teamId)
+                put("innings", ls.innings)
+                if (ls.timeLimitMinutes != null) put("time_limit_minutes", ls.timeLimitMinutes)
+                else put("time_limit_minutes", JSONObject.NULL)
+            })
+        }
+        root.put("league_settings", allLeagueSettings)
+
         // TODO: add remaining tables in a future commit (issue #18-#20):
         //  players, team_positions, pitchers, pitches, at_bats,
         //  own_lineup, substitutions, opponent_lineup, opponent_bench,
@@ -124,6 +138,7 @@ class BackupManager(private val context: Context) {
 
         restoreScoreboardRuns(migrated)
         restoreOpponentTeams(migrated)
+        restoreLeagueSettings(migrated)
         // TODO: restore remaining tables (issue #18-#20)
     }
 
@@ -217,6 +232,14 @@ class BackupManager(private val context: Context) {
             v = 12
         }
 
+        // Migration 12 → 13: league_settings table introduced – older backups have no league_settings array.
+        if (v < 13 && toVersion >= 13) {
+            if (!current.has("league_settings")) {
+                current.put("league_settings", JSONArray())
+            }
+            v = 13
+        }
+
         return current
     }
 
@@ -240,6 +263,21 @@ class BackupManager(private val context: Context) {
             db.insertOpponentTeamForTeam(
                 name = obj.getString("name"),
                 teamId = obj.optLong("team_id", 0L)
+            )
+        }
+    }
+
+    private fun restoreLeagueSettings(json: JSONObject) {
+        val arr = json.optJSONArray("league_settings") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.saveLeagueSettings(
+                LeagueSettings(
+                    teamId = obj.getLong("team_id"),
+                    innings = obj.optInt("innings", 9),
+                    timeLimitMinutes = if (obj.isNull("time_limit_minutes")) null
+                                       else obj.optInt("time_limit_minutes")
+                )
             )
         }
     }

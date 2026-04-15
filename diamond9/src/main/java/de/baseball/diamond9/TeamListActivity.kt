@@ -78,8 +78,9 @@ class TeamListActivity : ComponentActivity() {
                 TeamListScreen(
                     teams = teams,
                     onTeamClick = { team ->
-                        val intent = Intent(this, TeamDetailActivity::class.java)
+                        val intent = Intent(this, TeamHubActivity::class.java)
                         intent.putExtra("teamId", team.id)
+                        intent.putExtra("teamName", team.name)
                         startActivity(intent)
                     },
                     onDeleteTeam = { team ->
@@ -281,7 +282,7 @@ fun TeamItem(
                     color = colorResource(R.color.color_text_primary)
                 )
                 Text(
-                    text = stringResource(R.string.team_tap_to_edit),
+                    text = stringResource(R.string.team_tap_to_open),
                     fontSize = 13.sp,
                     color = colorResource(R.color.color_text_secondary)
                 )
