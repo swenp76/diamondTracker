@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -317,10 +318,9 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
                 Text(
                     text = timeString,
                     fontSize = 28.sp,
@@ -348,11 +348,13 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.padding(end = 4.dp)
+                        modifier = Modifier.widthIn(min = 96.dp).padding(end = 4.dp)
                     ) {
                         Text(
                             text = if (totalElapsedMs == 0L) stringResource(R.string.timer_btn_start) else stringResource(R.string.timer_btn_resume),
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 } else {
@@ -371,9 +373,9 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.padding(end = 4.dp)
+                        modifier = Modifier.widthIn(min = 96.dp).padding(end = 4.dp)
                     ) {
-                        Text(stringResource(R.string.timer_btn_pause), fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.timer_btn_pause), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
 
@@ -383,7 +385,7 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
                         onClick = { showResetDialog = true },
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.timer_btn_reset), color = Color.Red)
+                        Text(stringResource(R.string.timer_btn_reset), color = Color.Red, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }

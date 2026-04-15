@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -674,7 +675,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_ball), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.btn_ball), fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -683,7 +684,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_strike), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.btn_strike), fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -694,7 +695,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_hit), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.btn_hit), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -703,7 +704,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hbp)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_hbp), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.btn_hbp), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -712,7 +713,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_foul)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_foul), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.btn_foul), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -723,7 +724,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_dark)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_add_batter), fontSize = 16.sp)
+                        Text(stringResource(R.string.btn_add_batter), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -732,7 +733,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_out), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.btn_out), fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -741,7 +742,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_undo), fontSize = 14.sp)
+                        Text(stringResource(R.string.btn_undo), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
