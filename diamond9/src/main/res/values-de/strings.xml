@@ -14,6 +14,7 @@
     <string name="btn_confirm">Bestätigen</string>
     <string name="btn_jump">Springen</string>
     <string name="btn_import">Importieren</string>
+    <string name="btn_export">Exportieren</string>
     <string name="btn_share">Teilen</string>
     <string name="error_required_field">Pflichtfeld</string>
 

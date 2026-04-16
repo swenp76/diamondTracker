@@ -290,7 +290,7 @@ fun TeamSettingsScreen(
                                 contentColor = Color.White
                             )
                         ) {
-                            Text(stringResource(R.string.teamsettings_import_league))
+                            Text(stringResource(R.string.btn_import))
                         }
                         Button(
                             onClick = onExportLeague,
@@ -300,7 +300,7 @@ fun TeamSettingsScreen(
                                 contentColor = Color.White
                             )
                         ) {
-                            Text(stringResource(R.string.teamsettings_export_league))
+                            Text(stringResource(R.string.btn_export))
                         }
                         Button(
                             onClick = onShareLeague,
