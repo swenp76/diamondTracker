@@ -453,7 +453,7 @@ class BackupManager(private val context: Context) {
             for (i in 0 until lineupArr.length()) {
                 val entry = lineupArr.getJSONObject(i)
                 val slot = entry.getInt("slot")
-                require(slot in 1..10) { "Invalid lineup slot: $slot" }
+                require(slot in 1..20) { "Invalid lineup slot: $slot" }
                 val pid = findOrCreatePlayer(entry.getJSONObject("player"))
                 db.setOwnLineupPlayer(gameId, slot, pid)
             }
@@ -465,7 +465,7 @@ class BackupManager(private val context: Context) {
             for (i in 0 until subArr.length()) {
                 val s = subArr.getJSONObject(i)
                 val slot = s.getInt("slot")
-                require(slot in 1..10) { "Invalid substitution slot: $slot" }
+                require(slot in 1..20) { "Invalid substitution slot: $slot" }
                 val pOut = findOrCreatePlayer(s.optJSONObject("player_out"))
                 val pIn = findOrCreatePlayer(s.optJSONObject("player_in"))
                 db.addSubstitution(gameId, slot, pOut, pIn)
@@ -479,7 +479,7 @@ class BackupManager(private val context: Context) {
                 val abObj = abArr.getJSONObject(i)
                 val abSlot = abObj.getInt("slot")
                 val abInning = abObj.getInt("inning")
-                require(abSlot in 1..10) { "Invalid at-bat slot: $abSlot" }
+                require(abSlot in 1..20) { "Invalid at-bat slot: $abSlot" }
                 require(abInning in 1..20) { "Invalid at-bat inning: $abInning" }
                 val pid = findOrCreatePlayer(abObj.optJSONObject("player"))
                 val abId = db.insertAtBat(gameId, pid, abSlot, abInning)
@@ -548,5 +548,39 @@ class BackupManager(private val context: Context) {
         }
 
         return gameId
+    }
+
+    // ── Team Import ─────────────────────────────────────────────────────────────
+
+    /**
+     * Imports a team from a JSON object produced by [TeamDetailActivity.buildTeamJson].
+     * Creates a new team with players and positions; never overwrites an existing team.
+     */
+    fun importTeam(json: JSONObject) {
+        val teamId = db.insertTeam(json.getString("name"))
+
+        db.getEnabledPositions(teamId).forEach { db.setPositionEnabled(teamId, it, false) }
+        val posArray = json.optJSONArray("positions")
+        if (posArray != null) {
+            for (p in 0 until posArray.length()) {
+                db.setPositionEnabled(teamId, posArray.getInt(p), true)
+            }
+        }
+
+        val playersArray = json.optJSONArray("players")
+        if (playersArray != null) {
+            for (p in 0 until playersArray.length()) {
+                val pl = playersArray.getJSONObject(p)
+                db.insertPlayer(
+                    teamId,
+                    pl.getString("name"),
+                    pl.optString("number", ""),
+                    pl.optInt("primary_position", 0),
+                    pl.optInt("secondary_position", 0),
+                    pl.optBoolean("is_pitcher", false),
+                    pl.optInt("birth_year", 0)
+                )
+            }
+        }
     }
 }

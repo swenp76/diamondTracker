@@ -393,6 +393,26 @@
     <string name="teamsettings_saved">Settings saved</string>
     <string name="teamsettings_minutes_suffix">min</string>
 
+    <!-- ── JSON Dispatch ─────────────────────────────────────────────────── -->
+    <string name="dispatch_read_error">Could not read file.</string>
+    <string name="dispatch_confirm_import">Import</string>
+    <string name="dispatch_cancel">Cancel</string>
+    <string name="dispatch_ok">OK</string>
+    <string name="dispatch_no_team">No team found. Please create a team first.</string>
+    <string name="dispatch_select_team">Import into which team?</string>
+    <string name="dispatch_import_failed">Import failed: %s</string>
+    <string name="dispatch_game_title">Import Game</string>
+    <string name="dispatch_game_message">Do you want to import the game \"%s\"?</string>
+    <string name="dispatch_game_imported">Game imported ✓</string>
+    <string name="dispatch_team_title">Import Team</string>
+    <string name="dispatch_team_message">Do you want to import the team \"%s\"?</string>
+    <string name="dispatch_team_imported">Team imported ✓</string>
+    <string name="dispatch_league_title">Import League Settings</string>
+    <string name="dispatch_league_message">Do you want to import these league settings?\n%s</string>
+    <string name="dispatch_league_imported">League settings imported ✓</string>
+    <string name="dispatch_unknown_title">Unknown File Format</string>
+    <string name="dispatch_unknown_message">This JSON file is not a known diamond9 format (type: \"%s\").</string>
+
     <!-- ── About Screen ──────────────────────────────────────────────────── -->
     <string name="about_title">About</string>
     <string name="about_legal_title">Legal</string>

@@ -37,6 +37,35 @@
         <activity android:name=".TeamHubActivity" android:exported="false" />
         <activity android:name=".TeamSettingsActivity" android:exported="false" />
 
+        <activity
+            android:name=".JsonDispatchActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+
+            <!-- Dateimanager / Downloads -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/json" />
+            </intent-filter>
+
+            <!-- Fallback für Dateimanager die text/plain für .json senden -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <!-- Explicit file scheme (ältere Android-Versionen, z.B. einige Dateimanager) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data
+                    android:mimeType="*/*"
+                    android:pathPattern=".*\\.json" />
+            </intent-filter>
+        </activity>
+
     </application>
 
 </manifest>

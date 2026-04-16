@@ -90,6 +90,7 @@ class TeamDetailActivity : ComponentActivity() {
             })
         }
         return JSONObject().apply {
+            put("type", "team")
             put("version", 1)
             put("name", team.name)
             put("positions", posArray)

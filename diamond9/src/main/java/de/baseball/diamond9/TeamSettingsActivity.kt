@@ -38,6 +38,7 @@ class TeamSettingsActivity : ComponentActivity() {
         try {
             val settings = db.getLeagueSettings(teamId)
             val json = JSONObject().apply {
+                put("type", "league_settings")
                 put("innings", settings.innings)
                 if (settings.timeLimitMinutes != null) put("time_limit_minutes", settings.timeLimitMinutes)
                 else put("time_limit_minutes", JSONObject.NULL)

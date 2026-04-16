@@ -408,6 +408,9 @@ class DatabaseHelper(context: Context) {
 
     fun getAllTeams(): List<Team> = teamDao.getAllTeams()
 
+    /** Returns the id of the first team in the list, or null if no teams exist. */
+    fun getActiveTeamId(): Long? = getAllTeams().firstOrNull()?.id
+
     fun updateTeamName(teamId: Long, name: String) = teamDao.updateTeamName(teamId, name)
 
     fun deleteTeam(teamId: Long) = teamDao.deleteTeam(teamId)
