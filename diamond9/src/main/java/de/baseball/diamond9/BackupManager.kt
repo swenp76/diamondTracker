@@ -1,9 +1,12 @@
 package de.baseball.diamond9
 
 import android.content.Context
+import android.content.Intent
+import androidx.core.content.FileProvider
 import de.baseball.diamond9.db.OwnLineupSlot
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * Handles backup and restore of all app data as JSON.
@@ -29,6 +32,24 @@ class BackupManager(private val context: Context) {
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
+
+        /**
+         * Writes [content] to a temp file in the cache dir and fires an
+         * ACTION_SEND share chooser so the user can send it via WhatsApp etc.
+         */
+        fun shareJson(context: Context, fileName: String, content: String) {
+            val file = File(context.cacheDir, fileName)
+            file.writeText(content, Charsets.UTF_8)
+            val uri = FileProvider.getUriForFile(
+                context, "${context.packageName}.fileprovider", file
+            )
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, null))
+        }
 
         /** Valid pitch type strings stored in the database. */
         val VALID_PITCH_TYPES = setOf("B", "S", "F", "BF", "SO", "H", "HBP", "W")

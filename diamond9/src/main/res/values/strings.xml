@@ -14,6 +14,7 @@
     <string name="btn_confirm">Confirm</string>
     <string name="btn_jump">Jump</string>
     <string name="btn_import">Import</string>
+    <string name="btn_share">Share</string>
     <string name="error_required_field">Required field</string>
 
     <!-- ── Content Descriptions ─────────────────────────────────────────── -->
@@ -153,6 +154,7 @@
     <string name="teams_title">Teams</string>
     <string name="menu_import_team">Import Team</string>
     <string name="menu_export_team">Export Team</string>
+    <string name="menu_share_team">Share Team</string>
     <string name="dialog_delete_team_title">Delete Team</string>
     <string name="dialog_delete_team_message">Really delete \"%s\" and all players?</string>
     <string name="dialog_add_team_title">New Team</string>

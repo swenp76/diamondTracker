@@ -69,6 +69,11 @@ class TeamDetailActivity : ComponentActivity() {
                     val teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: "team"
                     val safeName = teamName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
                     exportLauncher.launch("$safeName.json")
+                },
+                onShare = {
+                    val teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: "team"
+                    val safeName = teamName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
+                    BackupManager.shareJson(this, "$safeName.json", buildTeamJson(teamId))
                 }
             )
         }
@@ -105,7 +110,8 @@ fun TeamDetailScreen(
     teamId: Long,
     db: DatabaseHelper,
     onBack: () -> Unit,
-    onExport: () -> Unit
+    onExport: () -> Unit,
+    onShare: () -> Unit
 ) {
     var teamName by remember { mutableStateOf("") }
     var players by remember { mutableStateOf(emptyList<Player>()) }
@@ -154,6 +160,13 @@ fun TeamDetailScreen(
                                 onClick = {
                                     menuExpanded = false
                                     onExport()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_share_team)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onShare()
                                 }
                             )
                         }
