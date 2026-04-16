@@ -25,7 +25,11 @@ import java.io.File
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
-class BackupManager(private val context: Context) {
+class BackupManager private constructor(
+    private val context: Context,
+    private val db: DatabaseHelper
+) {
+    constructor(context: Context) : this(context, DatabaseHelper(context))
 
     companion object {
         const val DB_VERSION = 13
@@ -59,8 +63,6 @@ class BackupManager(private val context: Context) {
             "K", "KL", "GO", "FO", "LO", "BB", "H", "HBP", "SAC", "FC", "E", "DP", "OUT"
         )
     }
-
-    private val db = DatabaseHelper(context)
 
     // ── Export ──────────────────────────────────────────────────────────────────
 

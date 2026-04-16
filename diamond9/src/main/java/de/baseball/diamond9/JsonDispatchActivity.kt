@@ -17,6 +17,21 @@ import org.json.JSONObject
 
 class JsonDispatchActivity : ComponentActivity() {
 
+    companion object {
+        /**
+         * Heuristic fallback for older exports that predate the "type" field.
+         *   - has "game" key             → single_game
+         *   - has "name" + "players"     → team
+         *   - has "innings" (no "game")  → league_settings
+         */
+        fun inferType(json: JSONObject): String = when {
+            json.has("game")                        -> "single_game"
+            json.has("name") && json.has("players") -> "team"
+            json.has("innings")                     -> "league_settings"
+            else                                    -> ""
+        }
+    }
+
     private lateinit var db: DatabaseHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -284,19 +299,6 @@ class JsonDispatchActivity : ComponentActivity() {
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
-
-    /**
-     * Heuristic fallback for older exports that predate the "type" field.
-     *   - has "game" key             → single_game
-     *   - has "name" + "players"     → team
-     *   - has "innings" (no "game")  → league_settings
-     */
-    private fun inferType(json: JSONObject): String = when {
-        json.has("game")                          -> "single_game"
-        json.has("name") && json.has("players")   -> "team"
-        json.has("innings")                       -> "league_settings"
-        else                                      -> ""
-    }
 
     private fun readJson(uri: Uri): Pair<JSONObject?, String?> {
         return try {
