@@ -571,10 +571,35 @@ class BackupManager(private val context: Context) {
         return gameId
     }
 
-    // ── Team Import ─────────────────────────────────────────────────────────────
+    // ── Team Export / Import ─────────────────────────────────────────────────────
+
+    /** Builds a JSON string for the given team (roster + positions). */
+    fun exportTeam(teamId: Long): String {
+        val team = db.getAllTeams().first { it.id == teamId }
+        val posArray = JSONArray()
+        db.getEnabledPositions(teamId).sorted().forEach { posArray.put(it) }
+        val playersArray = JSONArray()
+        db.getPlayersForTeam(teamId).forEach { p ->
+            playersArray.put(JSONObject().apply {
+                put("name", p.name)
+                put("number", p.number)
+                put("primary_position", p.primaryPosition)
+                put("secondary_position", p.secondaryPosition)
+                put("is_pitcher", p.isPitcher)
+                put("birth_year", p.birthYear)
+            })
+        }
+        return JSONObject().apply {
+            put("type", "team")
+            put("version", 1)
+            put("name", team.name)
+            put("positions", posArray)
+            put("players", playersArray)
+        }.toString(2)
+    }
 
     /**
-     * Imports a team from a JSON object produced by [TeamDetailActivity.buildTeamJson].
+     * Imports a team from a JSON object produced by [exportTeam].
      * Creates a new team with players and positions; never overwrites an existing team.
      */
     fun importTeam(json: JSONObject) {
