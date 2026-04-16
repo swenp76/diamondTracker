@@ -244,7 +244,7 @@ data class PitcherStats(
 
 // ── DatabaseHelper – Room-Wrapper mit identischer API ─────────────────────────
 
-class DatabaseHelper private constructor(private val db: AppDatabase) {
+class DatabaseHelper constructor(private val db: AppDatabase) {
 
     constructor(context: Context) : this(AppDatabase.getDatabase(context))
 

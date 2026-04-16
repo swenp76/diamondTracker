@@ -25,7 +25,7 @@ import java.io.File
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
-class BackupManager private constructor(
+class BackupManager constructor(
     private val context: Context,
     private val db: DatabaseHelper
 ) {
