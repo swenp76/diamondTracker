@@ -643,7 +643,7 @@ class BattingTrackActivity : ComponentActivity() {
                         R.string.btn_result_hbp to colorResource(R.color.color_hbp),
                         R.string.btn_result_sac to colorResource(R.color.color_orange),
                         R.string.btn_result_fc  to colorResource(R.color.color_primary),
-                        R.string.btn_result_e   to colorResource(R.color.color_foul)
+                        R.string.btn_result_dp  to colorResource(R.color.color_text_secondary)
                     ).forEachIndexed { i, (labelRes, color) ->
                         val label = stringResource(labelRes)
                         if (i > 0) Spacer(Modifier.width(8.dp))
