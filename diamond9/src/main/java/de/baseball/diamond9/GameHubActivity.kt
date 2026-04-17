@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,6 +40,9 @@ import java.util.*
 class GameHubActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = true
         val gameId = intent.getLongExtra("game_id", -1L)
         val date = intent.getStringExtra("date") ?: ""
         val opponent = intent.getStringExtra("opponent") ?: ""
@@ -114,6 +119,7 @@ private fun GameHubScreen(
     val leagueSettings = remember { db.getLeagueSettings(ownTeamId) }
 
     Scaffold(
+        containerColor = colorResource(R.color.color_background),
         topBar = {
             TopAppBar(
                 title = {
@@ -445,7 +451,7 @@ private fun HubButton(text: String, color: Color, onClick: () -> Unit) {
         shape = RoundedCornerShape(12.dp),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
     ) {
-        Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -538,7 +544,7 @@ private fun HalfInningBar(
                         contentColor = Color.White
                     )
                 ) {
-                    Text(stringResource(R.string.gamehub_time_limit_override), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.gamehub_time_limit_override), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 OutlinedButton(
                     onClick = {
@@ -547,7 +553,7 @@ private fun HalfInningBar(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.gamehub_time_limit_cancel))
+                    Text(stringResource(R.string.gamehub_time_limit_cancel), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -584,7 +590,9 @@ private fun HalfInningBar(
             Text(
                 text = stringResource(if (isOurOffense) R.string.gamehub_offense else R.string.gamehub_defense),
                 fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
         IconButton(onClick = { showEditDialog = true }) {

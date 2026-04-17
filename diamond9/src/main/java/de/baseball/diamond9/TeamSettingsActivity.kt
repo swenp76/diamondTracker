@@ -4,7 +4,9 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -73,6 +75,9 @@ class TeamSettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = true
         teamId = intent.getLongExtra("teamId", -1)
         val teamName = intent.getStringExtra("teamName") ?: ""
         db = DatabaseHelper(this)
@@ -158,6 +163,7 @@ fun TeamSettingsScreen(
     }
 
     Scaffold(
+        containerColor = colorResource(R.color.color_background),
         topBar = {
             TopAppBar(
                 title = { Text("$teamName – ${stringResource(R.string.teamhub_settings)}") },

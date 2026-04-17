@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -77,6 +79,9 @@ class OpponentLineupActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = true
 
         val gameId = intent.getLongExtra("gameId", -1)
         val opponentName = intent.getStringExtra("opponentName") ?: "Gegner"
@@ -155,6 +160,7 @@ fun OpponentLineupScreen(
     var jumpToSlotDialogState by remember { mutableStateOf<OppSlotState?>(null) }
 
     Scaffold(
+        containerColor = colorResource(R.color.color_background),
         topBar = {
             TopAppBar(
                 title = {

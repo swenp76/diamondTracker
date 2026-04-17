@@ -20,7 +20,8 @@ data class Game(
     @ColumnInfo(name = "game_time", defaultValue = "") val gameTime: String = "",
     @ColumnInfo(name = "is_home", defaultValue = "1") val isHome: Int = 1,  // 1 = home, 0 = away
     @ColumnInfo(name = "current_inning", defaultValue = "1") val currentInning: Int = 1,
-    @ColumnInfo(name = "is_top_half", defaultValue = "1") val isTopHalf: Int = 1  // 1 = top, 0 = bottom
+    @ColumnInfo(name = "is_top_half", defaultValue = "1") val isTopHalf: Int = 1,  // 1 = top, 0 = bottom
+    @ColumnInfo(name = "game_number", defaultValue = "") val gameNumber: String = ""
 )
 
 @Entity(tableName = "pitchers")
@@ -260,8 +261,8 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
 
     // ── Games ──────────────────────────────────────────────────────────────────
 
-    fun insertGame(date: String, opponent: String, teamId: Long, gameTime: String = "", isHome: Int = 1): Long =
-        gameDao.insertGame(Game(date = date, opponent = opponent, teamId = teamId, gameTime = gameTime, isHome = isHome))
+    fun insertGame(date: String, opponent: String, teamId: Long, gameTime: String = "", isHome: Int = 1, gameNumber: String = ""): Long =
+        gameDao.insertGame(Game(date = date, opponent = opponent, teamId = teamId, gameTime = gameTime, isHome = isHome, gameNumber = gameNumber))
 
     fun getAllGames(): List<Game> = gameDao.getAllGames()
 
@@ -269,8 +270,8 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
 
     fun getGame(gameId: Long): Game? = gameDao.getGame(gameId)
 
-    fun updateGame(gameId: Long, date: String, opponent: String, gameTime: String = "", isHome: Int = 1) =
-        gameDao.updateGame(gameId, date, opponent, gameTime, isHome)
+    fun updateGame(gameId: Long, date: String, opponent: String, gameTime: String = "", isHome: Int = 1, gameNumber: String = "") =
+        gameDao.updateGame(gameId, date, opponent, gameTime, isHome, gameNumber)
 
     fun deleteGame(gameId: Long) = gameDao.deleteGameWithCascade(gameId)
 

@@ -89,6 +89,7 @@
     <string name="hint_date_format">TT.MM.JJJJ</string>
     <string name="label_time">Uhrzeit (optional)</string>
     <string name="hint_time">HH:MM</string>
+    <string name="label_game_number">Nummer (optional)</string>
     <string name="label_opponent">Gegner</string>
     <string name="hint_opponent">Mannschaft</string>
     <string name="label_or_enter_new">Oder neu eingeben:</string>

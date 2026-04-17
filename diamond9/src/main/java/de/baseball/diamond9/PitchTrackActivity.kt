@@ -8,6 +8,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -50,6 +52,9 @@ class PitchTrackActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = true
 
         pitcherId = intent.getLongExtra("pitcherId", -1)
         gameId = intent.getLongExtra("gameId", -1)
@@ -196,6 +201,7 @@ class PitchTrackActivity : ComponentActivity() {
         }
 
         Scaffold(
+            containerColor = colorResource(R.color.color_background),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
@@ -349,11 +355,11 @@ class PitchTrackActivity : ComponentActivity() {
                             },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary))
-                        ) { Text(stringResource(R.string.half_inning_confirm), fontWeight = FontWeight.Bold) }
+                        ) { Text(stringResource(R.string.half_inning_confirm), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         OutlinedButton(
                             onClick = { showHalfInningSheet = false },
                             modifier = Modifier.weight(1f)
-                        ) { Text(stringResource(R.string.half_inning_keep_going)) }
+                        ) { Text(stringResource(R.string.half_inning_keep_going), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
                 }
             }
@@ -394,7 +400,7 @@ class PitchTrackActivity : ComponentActivity() {
                                 colors = ButtonDefaults.buttonColors(containerColor = color),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text(type, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                Text(type, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -429,7 +435,7 @@ class PitchTrackActivity : ComponentActivity() {
                                 colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -695,7 +701,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_hit), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.btn_hit), fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -704,7 +710,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hbp)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_hbp), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.btn_hbp), fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -713,7 +719,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_foul)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_foul), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.btn_foul), fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))

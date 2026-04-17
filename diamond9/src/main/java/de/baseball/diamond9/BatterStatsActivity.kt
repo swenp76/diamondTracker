@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -31,6 +32,8 @@ class BatterStatsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = true
 
         val gameId       = intent.getLongExtra("gameId", -1L)
         val gameOpponent = intent.getStringExtra("gameOpponent") ?: ""
@@ -65,6 +68,7 @@ private fun BatterStatsScreen(
     )
 
     Scaffold(
+        containerColor = colorResource(R.color.color_background),
         topBar = {
             TopAppBar(
                 title = {

@@ -5,6 +5,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,6 +43,9 @@ class BattingTrackActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = true
 
         gameId = intent.getLongExtra("gameId", -1)
         db = DatabaseHelper(this)
@@ -265,17 +270,18 @@ class BattingTrackActivity : ComponentActivity() {
                             },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary))
-                        ) { Text(stringResource(R.string.half_inning_confirm), fontWeight = FontWeight.Bold) }
+                        ) { Text(stringResource(R.string.half_inning_confirm), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         OutlinedButton(
                             onClick = { showHalfInningSheet = false },
                             modifier = Modifier.weight(1f)
-                        ) { Text(stringResource(R.string.half_inning_keep_going)) }
+                        ) { Text(stringResource(R.string.half_inning_keep_going), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
                 }
             }
         }
 
         Scaffold(
+            containerColor = colorResource(R.color.color_background),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
@@ -679,10 +685,10 @@ class BattingTrackActivity : ComponentActivity() {
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
                                 colors = ButtonDefaults.buttonColors(containerColor = color),
                                 shape = RoundedCornerShape(8.dp)
-                            ) { Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                            ) { Text(label, fontSize = if (labelRes == R.string.btn_result_bb) 12.sp else 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         }
                     Spacer(Modifier.width(6.dp))
-                    Button(onClick = { outExpanded = !outExpanded; showMoreSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = if (outExpanded) colorResource(R.color.color_orange) else colorResource(R.color.color_orange_bright)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_out), fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    Button(onClick = { outExpanded = !outExpanded; showMoreSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = if (outExpanded) colorResource(R.color.color_orange) else colorResource(R.color.color_orange_bright)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_out), fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     Spacer(Modifier.width(6.dp))
                     Button(onClick = { showMoreSheet = true; outExpanded = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_more), fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }

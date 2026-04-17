@@ -126,6 +126,7 @@
     <string name="hint_date_format">DD.MM.YYYY</string>
     <string name="label_time">Time (optional)</string>
     <string name="hint_time">HH:MM</string>
+    <string name="label_game_number">Number (optional)</string>
     <string name="label_location">Home / Away</string>
     <string name="location_home">Home</string>
     <string name="location_away">Away</string>
