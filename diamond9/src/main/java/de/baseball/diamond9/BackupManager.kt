@@ -61,7 +61,9 @@ class BackupManager constructor(
 
         /** Valid at-bat result strings stored in the database. */
         val VALID_AT_BAT_RESULTS = setOf(
-            "K", "KL", "GO", "FO", "LO", "BB", "H", "HBP", "SAC", "FC", "E", "DP", "OUT"
+            "K", "KL", "GO", "FO", "LO", "BB", "H", "HBP", "SAC", "FC", "E", "DP", "OUT",
+            "1B", "2B", "3B", "HR",
+            "ROE"
         )
     }
 

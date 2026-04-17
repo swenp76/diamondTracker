@@ -246,4 +246,40 @@ class GameBatterStatsDaoTest {
         assertEquals(4, stats[0].ab)
         assertEquals(0, stats[0].strikeouts)
     }
+
+    // ── ROE (Reached on Error) ────────────────────────────────────────────────
+
+    @Test
+    fun getGameBatterStats_roeCountsAsAbNotHit() {
+        val pId = newPlayer(); val gId = newGame()
+        ab(gId, pId, 1, "ROE")
+
+        val stats = atBatDao.getGameBatterStats(gId)
+        assertEquals(1, stats.size)
+        assertEquals(1, stats[0].pa)
+        assertEquals(1, stats[0].ab)
+        assertEquals(0, stats[0].hits)
+        assertEquals(0, stats[0].walks)
+        assertEquals(0, stats[0].hbp)
+    }
+
+    @Test
+    fun getGameBatterStats_roeDoesNotCountAsOut() {
+        val pId = newPlayer(); val gId = newGame()
+        ab(gId, pId, 1, "ROE")
+
+        assertEquals(0, atBatDao.getOutsForGame(gId))
+    }
+
+    @Test
+    fun getSeasonStats_roeCountsAsAbNotHit() {
+        val pId = newPlayer(); val gId = newGame()
+        ab(gId, pId, 1, "ROE")
+        ab(gId, pId, 2, "1B")
+
+        val stats = atBatDao.getSeasonBatterStats(teamId)
+        assertEquals(1, stats.size)
+        assertEquals(2, stats[0].ab)
+        assertEquals(1, stats[0].hits)
+    }
 }

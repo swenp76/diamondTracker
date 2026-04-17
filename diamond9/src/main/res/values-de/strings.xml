@@ -57,6 +57,8 @@
     <string name="pitch_label_foul">Foul</string>
     <string name="pitch_label_hit">── Hit ──────────────────────────</string>
     <string name="pitch_label_hbp">── Hit by Pitch ─────────────────</string>
+    <string name="pitch_label_roe">── Erreicht per Fehler (ROE) ─────</string>
+    <string name="btn_result_roe">Fehler (ROE)</string>
     <string name="pitch_label_walk">── Walk ─────────────────────────</string>
     <string name="pitch_label_strikeout">── Strike-Out (K) ───────────────</string>
     <string name="pitch_label_slot">── Slot %d ──────────────────────────</string>

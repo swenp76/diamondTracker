@@ -80,6 +80,7 @@
     <string name="btn_result_sac">SAC</string>
     <string name="btn_result_fc">FC</string>
     <string name="btn_result_e">E</string>
+    <string name="btn_result_roe">Reached on Error</string>
     <string name="btn_result_dp">DP</string>
 
     <!-- ── Pitch Log Labels ───────────────────────────────────────────────── -->
@@ -94,6 +95,7 @@
     <string name="pitch_label_go">── Ground Out (GO) ──────────────</string>
     <string name="pitch_label_fo">── Fly Out (FO) ─────────────────</string>
     <string name="pitch_label_hbp">── Hit by Pitch ─────────────────</string>
+    <string name="pitch_label_roe">── Reached on Error ─────────────</string>
     <string name="pitch_label_walk">── Walk ─────────────────────────</string>
     <string name="pitch_label_strikeout">── Strike-Out (K) ───────────────</string>
     <string name="pitch_label_slot">── Slot %d ──────────────────────────</string>

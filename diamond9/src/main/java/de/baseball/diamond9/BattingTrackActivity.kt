@@ -610,6 +610,10 @@ class BattingTrackActivity : ComponentActivity() {
                         Spacer(Modifier.width(8.dp))
                         Button(onClick = { onResult("HR"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit_homer)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_hr), fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
+                    Spacer(Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth().height(64.dp)) {
+                        Button(onClick = { onResult("ROE"); showHSheet = false }, modifier = Modifier.fillMaxWidth().fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_roe), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    }
                 }
             }
         }
