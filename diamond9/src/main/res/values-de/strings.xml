@@ -210,7 +210,7 @@
 
     <!-- ── Gegner-Lineup ──────────────────────────────────────────────────── -->
     <string name="oppo_lineup_subtitle">Aufstellung</string>
-    <string name="oppo_section_batting_order">Batting Order (1 – 9)</string>
+    <string name="oppo_section_batting_order">Batting Order (1 – 10)</string>
     <string name="oppo_section_bench">Bank (11 – 20)</string>
     <string name="dialog_jersey_title">Trikotnummer</string>
     <string name="dialog_other_number">Andere Nummer…</string>

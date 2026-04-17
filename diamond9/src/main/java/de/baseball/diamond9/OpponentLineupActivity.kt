@@ -435,7 +435,7 @@ private fun computeState(db: DatabaseHelper, gameId: Long): Pair<List<OppSlotSta
     val lineup = db.getLineup(gameId)
     val subs = db.getOpponentSubstitutionsForGame(gameId)
 
-    val slotStates = (1..9).map { slot ->
+    val slotStates = (1..10).map { slot ->
         val originalJersey = lineup.firstOrNull { it.battingOrder == slot }?.jerseyNumber ?: ""
         val slotSubs = subs.filter { it.slot == slot }
         val currentJersey = slotSubs.lastOrNull()?.jerseyIn ?: originalJersey
