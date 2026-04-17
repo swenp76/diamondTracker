@@ -255,7 +255,7 @@ private fun Scoreboard(
             }
             // Guest Row
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ScoreCell(guestTeam, 100.dp, false, FontWeight.Bold)
+                ScoreCell(guestTeam, 100.dp, false, FontWeight.Bold, startPadding = 8.dp)
                 (1..innings).forEach { inn ->
                     val r = if (hasEntry.value[0][inn - 1]) runs.value[0][inn - 1].toString() else "-"
                     ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(0, inn) }, highlightEdge = if (inn == currentInning) "top" else "none")
@@ -265,7 +265,7 @@ private fun Scoreboard(
             HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
             // Home Row
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ScoreCell(homeTeam, 100.dp, false, FontWeight.Bold)
+                ScoreCell(homeTeam, 100.dp, false, FontWeight.Bold, startPadding = 8.dp)
                 (1..innings).forEach { inn ->
                     val r = if (hasEntry.value[1][inn - 1]) runs.value[1][inn - 1].toString() else "-"
                     ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(1, inn) }, highlightEdge = if (inn == currentInning) "bottom" else "none")
@@ -421,7 +421,8 @@ private fun ScoreCell(
     fontWeight: FontWeight = FontWeight.Normal,
     textColor: Color = Color.Unspecified,
     onClick: (() -> Unit)? = null,
-    highlightEdge: String = "none"
+    highlightEdge: String = "none",
+    startPadding: Dp = 0.dp
 ) {
     val hlColor = colorResource(R.color.color_primary)
     Box(
@@ -436,8 +437,9 @@ private fun ScoreCell(
                 if (highlightEdge == "top") drawLine(hlColor, Offset(0f, h), Offset(size.width, h), stroke)
                 else drawLine(hlColor, Offset(0f, size.height - h), Offset(size.width, size.height - h), stroke)
             } else Modifier)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
-        contentAlignment = Alignment.Center
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(start = startPadding),
+        contentAlignment = if (startPadding > 0.dp) Alignment.CenterStart else Alignment.Center
     ) {
         Text(
             text = text,
