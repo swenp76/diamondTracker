@@ -19,9 +19,9 @@ android {
     defaultConfig {
         applicationId "de.baseball.diamond9"
         minSdk 26
-        targetSdk 35
-        versionCode 13
-        versionName "0.13-alpha"
+        targetSdk 36
+        versionCode 14
+        versionName "0.14-alpha"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 

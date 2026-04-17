@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ class TeamSettingsActivity : ComponentActivity() {
         try {
             val settings = db.getLeagueSettings(teamId)
             val json = JSONObject().apply {
+                put("type", "league_settings")
                 put("innings", settings.innings)
                 if (settings.timeLimitMinutes != null) put("time_limit_minutes", settings.timeLimitMinutes)
                 else put("time_limit_minutes", JSONObject.NULL)
@@ -86,6 +88,16 @@ class TeamSettingsActivity : ComponentActivity() {
                 onExportLeague = {
                     exportLauncher.launch("league_settings.json")
                 },
+                onShareLeague = {
+                    val settings = db.getLeagueSettings(teamId)
+                    val json = JSONObject().apply {
+                        put("type", "league_settings")
+                        put("innings", settings.innings)
+                        if (settings.timeLimitMinutes != null) put("time_limit_minutes", settings.timeLimitMinutes)
+                        else put("time_limit_minutes", JSONObject.NULL)
+                    }
+                    BackupManager.shareJson(this, "league_settings.json", json.toString(2))
+                },
                 onSaveLeague = { newSettings ->
                     db.saveLeagueSettings(newSettings)
                     Toast.makeText(this, getString(R.string.teamsettings_saved), Toast.LENGTH_SHORT).show()
@@ -117,6 +129,7 @@ fun TeamSettingsScreen(
     onBack: () -> Unit,
     onImportLeague: () -> Unit,
     onExportLeague: () -> Unit,
+    onShareLeague: () -> Unit,
     onSaveLeague: (LeagueSettings) -> Unit
 ) {
     var innings by remember { mutableStateOf(leagueSettings.innings) }
@@ -277,7 +290,7 @@ fun TeamSettingsScreen(
                                 contentColor = Color.White
                             )
                         ) {
-                            Text(stringResource(R.string.teamsettings_import_league))
+                            Text(stringResource(R.string.btn_import))
                         }
                         Button(
                             onClick = onExportLeague,
@@ -287,7 +300,23 @@ fun TeamSettingsScreen(
                                 contentColor = Color.White
                             )
                         ) {
-                            Text(stringResource(R.string.teamsettings_export_league))
+                            Text(stringResource(R.string.btn_export))
+                        }
+                        Button(
+                            onClick = onShareLeague,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colorResource(R.color.color_text_subtle),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.size(4.dp))
+                            Text(stringResource(R.string.btn_share))
                         }
                     }
                 }

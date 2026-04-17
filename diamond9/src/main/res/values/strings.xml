@@ -14,6 +14,8 @@
     <string name="btn_confirm">Confirm</string>
     <string name="btn_jump">Jump</string>
     <string name="btn_import">Import</string>
+    <string name="btn_export">Export</string>
+    <string name="btn_share">Share</string>
     <string name="error_required_field">Required field</string>
 
     <!-- ── Content Descriptions ─────────────────────────────────────────── -->
@@ -153,6 +155,7 @@
     <string name="teams_title">Teams</string>
     <string name="menu_import_team">Import Team</string>
     <string name="menu_export_team">Export Team</string>
+    <string name="menu_share_team">Share Team</string>
     <string name="dialog_delete_team_title">Delete Team</string>
     <string name="dialog_delete_team_message">Really delete \"%s\" and all players?</string>
     <string name="dialog_add_team_title">New Team</string>
@@ -392,6 +395,26 @@
     <string name="teamsettings_export_team">Export Team Settings</string>
     <string name="teamsettings_saved">Settings saved</string>
     <string name="teamsettings_minutes_suffix">min</string>
+
+    <!-- ── JSON Dispatch ─────────────────────────────────────────────────── -->
+    <string name="dispatch_read_error">Could not read file.</string>
+    <string name="dispatch_confirm_import">Import</string>
+    <string name="dispatch_cancel">Cancel</string>
+    <string name="dispatch_ok">OK</string>
+    <string name="dispatch_no_team">No team found. Please create a team first.</string>
+    <string name="dispatch_select_team">Import into which team?</string>
+    <string name="dispatch_import_failed">Import failed: %s</string>
+    <string name="dispatch_game_title">Import Game</string>
+    <string name="dispatch_game_message">Do you want to import the game \"%s\"?</string>
+    <string name="dispatch_game_imported">Game imported ✓</string>
+    <string name="dispatch_team_title">Import Team</string>
+    <string name="dispatch_team_message">Do you want to import the team \"%s\"?</string>
+    <string name="dispatch_team_imported">Team imported ✓</string>
+    <string name="dispatch_league_title">Import League Settings</string>
+    <string name="dispatch_league_message">Do you want to import these league settings?\n%s</string>
+    <string name="dispatch_league_imported">League settings imported ✓</string>
+    <string name="dispatch_unknown_title">Unknown File Format</string>
+    <string name="dispatch_unknown_message">This JSON file is not a known diamond9 format (type: \"%s\").</string>
 
     <!-- ── About Screen ──────────────────────────────────────────────────── -->
     <string name="about_title">About</string>

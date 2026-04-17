@@ -1,9 +1,12 @@
 package de.baseball.diamond9
 
 import android.content.Context
+import android.content.Intent
+import androidx.core.content.FileProvider
 import de.baseball.diamond9.db.OwnLineupSlot
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * Handles backup and restore of all app data as JSON.
@@ -22,13 +25,35 @@ import org.json.JSONObject
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
-class BackupManager(private val context: Context) {
+class BackupManager constructor(
+    private val context: Context,
+    private val db: DatabaseHelper
+) {
+    constructor(context: Context) : this(context, DatabaseHelper(context))
 
     companion object {
         const val DB_VERSION = 13
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
+
+        /**
+         * Writes [content] to a temp file in the cache dir and fires an
+         * ACTION_SEND share chooser so the user can send it via WhatsApp etc.
+         */
+        fun shareJson(context: Context, fileName: String, content: String) {
+            val file = File(context.cacheDir, fileName)
+            file.writeText(content, Charsets.UTF_8)
+            val uri = FileProvider.getUriForFile(
+                context, "${context.packageName}.fileprovider", file
+            )
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, null))
+        }
 
         /** Valid pitch type strings stored in the database. */
         val VALID_PITCH_TYPES = setOf("B", "S", "F", "BF", "SO", "H", "HBP", "W")
@@ -38,8 +63,6 @@ class BackupManager(private val context: Context) {
             "K", "KL", "GO", "FO", "LO", "BB", "H", "HBP", "SAC", "FC", "E", "DP", "OUT"
         )
     }
-
-    private val db = DatabaseHelper(context)
 
     // ── Export ──────────────────────────────────────────────────────────────────
 
@@ -453,7 +476,7 @@ class BackupManager(private val context: Context) {
             for (i in 0 until lineupArr.length()) {
                 val entry = lineupArr.getJSONObject(i)
                 val slot = entry.getInt("slot")
-                require(slot in 1..10) { "Invalid lineup slot: $slot" }
+                require(slot in 1..20) { "Invalid lineup slot: $slot" }
                 val pid = findOrCreatePlayer(entry.getJSONObject("player"))
                 db.setOwnLineupPlayer(gameId, slot, pid)
             }
@@ -465,7 +488,7 @@ class BackupManager(private val context: Context) {
             for (i in 0 until subArr.length()) {
                 val s = subArr.getJSONObject(i)
                 val slot = s.getInt("slot")
-                require(slot in 1..10) { "Invalid substitution slot: $slot" }
+                require(slot in 1..20) { "Invalid substitution slot: $slot" }
                 val pOut = findOrCreatePlayer(s.optJSONObject("player_out"))
                 val pIn = findOrCreatePlayer(s.optJSONObject("player_in"))
                 db.addSubstitution(gameId, slot, pOut, pIn)
@@ -479,7 +502,7 @@ class BackupManager(private val context: Context) {
                 val abObj = abArr.getJSONObject(i)
                 val abSlot = abObj.getInt("slot")
                 val abInning = abObj.getInt("inning")
-                require(abSlot in 1..10) { "Invalid at-bat slot: $abSlot" }
+                require(abSlot in 1..20) { "Invalid at-bat slot: $abSlot" }
                 require(abInning in 1..20) { "Invalid at-bat inning: $abInning" }
                 val pid = findOrCreatePlayer(abObj.optJSONObject("player"))
                 val abId = db.insertAtBat(gameId, pid, abSlot, abInning)
@@ -548,5 +571,64 @@ class BackupManager(private val context: Context) {
         }
 
         return gameId
+    }
+
+    // ── Team Export / Import ─────────────────────────────────────────────────────
+
+    /** Builds a JSON string for the given team (roster + positions). */
+    fun exportTeam(teamId: Long): String {
+        val team = db.getAllTeams().first { it.id == teamId }
+        val posArray = JSONArray()
+        db.getEnabledPositions(teamId).sorted().forEach { posArray.put(it) }
+        val playersArray = JSONArray()
+        db.getPlayersForTeam(teamId).forEach { p ->
+            playersArray.put(JSONObject().apply {
+                put("name", p.name)
+                put("number", p.number)
+                put("primary_position", p.primaryPosition)
+                put("secondary_position", p.secondaryPosition)
+                put("is_pitcher", p.isPitcher)
+                put("birth_year", p.birthYear)
+            })
+        }
+        return JSONObject().apply {
+            put("type", "team")
+            put("version", 1)
+            put("name", team.name)
+            put("positions", posArray)
+            put("players", playersArray)
+        }.toString(2)
+    }
+
+    /**
+     * Imports a team from a JSON object produced by [exportTeam].
+     * Creates a new team with players and positions; never overwrites an existing team.
+     */
+    fun importTeam(json: JSONObject) {
+        val teamId = db.insertTeam(json.getString("name"))
+
+        db.getEnabledPositions(teamId).forEach { db.setPositionEnabled(teamId, it, false) }
+        val posArray = json.optJSONArray("positions")
+        if (posArray != null) {
+            for (p in 0 until posArray.length()) {
+                db.setPositionEnabled(teamId, posArray.getInt(p), true)
+            }
+        }
+
+        val playersArray = json.optJSONArray("players")
+        if (playersArray != null) {
+            for (p in 0 until playersArray.length()) {
+                val pl = playersArray.getJSONObject(p)
+                db.insertPlayer(
+                    teamId,
+                    pl.getString("name"),
+                    pl.optString("number", ""),
+                    pl.optInt("primary_position", 0),
+                    pl.optInt("secondary_position", 0),
+                    pl.optBoolean("is_pitcher", false),
+                    pl.optInt("birth_year", 0)
+                )
+            }
+        }
     }
 }

@@ -33,8 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.json.JSONArray
-import org.json.JSONObject
+
 
 class TeamDetailActivity : ComponentActivity() {
 
@@ -47,7 +46,7 @@ class TeamDetailActivity : ComponentActivity() {
         uri ?: return@registerForActivityResult
         try {
             contentResolver.openOutputStream(uri)?.use { out ->
-                out.write(buildTeamJson(teamId).toByteArray(Charsets.UTF_8))
+                out.write(BackupManager(this).exportTeam(teamId).toByteArray(Charsets.UTF_8))
             }
             Toast.makeText(this, getString(R.string.toast_team_exported), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
@@ -69,33 +68,16 @@ class TeamDetailActivity : ComponentActivity() {
                     val teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: "team"
                     val safeName = teamName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
                     exportLauncher.launch("$safeName.json")
+                },
+                onShare = {
+                    val teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: "team"
+                    val safeName = teamName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
+                    BackupManager.shareJson(this, "$safeName.json", BackupManager(this).exportTeam(teamId))
                 }
             )
         }
     }
 
-    private fun buildTeamJson(teamId: Long): String {
-        val team = db.getAllTeams().first { it.id == teamId }
-        val posArray = JSONArray()
-        db.getEnabledPositions(teamId).sorted().forEach { posArray.put(it) }
-        val playersArray = JSONArray()
-        db.getPlayersForTeam(teamId).forEach { player ->
-            playersArray.put(JSONObject().apply {
-                put("name", player.name)
-                put("number", player.number)
-                put("primary_position", player.primaryPosition)
-                put("secondary_position", player.secondaryPosition)
-                put("is_pitcher", player.isPitcher)
-                put("birth_year", player.birthYear)
-            })
-        }
-        return JSONObject().apply {
-            put("version", 1)
-            put("name", team.name)
-            put("positions", posArray)
-            put("players", playersArray)
-        }.toString(2)
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,7 +86,8 @@ fun TeamDetailScreen(
     teamId: Long,
     db: DatabaseHelper,
     onBack: () -> Unit,
-    onExport: () -> Unit
+    onExport: () -> Unit,
+    onShare: () -> Unit
 ) {
     var teamName by remember { mutableStateOf("") }
     var players by remember { mutableStateOf(emptyList<Player>()) }
@@ -153,6 +136,13 @@ fun TeamDetailScreen(
                                 onClick = {
                                     menuExpanded = false
                                     onExport()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_share_team)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onShare()
                                 }
                             )
                         }

@@ -14,6 +14,8 @@
     <string name="btn_confirm">Bestätigen</string>
     <string name="btn_jump">Springen</string>
     <string name="btn_import">Importieren</string>
+    <string name="btn_export">Exportieren</string>
+    <string name="btn_share">Teilen</string>
     <string name="error_required_field">Pflichtfeld</string>
 
     <!-- ── Barrierefreiheit / Content Descriptions ───────────────────────── -->
@@ -113,6 +115,7 @@
     <string name="teams_title">Teams</string>
     <string name="menu_import_team">Team importieren</string>
     <string name="menu_export_team">Team exportieren</string>
+    <string name="menu_share_team">Team teilen</string>
     <string name="dialog_delete_team_title">Team löschen</string>
     <string name="dialog_delete_team_message">\"%s\" und alle Spieler wirklich löschen?</string>
     <string name="dialog_add_team_title">Neues Team</string>
@@ -326,4 +329,24 @@
     <string name="gamehub_time_limit_message">Das Zeitlimit von %d min ist abgelaufen. Es sollte kein neues Inning mehr begonnen werden.</string>
     <string name="gamehub_time_limit_override">Überschreiben – neues Inning trotzdem starten</string>
     <string name="gamehub_time_limit_cancel">Kein neues Inning starten</string>
+
+    <!-- ── JSON Dispatch ─────────────────────────────────────────────────── -->
+    <string name="dispatch_read_error">Datei konnte nicht gelesen werden.</string>
+    <string name="dispatch_confirm_import">Importieren</string>
+    <string name="dispatch_cancel">Abbrechen</string>
+    <string name="dispatch_ok">OK</string>
+    <string name="dispatch_no_team">Kein Team vorhanden. Bitte zuerst ein Team anlegen.</string>
+    <string name="dispatch_select_team">In welches Team importieren?</string>
+    <string name="dispatch_import_failed">Import fehlgeschlagen: %s</string>
+    <string name="dispatch_game_title">Spiel importieren</string>
+    <string name="dispatch_game_message">Möchtest du das Spiel \"%s\" importieren?</string>
+    <string name="dispatch_game_imported">Spiel importiert ✓</string>
+    <string name="dispatch_team_title">Team importieren</string>
+    <string name="dispatch_team_message">Möchtest du das Team \"%s\" importieren?</string>
+    <string name="dispatch_team_imported">Team importiert ✓</string>
+    <string name="dispatch_league_title">Liga-Einstellungen importieren</string>
+    <string name="dispatch_league_message">Möchtest du diese Liga-Einstellungen importieren?\n%s</string>
+    <string name="dispatch_league_imported">Liga-Einstellungen importiert ✓</string>
+    <string name="dispatch_unknown_title">Unbekanntes Dateiformat</string>
+    <string name="dispatch_unknown_message">Diese JSON-Datei ist kein bekanntes diamond9-Format (type: \"%s\").</string>
 </resources>
