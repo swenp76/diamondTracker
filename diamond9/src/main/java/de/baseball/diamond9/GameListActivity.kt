@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -151,6 +152,11 @@ class GameListActivity : ComponentActivity() {
                         val fileName = "Game_${game.date.replace(".", "")}_${game.opponent.replace(" ", "_")}.json"
                         exportLauncher.launch(fileName)
                     },
+                    onShareGame = { game ->
+                        val fileName = "Game_${game.date.replace(".", "")}_${game.opponent.replace(" ", "_")}.json"
+                        val json = backupManager.exportGame(game.id)
+                        BackupManager.shareJson(this, fileName, json.toString(4))
+                    },
                     onImportGame = { callback ->
                         onImportConfirmed = callback
                         importLauncher.launch(arrayOf("application/json"))
@@ -171,6 +177,7 @@ private fun GameListScreen(
     onGameClick: (Game) -> Unit,
     onSeasonStatsClick: () -> Unit = {},
     onExportGame: (Game) -> Unit,
+    onShareGame: (Game) -> Unit,
     onImportGame: ((JSONObject) -> Unit) -> Unit
 ) {
     val context = LocalContext.current
@@ -251,7 +258,8 @@ private fun GameListScreen(
                             onEdit = { gameToEdit = game },
                             onCopy = { gameToCopy = game },
                             onDelete = { gameToDelete = game },
-                            onExport = { onExportGame(game) }
+                            onExport = { onExportGame(game) },
+                            onShare = { onShareGame(game) }
                         )
                     }
                 }
@@ -381,7 +389,8 @@ private fun GameItem(
     onEdit: () -> Unit,
     onCopy: () -> Unit,
     onDelete: () -> Unit,
-    onExport: () -> Unit
+    onExport: () -> Unit,
+    onShare: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -426,6 +435,9 @@ private fun GameItem(
 
             IconButton(onClick = onCopy) {
                 Icon(Icons.Default.ContentCopy, null, tint = colorResource(R.color.color_primary))
+            }
+            IconButton(onClick = onShare) {
+                Icon(Icons.Default.Share, null, tint = colorResource(R.color.color_primary))
             }
             IconButton(onClick = onExport) {
                 Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = colorResource(R.color.color_primary))

@@ -244,9 +244,10 @@ data class PitcherStats(
 
 // ── DatabaseHelper – Room-Wrapper mit identischer API ─────────────────────────
 
-class DatabaseHelper(context: Context) {
+class DatabaseHelper constructor(private val db: AppDatabase) {
 
-    private val db = AppDatabase.getDatabase(context)
+    constructor(context: Context) : this(AppDatabase.getDatabase(context))
+
     private val gameDao = db.gameDao()
     private val pitcherDao = db.pitcherDao()
     private val atBatDao = db.atBatDao()
@@ -407,6 +408,9 @@ class DatabaseHelper(context: Context) {
     }
 
     fun getAllTeams(): List<Team> = teamDao.getAllTeams()
+
+    /** Returns the id of the first team in the list, or null if no teams exist. */
+    fun getActiveTeamId(): Long? = getAllTeams().firstOrNull()?.id
 
     fun updateTeamName(teamId: Long, name: String) = teamDao.updateTeamName(teamId, name)
 
