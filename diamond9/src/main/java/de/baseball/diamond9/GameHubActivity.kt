@@ -22,6 +22,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.colorResource
@@ -248,7 +250,7 @@ private fun Scoreboard(
             // Header Row
             Row(modifier = Modifier.background(colorResource(R.color.color_primary))) {
                 ScoreCell("", 100.dp, true)
-                (1..innings).forEach { ScoreCell(it.toString(), 30.dp, true, highlight = it == currentInning) }
+                (1..innings).forEach { ScoreCell(it.toString(), 30.dp, true) }
                 ScoreCell(stringResource(R.string.scoreboard_total_label), 40.dp, true)
             }
             // Guest Row
@@ -256,7 +258,7 @@ private fun Scoreboard(
                 ScoreCell(guestTeam, 100.dp, false, FontWeight.Bold)
                 (1..innings).forEach { inn ->
                     val r = if (hasEntry.value[0][inn - 1]) runs.value[0][inn - 1].toString() else "-"
-                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(0, inn) }, highlight = inn == currentInning)
+                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(0, inn) }, highlightEdge = if (inn == currentInning) "top" else "none")
                 }
                 ScoreCell(totalFor(0).toString(), 40.dp, false, FontWeight.Bold)
             }
@@ -266,7 +268,7 @@ private fun Scoreboard(
                 ScoreCell(homeTeam, 100.dp, false, FontWeight.Bold)
                 (1..innings).forEach { inn ->
                     val r = if (hasEntry.value[1][inn - 1]) runs.value[1][inn - 1].toString() else "-"
-                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(1, inn) }, highlight = inn == currentInning)
+                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(1, inn) }, highlightEdge = if (inn == currentInning) "bottom" else "none")
                 }
                 ScoreCell(totalFor(1).toString(), 40.dp, false, FontWeight.Bold)
             }
@@ -419,14 +421,21 @@ private fun ScoreCell(
     fontWeight: FontWeight = FontWeight.Normal,
     textColor: Color = Color.Unspecified,
     onClick: (() -> Unit)? = null,
-    highlight: Boolean = false
+    highlightEdge: String = "none"
 ) {
-    val borderColor = if (isHeader) Color.White else colorResource(R.color.color_primary)
+    val hlColor = colorResource(R.color.color_primary)
     Box(
         modifier = Modifier
             .width(width)
             .height(40.dp)
-            .then(if (highlight) Modifier.border(2.dp, borderColor) else Modifier)
+            .then(if (highlightEdge != "none") Modifier.drawBehind {
+                val stroke = 2.dp.toPx()
+                val h = stroke / 2
+                drawLine(hlColor, Offset(h, 0f), Offset(h, size.height), stroke)
+                drawLine(hlColor, Offset(size.width - h, 0f), Offset(size.width - h, size.height), stroke)
+                if (highlightEdge == "top") drawLine(hlColor, Offset(0f, h), Offset(size.width, h), stroke)
+                else drawLine(hlColor, Offset(0f, size.height - h), Offset(size.width, size.height - h), stroke)
+            } else Modifier)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center
     ) {
