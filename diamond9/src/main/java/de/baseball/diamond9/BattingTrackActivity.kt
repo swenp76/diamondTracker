@@ -291,7 +291,7 @@ class BattingTrackActivity : ComponentActivity() {
                             Text(
                                 text = halfInningState.shortLabel,
                                 fontSize = 13.sp,
-                                color = Color.White.copy(alpha = 0.8f)
+                                color = colorResource(R.color.color_text_secondary)
                             )
                         }
                     },
@@ -301,9 +301,9 @@ class BattingTrackActivity : ComponentActivity() {
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = colorResource(R.color.color_primary),
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White
+                        containerColor = Color.White,
+                        titleContentColor = colorResource(R.color.color_text_primary),
+                        navigationIconContentColor = colorResource(R.color.color_text_primary)
                     )
                 )
             }

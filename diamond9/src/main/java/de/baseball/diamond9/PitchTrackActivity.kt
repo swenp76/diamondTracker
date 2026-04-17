@@ -211,7 +211,7 @@ class PitchTrackActivity : ComponentActivity() {
                             Text(
                                 text = halfInningState.shortLabel,
                                 fontSize = 13.sp,
-                                color = Color.White.copy(alpha = 0.8f)
+                                color = colorResource(R.color.color_text_secondary)
                             )
                         }
                     },
@@ -221,9 +221,9 @@ class PitchTrackActivity : ComponentActivity() {
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = Color.White,
+                        titleContentColor = colorResource(R.color.color_text_primary),
+                        navigationIconContentColor = colorResource(R.color.color_text_primary)
                     )
                 )
             }
