@@ -1,5 +1,6 @@
 package de.baseball.diamond9
 
+import android.content.ContentValues
 import android.content.Context
 import androidx.room.*
 import de.baseball.diamond9.db.*
@@ -259,8 +260,10 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     private val scoreboardDao = db.scoreboardDao()
     private val leagueSettingsDao = db.leagueSettingsDao()
 
-    fun execSQL(sql: String, args: Array<Any?>) {
-        db.openHelper.writableDatabase.execSQL(sql, args)
+    fun rawInsertWithConflictIgnore(table: String, cv: ContentValues) {
+        db.openHelper.writableDatabase.insert(
+            table, android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE, cv
+        )
     }
 
     // ── Games ──────────────────────────────────────────────────────────────────

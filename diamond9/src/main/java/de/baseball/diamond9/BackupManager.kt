@@ -1,5 +1,6 @@
 package de.baseball.diamond9
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
@@ -348,10 +349,10 @@ class BackupManager constructor(
         val arr = json.optJSONArray("teams") ?: return
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
-            db.execSQL(
-                "INSERT OR IGNORE INTO teams (id, name) VALUES (?, ?)",
-                arrayOf(obj.getLong("id"), obj.getString("name"))
-            )
+            db.rawInsertWithConflictIgnore("teams", ContentValues().apply {
+                put("id", obj.getLong("id"))
+                put("name", obj.getString("name"))
+            })
         }
     }
 
@@ -367,21 +368,16 @@ class BackupManager constructor(
         val arr = json.optJSONArray("players") ?: return
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
-            db.execSQL(
-                """INSERT OR IGNORE INTO players
-                   (id, team_id, name, number, primary_position, secondary_position, is_pitcher, birth_year)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                arrayOf(
-                    obj.getLong("id"),
-                    obj.getLong("team_id"),
-                    obj.getString("name"),
-                    obj.getString("number"),
-                    obj.getInt("primary_position"),
-                    obj.optInt("secondary_position", 0),
-                    obj.optInt("is_pitcher", 0),
-                    obj.optInt("birth_year", 0)
-                )
-            )
+            db.rawInsertWithConflictIgnore("players", ContentValues().apply {
+                put("id", obj.getLong("id"))
+                put("team_id", obj.getLong("team_id"))
+                put("name", obj.getString("name"))
+                put("number", obj.optString("number", ""))
+                put("primary_position", obj.optInt("primary_position", 0))
+                put("secondary_position", obj.optInt("secondary_position", 0))
+                put("is_pitcher", obj.optInt("is_pitcher", 0))
+                put("birth_year", obj.optInt("birth_year", 0))
+            })
         }
     }
 
@@ -389,28 +385,22 @@ class BackupManager constructor(
         val arr = json.optJSONArray("games") ?: return
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
-            db.execSQL(
-                """INSERT OR IGNORE INTO games
-                   (id, date, opponent, team_id, inning, outs, leadoff_slot,
-                    start_time, elapsed_time_ms, game_time, is_home, current_inning, is_top_half, game_number)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                arrayOf(
-                    obj.getLong("id"),
-                    obj.getString("date"),
-                    obj.getString("opponent"),
-                    obj.optLong("team_id", 0L),
-                    obj.optInt("inning", 1),
-                    obj.optInt("outs", 0),
-                    obj.optInt("leadoff_slot", 1),
-                    obj.optLong("start_time", 0L),
-                    obj.optLong("elapsed_time_ms", 0L),
-                    obj.optString("game_time", ""),
-                    obj.optInt("is_home", 1),
-                    obj.optInt("current_inning", 1),
-                    obj.optInt("is_top_half", 1),
-                    obj.optString("game_number", "")
-                )
-            )
+            db.rawInsertWithConflictIgnore("games", ContentValues().apply {
+                put("id", obj.getLong("id"))
+                put("date", obj.getString("date"))
+                put("opponent", obj.getString("opponent"))
+                put("team_id", obj.optLong("team_id", 0L))
+                put("inning", obj.optInt("inning", 1))
+                put("outs", obj.optInt("outs", 0))
+                put("leadoff_slot", obj.optInt("leadoff_slot", 1))
+                put("start_time", obj.optLong("start_time", 0L))
+                put("elapsed_time_ms", obj.optLong("elapsed_time_ms", 0L))
+                put("game_time", obj.optString("game_time", ""))
+                put("is_home", obj.optInt("is_home", 1))
+                put("current_inning", obj.optInt("current_inning", 1))
+                put("is_top_half", obj.optInt("is_top_half", 1))
+                put("game_number", obj.optString("game_number", ""))
+            })
         }
     }
 
@@ -418,10 +408,12 @@ class BackupManager constructor(
         val arr = json.optJSONArray("pitchers") ?: return
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
-            db.execSQL(
-                "INSERT OR IGNORE INTO pitchers (id, game_id, name, player_id) VALUES (?, ?, ?, ?)",
-                arrayOf(obj.getLong("id"), obj.getLong("game_id"), obj.getString("name"), obj.getLong("player_id"))
-            )
+            db.rawInsertWithConflictIgnore("pitchers", ContentValues().apply {
+                put("id", obj.getLong("id"))
+                put("game_id", obj.getLong("game_id"))
+                put("name", obj.getString("name"))
+                put("player_id", obj.getLong("player_id"))
+            })
         }
     }
 
@@ -429,11 +421,15 @@ class BackupManager constructor(
         val arr = json.optJSONArray("pitches") ?: return
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
-            val atBatId = if (obj.isNull("at_bat_id")) null else obj.optLong("at_bat_id")
-            db.execSQL(
-                "INSERT OR IGNORE INTO pitches (id, pitcher_id, at_bat_id, type, sequence_nr, inning) VALUES (?, ?, ?, ?, ?, ?)",
-                arrayOf(obj.getLong("id"), obj.getLong("pitcher_id"), atBatId, obj.getString("type"), obj.getInt("sequence_nr"), obj.getInt("inning"))
-            )
+            db.rawInsertWithConflictIgnore("pitches", ContentValues().apply {
+                put("id", obj.getLong("id"))
+                put("pitcher_id", obj.getLong("pitcher_id"))
+                if (obj.isNull("at_bat_id")) putNull("at_bat_id")
+                else put("at_bat_id", obj.getLong("at_bat_id"))
+                put("type", obj.getString("type"))
+                put("sequence_nr", obj.getInt("sequence_nr"))
+                put("inning", obj.getInt("inning"))
+            })
         }
     }
 
@@ -441,11 +437,15 @@ class BackupManager constructor(
         val arr = json.optJSONArray("at_bats") ?: return
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
-            val result = if (obj.isNull("result")) null else obj.optString("result")
-            db.execSQL(
-                "INSERT OR IGNORE INTO at_bats (id, game_id, player_id, slot, inning, result) VALUES (?, ?, ?, ?, ?, ?)",
-                arrayOf(obj.getLong("id"), obj.getLong("game_id"), obj.getLong("player_id"), obj.getInt("slot"), obj.getInt("inning"), result)
-            )
+            db.rawInsertWithConflictIgnore("at_bats", ContentValues().apply {
+                put("id", obj.getLong("id"))
+                put("game_id", obj.getLong("game_id"))
+                put("player_id", obj.getLong("player_id"))
+                put("slot", obj.getInt("slot"))
+                put("inning", obj.getInt("inning"))
+                if (obj.isNull("result")) putNull("result")
+                else put("result", obj.getString("result"))
+            })
         }
     }
 
@@ -461,10 +461,13 @@ class BackupManager constructor(
         val arr = json.optJSONArray("substitutions") ?: return
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
-            db.execSQL(
-                "INSERT OR IGNORE INTO substitutions (id, game_id, slot, player_out_id, player_in_id) VALUES (?, ?, ?, ?, ?)",
-                arrayOf(obj.getLong("id"), obj.getLong("game_id"), obj.getInt("slot"), obj.getLong("player_out_id"), obj.getLong("player_in_id"))
-            )
+            db.rawInsertWithConflictIgnore("substitutions", ContentValues().apply {
+                put("id", obj.getLong("id"))
+                put("game_id", obj.getLong("game_id"))
+                put("slot", obj.getInt("slot"))
+                put("player_out_id", obj.getLong("player_out_id"))
+                put("player_in_id", obj.getLong("player_in_id"))
+            })
         }
     }
 
@@ -488,10 +491,13 @@ class BackupManager constructor(
         val arr = json.optJSONArray("opponent_substitutions") ?: return
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
-            db.addOpponentSubstitution(
-                obj.getLong("game_id"), obj.getInt("slot"),
-                obj.getString("jersey_out"), obj.getString("jersey_in")
-            )
+            db.rawInsertWithConflictIgnore("opponent_substitutions", ContentValues().apply {
+                put("id", obj.getLong("id"))
+                put("game_id", obj.getLong("game_id"))
+                put("slot", obj.getInt("slot"))
+                put("jersey_out", obj.getString("jersey_out"))
+                put("jersey_in", obj.getString("jersey_in"))
+            })
         }
     }
 
@@ -499,11 +505,13 @@ class BackupManager constructor(
         val arr = json.optJSONArray("pitcher_appearances") ?: return
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
-            db.execSQL(
-                """INSERT OR IGNORE INTO pitcher_appearances (id, player_id, game_id, date, batters_faced)
-                   VALUES (?, ?, ?, ?, ?)""",
-                arrayOf(obj.getLong("id"), obj.getLong("player_id"), obj.getLong("game_id"), obj.getString("date"), obj.getInt("batters_faced"))
-            )
+            db.rawInsertWithConflictIgnore("pitcher_appearances", ContentValues().apply {
+                put("id", obj.getLong("id"))
+                put("player_id", obj.getLong("player_id"))
+                put("game_id", obj.getLong("game_id"))
+                put("date", obj.getString("date"))
+                put("batters_faced", obj.getInt("batters_faced"))
+            })
         }
     }
 
