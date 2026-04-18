@@ -44,7 +44,8 @@ class BackupManager constructor(
          * ACTION_SEND share chooser so the user can send it via WhatsApp etc.
          */
         fun shareJson(context: Context, fileName: String, content: String) {
-            val file = File(context.cacheDir, fileName)
+            val safeName = fileName.replace("/", "_").replace("\\", "_")
+            val file = File(context.cacheDir, safeName)
             file.writeText(content, Charsets.UTF_8)
             val uri = FileProvider.getUriForFile(
                 context, "${context.packageName}.fileprovider", file
@@ -351,7 +352,7 @@ class BackupManager constructor(
             val obj = arr.getJSONObject(i)
             db.rawInsertWithConflictIgnore("teams", ContentValues().apply {
                 put("id", obj.getLong("id"))
-                put("name", obj.getString("name"))
+                put("name", obj.getString("name").take(50))
             })
         }
     }
@@ -371,8 +372,8 @@ class BackupManager constructor(
             db.rawInsertWithConflictIgnore("players", ContentValues().apply {
                 put("id", obj.getLong("id"))
                 put("team_id", obj.getLong("team_id"))
-                put("name", obj.getString("name"))
-                put("number", obj.optString("number", ""))
+                put("name", obj.getString("name").take(50))
+                put("number", obj.optString("number", "").take(3))
                 put("primary_position", obj.optInt("primary_position", 0))
                 put("secondary_position", obj.optInt("secondary_position", 0))
                 put("is_pitcher", obj.optInt("is_pitcher", 0))
@@ -387,19 +388,19 @@ class BackupManager constructor(
             val obj = arr.getJSONObject(i)
             db.rawInsertWithConflictIgnore("games", ContentValues().apply {
                 put("id", obj.getLong("id"))
-                put("date", obj.getString("date"))
-                put("opponent", obj.getString("opponent"))
+                put("date", obj.getString("date").take(10))
+                put("opponent", obj.getString("opponent").take(50))
                 put("team_id", obj.optLong("team_id", 0L))
                 put("inning", obj.optInt("inning", 1))
                 put("outs", obj.optInt("outs", 0))
                 put("leadoff_slot", obj.optInt("leadoff_slot", 1))
                 put("start_time", obj.optLong("start_time", 0L))
                 put("elapsed_time_ms", obj.optLong("elapsed_time_ms", 0L))
-                put("game_time", obj.optString("game_time", ""))
+                put("game_time", obj.optString("game_time", "").take(5))
                 put("is_home", obj.optInt("is_home", 1))
                 put("current_inning", obj.optInt("current_inning", 1))
                 put("is_top_half", obj.optInt("is_top_half", 1))
-                put("game_number", obj.optString("game_number", ""))
+                put("game_number", obj.optString("game_number", "").take(20))
             })
         }
     }
@@ -646,7 +647,7 @@ class BackupManager constructor(
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
             db.insertOpponentTeamForTeam(
-                name = obj.getString("name"),
+                name = obj.getString("name").take(50),
                 teamId = obj.optLong("team_id", 0L)
             )
         }
@@ -969,7 +970,7 @@ class BackupManager constructor(
      * Creates a new team with players and positions; never overwrites an existing team.
      */
     fun importTeam(json: JSONObject) {
-        val teamId = db.insertTeam(json.getString("name"))
+        val teamId = db.insertTeam(json.getString("name").take(50))
 
         db.getEnabledPositions(teamId).forEach { db.setPositionEnabled(teamId, it, false) }
         val posArray = json.optJSONArray("positions")
@@ -985,8 +986,8 @@ class BackupManager constructor(
                 val pl = playersArray.getJSONObject(p)
                 db.insertPlayer(
                     teamId,
-                    pl.getString("name"),
-                    pl.optString("number", ""),
+                    pl.getString("name").take(50),
+                    pl.optString("number", "").take(3),
                     pl.optInt("primary_position", 0),
                     pl.optInt("secondary_position", 0),
                     pl.optBoolean("is_pitcher", false),
