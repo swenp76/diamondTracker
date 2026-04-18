@@ -276,8 +276,8 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | 10 → 11 | `elapsed_time_ms` in `games` | ✅ |
 | 11 → 12 | `current_inning`, `is_top_half` in `games` (Half-Inning Tracking) | ✅ |
 | 12 → 13 | `league_settings`-Tabelle (Team Hub / Liga-Settings) | ✅ |
-| 13 → 14 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
-| 13 → 14 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
-| 14 → 15 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
+| 13 → 14 | `game_number` in `games` | ✅ |
+| 14 → 15 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
+| 15 → 16 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
 
 **Hinweis:** Jede Migration hier eintragen und gleichzeitig `BackupManager` aktualisieren.

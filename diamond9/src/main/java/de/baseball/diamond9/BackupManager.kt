@@ -319,6 +319,11 @@ class BackupManager constructor(
             throw IllegalArgumentException("Not a valid diamond9 backup file.")
         }
         val backupVersion = json.optInt("dbVersion", 1)
+        if (backupVersion > DB_VERSION) {
+            throw IllegalArgumentException(
+                "Backup version $backupVersion is newer than this app (v$DB_VERSION). Please update the app first."
+            )
+        }
         val migrated = applyBackupMigrations(json, fromVersion = backupVersion, toVersion = DB_VERSION)
 
         restoreTeams(migrated)
