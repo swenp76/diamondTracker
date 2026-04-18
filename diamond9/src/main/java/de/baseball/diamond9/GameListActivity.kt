@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.WindowCompat
 import androidx.compose.runtime.mutableIntStateOf
 import org.json.JSONArray
 import org.json.JSONObject
@@ -109,6 +110,8 @@ class GameListActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = true
         db = DatabaseHelper(this)
         backupManager = BackupManager(this)
 
@@ -198,6 +201,7 @@ private fun GameListScreen(
     }
 
     Scaffold(
+        containerColor = colorResource(R.color.color_background),
         topBar = {
             TopAppBar(
                 title = { Text(teamName) },
@@ -298,9 +302,9 @@ private fun GameListScreen(
             confirmLabel = stringResource(R.string.btn_create),
             opponents = db.getOpponentTeamsForTeam(teamId),
             onDismiss = { showAddDialog = false },
-            onConfirm = { date, time, opponent, isHome ->
+            onConfirm = { date, time, opponent, isHome, gameNumber ->
                 db.insertOpponentTeamForTeam(opponent, teamId)
-                db.insertGame(date, opponent, teamId, time, isHome)
+                db.insertGame(date, opponent, teamId, time, isHome, gameNumber)
                 refresh()
                 showAddDialog = false
             }
@@ -315,11 +319,12 @@ private fun GameListScreen(
             initialTime = game.gameTime,
             initialOpponent = game.opponent,
             initialIsHome = game.isHome,
+            initialNumber = game.gameNumber,
             opponents = db.getOpponentTeamsForTeam(teamId),
             onDismiss = { gameToEdit = null },
-            onConfirm = { date, time, opponent, isHome ->
+            onConfirm = { date, time, opponent, isHome, gameNumber ->
                 db.insertOpponentTeamForTeam(opponent, teamId)
-                db.updateGame(game.id, date, opponent, time, isHome)
+                db.updateGame(game.id, date, opponent, time, isHome, gameNumber)
                 refresh()
                 gameToEdit = null
             }
@@ -426,8 +431,9 @@ private fun GameItem(
                     }
                 }
                 val dateLabel = if (game.gameTime.isNotEmpty()) "${game.date}  ${game.gameTime}" else game.date
+                val dateLine = if (game.gameNumber.isNotEmpty()) "$dateLabel  #${game.gameNumber}" else dateLabel
                 Text(
-                    text = dateLabel,
+                    text = dateLine,
                     fontSize = 14.sp,
                     color = colorResource(R.color.color_text_secondary)
                 )
@@ -461,9 +467,10 @@ private fun GameDialog(
     initialTime: String = "",
     initialOpponent: String = "",
     initialIsHome: Int = 1,
+    initialNumber: String = "",
     opponents: List<OpponentTeam>,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, String, Int) -> Unit   // date, time, opponent, isHome
+    onConfirm: (String, String, String, Int, String) -> Unit   // date, time, opponent, isHome, gameNumber
 ) {
     val context = LocalContext.current
     val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.US)
@@ -484,6 +491,7 @@ private fun GameDialog(
 
     var date by remember { mutableStateOf(if (initialDate.isNotEmpty()) initialDate else sdf.format(calendar.time)) }
     var time by remember { mutableStateOf(initialTime) }
+    var number by remember { mutableStateOf(initialNumber) }
     var isHome by remember { mutableStateOf(initialIsHome) }
     var opponentText by remember { mutableStateOf(if (initialOpponent.isNotEmpty() && opponents.none { it.name == initialOpponent }) initialOpponent else "") }
     var selectedOpponent by remember { mutableStateOf(opponents.find { it.name == initialOpponent }) }
@@ -550,6 +558,14 @@ private fun GameDialog(
                         disabledBorderColor = MaterialTheme.colorScheme.outline,
                         disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                )
+
+                OutlinedTextField(
+                    value = number,
+                    onValueChange = { if (it.length <= 20) number = it },
+                    label = { Text(stringResource(R.string.label_game_number)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
 
                 Column {
@@ -632,7 +648,7 @@ private fun GameDialog(
             Button(onClick = {
                 val finalOpponent = opponentText.trim().ifEmpty { selectedOpponent?.name ?: "" }
                 if (date.isNotBlank() && finalOpponent.isNotBlank()) {
-                    onConfirm(date, time, finalOpponent, isHome)
+                    onConfirm(date, time, finalOpponent, isHome, number.trim())
                 } else {
                     if (date.isBlank()) dateError = true
                     if (finalOpponent.isBlank()) opponentError = true

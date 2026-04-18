@@ -57,6 +57,8 @@
     <string name="pitch_label_foul">Foul</string>
     <string name="pitch_label_hit">── Hit ──────────────────────────</string>
     <string name="pitch_label_hbp">── Hit by Pitch ─────────────────</string>
+    <string name="pitch_label_roe">── Erreicht per Fehler (ROE) ─────</string>
+    <string name="btn_result_roe">Fehler (ROE)</string>
     <string name="pitch_label_walk">── Walk ─────────────────────────</string>
     <string name="pitch_label_strikeout">── Strike-Out (K) ───────────────</string>
     <string name="pitch_label_slot">── Slot %d ──────────────────────────</string>
@@ -89,6 +91,7 @@
     <string name="hint_date_format">TT.MM.JJJJ</string>
     <string name="label_time">Uhrzeit (optional)</string>
     <string name="hint_time">HH:MM</string>
+    <string name="label_game_number">Nummer (optional)</string>
     <string name="label_opponent">Gegner</string>
     <string name="hint_opponent">Mannschaft</string>
     <string name="label_or_enter_new">Oder neu eingeben:</string>
@@ -209,7 +212,7 @@
 
     <!-- ── Gegner-Lineup ──────────────────────────────────────────────────── -->
     <string name="oppo_lineup_subtitle">Aufstellung</string>
-    <string name="oppo_section_batting_order">Batting Order (1 – 9)</string>
+    <string name="oppo_section_batting_order">Batting Order (1 – 10)</string>
     <string name="oppo_section_bench">Bank (11 – 20)</string>
     <string name="dialog_jersey_title">Trikotnummer</string>
     <string name="dialog_other_number">Andere Nummer…</string>

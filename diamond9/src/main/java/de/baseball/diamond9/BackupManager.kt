@@ -22,6 +22,7 @@ import java.io.File
  *  11 → elapsed_time_ms column added to games
  *  12 → current_inning and is_top_half columns added to games
  *  13 → league_settings table introduced
+ *  14 → game_number column added to games
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
@@ -32,7 +33,7 @@ class BackupManager constructor(
     constructor(context: Context) : this(context, DatabaseHelper(context))
 
     companion object {
-        const val DB_VERSION = 13
+        const val DB_VERSION = 14
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
@@ -60,7 +61,9 @@ class BackupManager constructor(
 
         /** Valid at-bat result strings stored in the database. */
         val VALID_AT_BAT_RESULTS = setOf(
-            "K", "KL", "GO", "FO", "LO", "BB", "H", "HBP", "SAC", "FC", "E", "DP", "OUT"
+            "K", "KL", "GO", "FO", "LO", "BB", "H", "HBP", "SAC", "FC", "E", "DP", "OUT",
+            "1B", "2B", "3B", "HR",
+            "ROE"
         )
     }
 
@@ -95,6 +98,7 @@ class BackupManager constructor(
                 put("is_home", g.isHome)
                 put("current_inning", g.currentInning)
                 put("is_top_half", g.isTopHalf)
+                put("game_number", g.gameNumber)
             }
         }))
 
@@ -326,6 +330,7 @@ class BackupManager constructor(
             put("is_home", game.isHome)
             put("current_inning", game.currentInning)
             put("is_top_half", game.isTopHalf)
+            put("game_number", game.gameNumber)
         }
         root.put("game", gObj)
 
@@ -437,7 +442,8 @@ class BackupManager constructor(
             opponent = gData.getString("opponent").take(50),
             teamId = teamId,
             gameTime = gData.optString("game_time", "").take(5),
-            isHome = isHome
+            isHome = isHome,
+            gameNumber = gData.optString("game_number", "").take(20)
         )
         db.updateGameState(gameId, gData.optInt("inning", 1), gData.optInt("outs", 0))
         db.updateLeadoffSlot(gameId, gData.optInt("leadoff_slot", 1))

@@ -5,6 +5,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -40,6 +43,9 @@ class BattingTrackActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = true
 
         gameId = intent.getLongExtra("gameId", -1)
         db = DatabaseHelper(this)
@@ -264,17 +270,18 @@ class BattingTrackActivity : ComponentActivity() {
                             },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary))
-                        ) { Text(stringResource(R.string.half_inning_confirm), fontWeight = FontWeight.Bold) }
+                        ) { Text(stringResource(R.string.half_inning_confirm), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         OutlinedButton(
                             onClick = { showHalfInningSheet = false },
                             modifier = Modifier.weight(1f)
-                        ) { Text(stringResource(R.string.half_inning_keep_going)) }
+                        ) { Text(stringResource(R.string.half_inning_keep_going), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
                 }
             }
         }
 
         Scaffold(
+            containerColor = colorResource(R.color.color_background),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
@@ -284,7 +291,7 @@ class BattingTrackActivity : ComponentActivity() {
                             Text(
                                 text = halfInningState.shortLabel,
                                 fontSize = 13.sp,
-                                color = Color.White.copy(alpha = 0.8f)
+                                color = colorResource(R.color.color_text_secondary)
                             )
                         }
                     },
@@ -294,9 +301,9 @@ class BattingTrackActivity : ComponentActivity() {
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = colorResource(R.color.color_primary),
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White
+                        containerColor = Color.White,
+                        titleContentColor = colorResource(R.color.color_text_primary),
+                        navigationIconContentColor = colorResource(R.color.color_text_primary)
                     )
                 )
             }
@@ -593,15 +600,19 @@ class BattingTrackActivity : ComponentActivity() {
             ModalBottomSheet(onDismissRequest = { showHSheet = false }) {
                 Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp)) {
                     Row(modifier = Modifier.fillMaxWidth().height(72.dp)) {
-                        Button(onClick = { onResult("1B"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_bright)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_1b), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        Button(onClick = { onResult("1B"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_bright)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_1b), fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         Spacer(Modifier.width(8.dp))
-                        Button(onClick = { onResult("2B"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_2b), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        Button(onClick = { onResult("2B"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_2b), fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth().height(72.dp)) {
-                        Button(onClick = { onResult("3B"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_dark)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_3b), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        Button(onClick = { onResult("3B"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_dark)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_3b), fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         Spacer(Modifier.width(8.dp))
-                        Button(onClick = { onResult("HR"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit_homer)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_hr), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        Button(onClick = { onResult("HR"); showHSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit_homer)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_hr), fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth().height(64.dp)) {
+                        Button(onClick = { onResult("ROE"); showHSheet = false }, modifier = Modifier.fillMaxWidth().fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_roe), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
                 }
             }
@@ -610,7 +621,7 @@ class BattingTrackActivity : ComponentActivity() {
         if (showBBSheet) {
             ModalBottomSheet(onDismissRequest = onBBSheetDismiss) {
                 Row(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp).fillMaxWidth().height(72.dp)) {
-                    Button(onClick = { onResult("BB"); onBBSheetDismiss() }, modifier = Modifier.fillMaxWidth().fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_walk_confirm), fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                    Button(onClick = { onResult("BB"); onBBSheetDismiss() }, modifier = Modifier.fillMaxWidth().fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_walk_confirm), fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
             }
         }
@@ -618,9 +629,9 @@ class BattingTrackActivity : ComponentActivity() {
         if (showKSheet) {
             ModalBottomSheet(onDismissRequest = onKSheetDismiss) {
                 Row(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp).fillMaxWidth().height(72.dp)) {
-                    Button(onClick = { onResult("K"); onKSheetDismiss() }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_strikeout_swinging), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                    Button(onClick = { onResult("K"); onKSheetDismiss() }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_strikeout_swinging), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = { onResult("KL"); onKSheetDismiss() }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike_looking)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_strikeout_looking), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                    Button(onClick = { onResult("KL"); onKSheetDismiss() }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike_looking)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_strikeout_looking), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
             }
         }
@@ -632,11 +643,11 @@ class BattingTrackActivity : ComponentActivity() {
                         R.string.btn_result_hbp to colorResource(R.color.color_hbp),
                         R.string.btn_result_sac to colorResource(R.color.color_orange),
                         R.string.btn_result_fc  to colorResource(R.color.color_primary),
-                        R.string.btn_result_e   to colorResource(R.color.color_foul)
+                        R.string.btn_result_dp  to colorResource(R.color.color_text_secondary)
                     ).forEachIndexed { i, (labelRes, color) ->
                         val label = stringResource(labelRes)
                         if (i > 0) Spacer(Modifier.width(8.dp))
-                        Button(onClick = { onResult(label); showMoreSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = color), shape = RoundedCornerShape(8.dp)) { Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                        Button(onClick = { onResult(label); showMoreSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = color), shape = RoundedCornerShape(8.dp)) { Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
                 }
             }
@@ -650,15 +661,15 @@ class BattingTrackActivity : ComponentActivity() {
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Row(modifier = Modifier.fillMaxWidth().height(80.dp)) {
-                    Button(onClick = onBall, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_ball), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                    Button(onClick = onBall, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_ball), fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = onStrike, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_strike), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                    Button(onClick = onStrike, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_strike), fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth().height(48.dp)) {
-                    Button(onClick = onFoul, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_foul)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_foul), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                    Button(onClick = onFoul, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_foul)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_foul), fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = onUndo, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_undo), fontSize = 14.sp) }
+                    Button(onClick = onUndo, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_undo), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = colorResource(R.color.color_divider_light))
                 Row(modifier = Modifier.fillMaxWidth().height(72.dp)) {
@@ -678,12 +689,12 @@ class BattingTrackActivity : ComponentActivity() {
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
                                 colors = ButtonDefaults.buttonColors(containerColor = color),
                                 shape = RoundedCornerShape(8.dp)
-                            ) { Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                            ) { Text(label, fontSize = if (labelRes == R.string.btn_result_bb) 12.sp else 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         }
                     Spacer(Modifier.width(6.dp))
-                    Button(onClick = { outExpanded = !outExpanded; showMoreSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = if (outExpanded) colorResource(R.color.color_orange) else colorResource(R.color.color_orange_bright)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_out), fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                    Button(onClick = { outExpanded = !outExpanded; showMoreSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = if (outExpanded) colorResource(R.color.color_orange) else colorResource(R.color.color_orange_bright)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_out), fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     Spacer(Modifier.width(6.dp))
-                    Button(onClick = { showMoreSheet = true; outExpanded = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_more), fontSize = 18.sp) }
+                    Button(onClick = { showMoreSheet = true; outExpanded = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_more), fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
                 if (outExpanded) {
                     Spacer(Modifier.height(6.dp))
@@ -692,7 +703,7 @@ class BattingTrackActivity : ComponentActivity() {
                             .forEachIndexed { i, labelRes ->
                                 val label = stringResource(labelRes)
                                 if (i > 0) Spacer(Modifier.width(6.dp))
-                                Button(onClick = { onResult(label); outExpanded = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)), shape = RoundedCornerShape(8.dp)) { Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                                Button(onClick = { onResult(label); outExpanded = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)), shape = RoundedCornerShape(8.dp)) { Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                             }
                     }
                 }

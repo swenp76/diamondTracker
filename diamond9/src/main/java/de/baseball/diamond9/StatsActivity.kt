@@ -3,6 +3,8 @@ package de.baseball.diamond9
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -29,6 +31,9 @@ class StatsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = true
         db = DatabaseHelper(this)
         val pitcherId = intent.getLongExtra("pitcherId", -1)
         val stats = db.getStatsForPitcher(pitcherId)
@@ -49,6 +54,7 @@ fun StatsScreen(
     onBackClick: () -> Unit
 ) {
     Scaffold(
+        containerColor = colorResource(R.color.color_background),
         topBar = {
             TopAppBar(
                 title = { Text(stats.pitcher.name) },

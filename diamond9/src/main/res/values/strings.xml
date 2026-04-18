@@ -80,6 +80,7 @@
     <string name="btn_result_sac">SAC</string>
     <string name="btn_result_fc">FC</string>
     <string name="btn_result_e">E</string>
+    <string name="btn_result_roe">Reached on Error</string>
     <string name="btn_result_dp">DP</string>
 
     <!-- ── Pitch Log Labels ───────────────────────────────────────────────── -->
@@ -94,6 +95,7 @@
     <string name="pitch_label_go">── Ground Out (GO) ──────────────</string>
     <string name="pitch_label_fo">── Fly Out (FO) ─────────────────</string>
     <string name="pitch_label_hbp">── Hit by Pitch ─────────────────</string>
+    <string name="pitch_label_roe">── Reached on Error ─────────────</string>
     <string name="pitch_label_walk">── Walk ─────────────────────────</string>
     <string name="pitch_label_strikeout">── Strike-Out (K) ───────────────</string>
     <string name="pitch_label_slot">── Slot %d ──────────────────────────</string>
@@ -126,6 +128,7 @@
     <string name="hint_date_format">DD.MM.YYYY</string>
     <string name="label_time">Time (optional)</string>
     <string name="hint_time">HH:MM</string>
+    <string name="label_game_number">Number (optional)</string>
     <string name="label_location">Home / Away</string>
     <string name="location_home">Home</string>
     <string name="location_away">Away</string>
@@ -249,7 +252,7 @@
 
     <!-- ── Opponent Lineup ──────────────────────────────────────────────────── -->
     <string name="oppo_lineup_subtitle">Lineup</string>
-    <string name="oppo_section_batting_order">Batting Order (1 – 9)</string>
+    <string name="oppo_section_batting_order">Batting Order (1 – 10)</string>
     <string name="oppo_section_bench">Bench (11 – 20)</string>
     <string name="dialog_jersey_title">Jersey Number</string>
     <string name="dialog_other_number">Other number…</string>

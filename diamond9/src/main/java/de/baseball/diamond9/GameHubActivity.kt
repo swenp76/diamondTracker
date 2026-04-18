@@ -4,7 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -19,6 +22,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.colorResource
@@ -26,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +42,9 @@ import java.util.*
 class GameHubActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = true
         val gameId = intent.getLongExtra("game_id", -1L)
         val date = intent.getStringExtra("date") ?: ""
         val opponent = intent.getStringExtra("opponent") ?: ""
@@ -112,6 +121,7 @@ private fun GameHubScreen(
     val leagueSettings = remember { db.getLeagueSettings(ownTeamId) }
 
     Scaffold(
+        containerColor = colorResource(R.color.color_background),
         topBar = {
             TopAppBar(
                 title = {
@@ -174,6 +184,17 @@ private fun Scoreboard(
 
     // teamIndex: 0 = guest, 1 = home
     var editCell by remember { mutableStateOf<Pair<Int, Int>?>(null) } // teamIndex to inning
+    var currentInning by remember { mutableStateOf(db.getHalfInningState(gameId).inning) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                currentInning = db.getHalfInningState(gameId).inning
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     // runs[teamIndex][inning-1]
     val runs = remember { mutableStateOf(Array(2) { t -> IntArray(innings) { inn -> db.getScoreboardRuns(gameId, inn + 1, t) } }) }
     val hasEntry = remember { mutableStateOf(Array(2) { t -> BooleanArray(innings) { inn -> db.hasScoreboardEntry(gameId, inn + 1, t) } }) }
@@ -234,20 +255,20 @@ private fun Scoreboard(
             }
             // Guest Row
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ScoreCell(guestTeam, 100.dp, false, FontWeight.Bold)
+                ScoreCell(guestTeam, 100.dp, false, FontWeight.Bold, startPadding = 8.dp)
                 (1..innings).forEach { inn ->
                     val r = if (hasEntry.value[0][inn - 1]) runs.value[0][inn - 1].toString() else "-"
-                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(0, inn) })
+                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(0, inn) }, highlightEdge = if (inn == currentInning) "top" else "none")
                 }
                 ScoreCell(totalFor(0).toString(), 40.dp, false, FontWeight.Bold)
             }
             HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
             // Home Row
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ScoreCell(homeTeam, 100.dp, false, FontWeight.Bold)
+                ScoreCell(homeTeam, 100.dp, false, FontWeight.Bold, startPadding = 8.dp)
                 (1..innings).forEach { inn ->
                     val r = if (hasEntry.value[1][inn - 1]) runs.value[1][inn - 1].toString() else "-"
-                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(1, inn) })
+                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(1, inn) }, highlightEdge = if (inn == currentInning) "bottom" else "none")
                 }
                 ScoreCell(totalFor(1).toString(), 40.dp, false, FontWeight.Bold)
             }
@@ -317,10 +338,9 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
                 Text(
                     text = timeString,
                     fontSize = 28.sp,
@@ -348,11 +368,13 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.padding(end = 4.dp)
+                        modifier = Modifier.widthIn(min = 96.dp).padding(end = 4.dp)
                     ) {
                         Text(
                             text = if (totalElapsedMs == 0L) stringResource(R.string.timer_btn_start) else stringResource(R.string.timer_btn_resume),
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 } else {
@@ -371,9 +393,9 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.padding(end = 4.dp)
+                        modifier = Modifier.widthIn(min = 96.dp).padding(end = 4.dp)
                     ) {
-                        Text(stringResource(R.string.timer_btn_pause), fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.timer_btn_pause), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
 
@@ -383,7 +405,7 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
                         onClick = { showResetDialog = true },
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.timer_btn_reset), color = Color.Red)
+                        Text(stringResource(R.string.timer_btn_reset), color = Color.Red, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -398,14 +420,26 @@ private fun ScoreCell(
     isHeader: Boolean,
     fontWeight: FontWeight = FontWeight.Normal,
     textColor: Color = Color.Unspecified,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    highlightEdge: String = "none",
+    startPadding: Dp = 0.dp
 ) {
+    val hlColor = colorResource(R.color.color_primary)
     Box(
         modifier = Modifier
             .width(width)
             .height(40.dp)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
-        contentAlignment = Alignment.Center
+            .then(if (highlightEdge != "none") Modifier.drawBehind {
+                val stroke = 2.dp.toPx()
+                val h = stroke / 2
+                drawLine(hlColor, Offset(h, 0f), Offset(h, size.height), stroke)
+                drawLine(hlColor, Offset(size.width - h, 0f), Offset(size.width - h, size.height), stroke)
+                if (highlightEdge == "top") drawLine(hlColor, Offset(0f, h), Offset(size.width, h), stroke)
+                else drawLine(hlColor, Offset(0f, size.height - h), Offset(size.width, size.height - h), stroke)
+            } else Modifier)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(start = startPadding),
+        contentAlignment = if (startPadding > 0.dp) Alignment.CenterStart else Alignment.Center
     ) {
         Text(
             text = text,
@@ -428,7 +462,7 @@ private fun HubButton(text: String, color: Color, onClick: () -> Unit) {
         shape = RoundedCornerShape(12.dp),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
     ) {
-        Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -521,7 +555,7 @@ private fun HalfInningBar(
                         contentColor = Color.White
                     )
                 ) {
-                    Text(stringResource(R.string.gamehub_time_limit_override), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.gamehub_time_limit_override), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 OutlinedButton(
                     onClick = {
@@ -530,7 +564,7 @@ private fun HalfInningBar(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.gamehub_time_limit_cancel))
+                    Text(stringResource(R.string.gamehub_time_limit_cancel), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -567,7 +601,9 @@ private fun HalfInningBar(
             Text(
                 text = stringResource(if (isOurOffense) R.string.gamehub_offense else R.string.gamehub_defense),
                 fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
         IconButton(onClick = { showEditDialog = true }) {
