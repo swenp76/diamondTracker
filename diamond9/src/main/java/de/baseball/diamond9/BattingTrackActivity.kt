@@ -320,7 +320,7 @@ class BattingTrackActivity : ComponentActivity() {
                     .background(colorResource(R.color.color_background))
             ) {
                 StatsBar(inning, outs, pitches, onRunnerOut = { recordRunnerOut() })
-                BatterStrip(currentSlot, lineup[currentSlot], launcher)
+                BatterStrip(currentSlot, lineup, launcher)
                 Box(modifier = Modifier.weight(1f)) {
                     PitchLog(pitches)
                 }
@@ -503,38 +503,103 @@ class BattingTrackActivity : ComponentActivity() {
     @Composable
     fun BatterStrip(
         slot: Int,
-        player: Player?,
+        lineup: Map<Int, Player>,
         launcher: androidx.activity.result.ActivityResultLauncher<Intent>
     ) {
         val context = LocalContext.current
-        val batterText = if (player != null)
-            stringResource(R.string.label_batter_slot_with_jersey, "#${player.number} ${player.name}", slot)
-        else
-            stringResource(R.string.label_batter_slot, slot)
+        val lineupSize = if (lineup.containsKey(10)) 10 else 9
+        val leadoff = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
 
-        Row(
+        val onDeckSlot = ((slot + lineupSize - 1) % lineupSize) + 1
+        val inHoleSlot = (onDeckSlot % lineupSize) + 1
+
+        val currentPlayer = lineup[slot]
+        val onDeckPlayer = lineup[onDeckSlot]
+        val inHolePlayer = lineup[inHoleSlot]
+
+        @Composable
+        fun getBatterText(s: Int, p: Player?): String {
+            return if (p != null)
+                stringResource(R.string.label_batter_slot_with_jersey, "#${p.number} ${p.name}", s)
+            else
+                stringResource(R.string.label_batter_slot, s)
+        }
+
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(colorResource(R.color.color_primary))
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 16.dp, vertical = 4.dp)
         ) {
-            Text(stringResource(R.string.label_batter), fontSize = 13.sp, color = colorResource(R.color.color_primary_light))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(batterText, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
-            Text(
-                stringResource(R.string.hint_lineup),
-                fontSize = 12.sp,
-                color = colorResource(R.color.color_primary_light),
-                modifier = Modifier
-                    .clickable {
-                        val i = Intent(context, OwnLineupActivity::class.java)
-                        i.putExtra("gameId", gameId)
-                        i.putExtra("isOffenseMode", true)
-                        launcher.launch(i)
-                    }
-                    .padding(8.dp)
-            )
+            // Current Batter
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.label_batter),
+                    fontSize = 13.sp,
+                    color = colorResource(R.color.color_primary_light),
+                    modifier = Modifier.width(64.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    getBatterText(slot, currentPlayer),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    stringResource(R.string.hint_lineup),
+                    fontSize = 12.sp,
+                    color = colorResource(R.color.color_primary_light),
+                    modifier = Modifier
+                        .clickable {
+                            val i = Intent(context, OwnLineupActivity::class.java)
+                            i.putExtra("gameId", gameId)
+                            i.putExtra("isOffenseMode", true)
+                            launcher.launch(i)
+                        }
+                        .padding(8.dp)
+                )
+            }
+
+            // On Deck
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.label_on_deck),
+                    fontSize = 11.sp,
+                    color = colorResource(R.color.color_primary_light),
+                    modifier = Modifier.width(64.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    getBatterText(onDeckSlot, onDeckPlayer),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White.copy(alpha = 0.9f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            // In Hole
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.label_in_the_hole),
+                    fontSize = 9.sp,
+                    color = colorResource(R.color.color_primary_light),
+                    modifier = Modifier.width(64.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    getBatterText(inHoleSlot, inHolePlayer),
+                    fontSize = 13.sp,
+                    color = Color.White.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 

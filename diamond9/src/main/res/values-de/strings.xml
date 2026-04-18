@@ -65,7 +65,9 @@
     <string name="pitch_label_slot_with_jersey">── %1$s (Slot %2$d) ─────────────</string>
 
     <!-- ── PitchTrackActivity ─────────────────────────────────────────────── -->
-    <string name="label_batter">Batter:</string>
+    <string name="label_batter">Schlagmann:</string>
+    <string name="label_on_deck">On Deck:</string>
+    <string name="label_in_the_hole">In Hole:</string>
     <string name="label_batter_slot">Slot %d</string>
     <string name="label_batter_slot_with_jersey">%1$s  (Slot %2$d)</string>
     <string name="hint_lineup">Aufstellung ▶</string>

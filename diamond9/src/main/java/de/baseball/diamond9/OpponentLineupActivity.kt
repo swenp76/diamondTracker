@@ -7,10 +7,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +25,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -58,6 +59,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -114,6 +118,21 @@ fun OpponentLineupScreen(
     var slotStates by remember { mutableStateOf(emptyList<OppSlotState>()) }
     var subStatuses by remember { mutableStateOf(emptyMap<String, OppSubStatus>()) }
     var benchPlayers by remember { mutableStateOf(emptyList<BenchPlayer>()) }
+    var lineupSize by remember { mutableStateOf(9) }
+    var totalAtBats by remember { mutableStateOf(0) }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                totalAtBats = db.getAtBatsForGame(gameId).size
+                val (slots, _) = computeState(db, gameId)
+                lineupSize = slots.count { it.currentJersey.isNotEmpty() || it.slot <= 9 }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     var jerseyInputDialogState by remember { mutableStateOf<Triple<String, String, (String) -> Unit>?>(null) }
     var swapTypeDialogState by remember { mutableStateOf<OppSlotState?>(null) }
@@ -200,9 +219,14 @@ fun OpponentLineupScreen(
                 items(slotStates) { state ->
                     val subs = db.getOpponentSubstitutionsForGame(gameId)
                     val hasSubs = subs.any { it.slot == state.slot }
+                    val leadoff = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
+                    val currentBatterSlot = ((leadoff - 1 + totalAtBats) % lineupSize) + 1
+                    val isCurrentBatter = state.slot == currentBatterSlot
+
                     OpponentStarterRow(
                         state = state,
                         hasSubs = hasSubs,
+                        isCurrentBatter = isCurrentBatter,
                         onRowClick = {
                             if (!hasSubs) {
                                 jerseyInputDialogState = Triple("Slot ${state.slot}", state.currentJersey) { jersey ->
@@ -492,6 +516,7 @@ private fun SlotNumber(slot: Int, color: Color) {
 private fun OpponentStarterRow(
     state: OppSlotState,
     hasSubs: Boolean,
+    isCurrentBatter: Boolean = false,
     onRowClick: () -> Unit,
     onLongClick: () -> Unit,
     onSwapClick: () -> Unit,
@@ -502,10 +527,12 @@ private fun OpponentStarterRow(
             onClick = onRowClick,
             onLongClick = onLongClick
         ),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = if (isCurrentBatter) BorderStroke(2.dp, colorResource(R.color.color_primary)) else null,
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             SlotNumber(state.slot, colorResource(R.color.color_primary))
