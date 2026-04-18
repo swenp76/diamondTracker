@@ -259,6 +259,10 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     private val scoreboardDao = db.scoreboardDao()
     private val leagueSettingsDao = db.leagueSettingsDao()
 
+    fun execSQL(sql: String, args: Array<Any?>) {
+        db.openHelper.writableDatabase.execSQL(sql, args)
+    }
+
     // ── Games ──────────────────────────────────────────────────────────────────
 
     fun insertGame(date: String, opponent: String, teamId: Long, gameTime: String = "", isHome: Int = 1, gameNumber: String = ""): Long =

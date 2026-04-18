@@ -190,7 +190,46 @@ class BackupManagerMigrationsTest {
         assertEquals(0L, g.getLong("elapsed_time_ms"))
     }
 
-    // ── Full chain: v5 → v11 ──────────────────────────────────────────────────
+    // ── Migration 13 → 14 : game_number added to games ───────────────────────
+
+    @Test
+    fun migration_v13_addsGameNumberToGames() {
+        val game = JSONObject().apply {
+            put("id", 1); put("date", "01.04.2026"); put("opponent", "Bears")
+            put("start_time", 0L); put("game_time", ""); put("is_home", 1)
+            put("elapsed_time_ms", 0L); put("current_inning", 1); put("is_top_half", 1)
+        }
+        val json = JSONObject().apply {
+            put("dbVersion", 13)
+            put("games", JSONArray().put(game))
+            put("opponent_teams", JSONArray())
+            put("league_settings", JSONArray())
+        }
+        val result = migrate(json, fromVersion = 13)
+        val g = result.getJSONArray("games").getJSONObject(0)
+        assertTrue(g.has("game_number"))
+        assertEquals("", g.getString("game_number"))
+    }
+
+    @Test
+    fun migration_v13_doesNotOverwriteExistingGameNumber() {
+        val game = JSONObject().apply {
+            put("id", 1); put("date", "01.04.2026"); put("opponent", "Bears")
+            put("start_time", 0L); put("game_time", ""); put("is_home", 1)
+            put("elapsed_time_ms", 0L); put("current_inning", 1); put("is_top_half", 1)
+            put("game_number", "1234")
+        }
+        val json = JSONObject().apply {
+            put("dbVersion", 14)
+            put("games", JSONArray().put(game))
+            put("opponent_teams", JSONArray())
+            put("league_settings", JSONArray())
+        }
+        val result = migrate(json, fromVersion = 14)
+        assertEquals("1234", result.getJSONArray("games").getJSONObject(0).getString("game_number"))
+    }
+
+    // ── Full chain: v5 → latest ───────────────────────────────────────────────
 
     @Test
     fun migration_v5ToLatest_appliesAllDefaults() {
@@ -213,6 +252,7 @@ class BackupManagerMigrationsTest {
         assertEquals("",  g.getString("game_time"))
         assertEquals(1,   g.getInt("is_home"))
         assertEquals(0L,  g.getLong("elapsed_time_ms"))
+        assertEquals("",  g.getString("game_number"))
 
         // scoreboard_runs array should be present
         assertTrue(result.has("scoreboard_runs"))

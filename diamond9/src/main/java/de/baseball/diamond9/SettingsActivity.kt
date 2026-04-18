@@ -1,10 +1,14 @@
 package de.baseball.diamond9
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.Column
@@ -20,6 +24,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
@@ -34,14 +40,60 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class SettingsActivity : ComponentActivity() {
+
+    private lateinit var backupLauncher: ActivityResultLauncher<String>
+    private lateinit var restoreLauncher: ActivityResultLauncher<Array<String>>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
+
+        val backupManager = BackupManager(this)
+
+        backupLauncher = registerForActivityResult(
+            ActivityResultContracts.CreateDocument("application/json")
+        ) { uri ->
+            uri ?: return@registerForActivityResult
+            try {
+                val json = backupManager.exportToJson()
+                contentResolver.openOutputStream(uri)?.use { os ->
+                    os.write(json.toString(2).toByteArray())
+                }
+                Toast.makeText(this, getString(R.string.settings_backup_success), Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this, getString(R.string.settings_backup_failed, e.message), Toast.LENGTH_LONG).show()
+            }
+        }
+
+        restoreLauncher = registerForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri ->
+            uri ?: return@registerForActivityResult
+            try {
+                val pfd = contentResolver.openFileDescriptor(uri, "r")
+                val size = pfd?.statSize ?: 0L
+                pfd?.close()
+                if (size > BackupManager.MAX_IMPORT_BYTES) {
+                    Toast.makeText(this, getString(R.string.toast_import_file_too_large), Toast.LENGTH_LONG).show()
+                    return@registerForActivityResult
+                }
+                val text = contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
+                    ?: return@registerForActivityResult
+                backupManager.restoreFromJson(JSONObject(text))
+                Toast.makeText(this, getString(R.string.settings_restore_success), Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this, getString(R.string.settings_restore_failed, e.message), Toast.LENGTH_LONG).show()
+            }
+        }
+
         setContent {
             val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
             val scope = rememberCoroutineScope()
@@ -55,7 +107,23 @@ class SettingsActivity : ComponentActivity() {
                 SettingsScreen(
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onTeamsClick = { startActivity(Intent(this, TeamListActivity::class.java)) },
-                    onOpponentsClick = { startActivity(Intent(this, ManageOpponentsActivity::class.java)) }
+                    onOpponentsClick = { startActivity(Intent(this, ManageOpponentsActivity::class.java)) },
+                    onBackupClick = {
+                        val fileName = "diamond9_backup_${
+                            SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date())
+                        }.json"
+                        backupLauncher.launch(fileName)
+                    },
+                    onRestoreClick = {
+                        AlertDialog.Builder(this)
+                            .setTitle(getString(R.string.settings_restore_confirm_title))
+                            .setMessage(getString(R.string.settings_restore_confirm_message))
+                            .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
+                                restoreLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                            }
+                            .setNegativeButton(getString(R.string.btn_cancel), null)
+                            .show()
+                    }
                 )
             }
         }
@@ -67,7 +135,9 @@ class SettingsActivity : ComponentActivity() {
 private fun SettingsScreen(
     onMenuClick: () -> Unit,
     onTeamsClick: () -> Unit,
-    onOpponentsClick: () -> Unit
+    onOpponentsClick: () -> Unit,
+    onBackupClick: () -> Unit,
+    onRestoreClick: () -> Unit
 ) {
     Scaffold(
         containerColor = colorResource(R.color.color_background),
@@ -127,6 +197,26 @@ private fun SettingsScreen(
                     icon = Icons.Default.Group,
                     iconColor = colorResource(R.color.color_strike),
                     onClick = onOpponentsClick
+                )
+
+                Spacer(modifier = Modifier.size(8.dp))
+
+                SettingsCard(
+                    title = stringResource(R.string.settings_backup_title),
+                    subtitle = stringResource(R.string.settings_backup_subtitle),
+                    icon = Icons.Default.CloudUpload,
+                    iconColor = colorResource(R.color.color_primary),
+                    onClick = onBackupClick
+                )
+
+                Spacer(modifier = Modifier.size(8.dp))
+
+                SettingsCard(
+                    title = stringResource(R.string.settings_restore_title),
+                    subtitle = stringResource(R.string.settings_restore_subtitle),
+                    icon = Icons.Default.CloudDownload,
+                    iconColor = colorResource(R.color.color_green),
+                    onClick = onRestoreClick
                 )
             }
         }

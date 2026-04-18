@@ -352,4 +352,16 @@
     <string name="dispatch_league_imported">Liga-Einstellungen importiert ✓</string>
     <string name="dispatch_unknown_title">Unbekanntes Dateiformat</string>
     <string name="dispatch_unknown_message">Diese JSON-Datei ist kein bekanntes diamond9-Format (type: \"%s\").</string>
+
+    <!-- Backup / Restore -->
+    <string name="settings_backup_title">Backup</string>
+    <string name="settings_backup_subtitle">Alle Daten als JSON exportieren</string>
+    <string name="settings_restore_title">Wiederherstellen</string>
+    <string name="settings_restore_subtitle">Daten aus einer Backup-Datei importieren</string>
+    <string name="settings_backup_success">Backup gespeichert ✓</string>
+    <string name="settings_backup_failed">Backup fehlgeschlagen: %s</string>
+    <string name="settings_restore_success">Daten wiederhergestellt ✓</string>
+    <string name="settings_restore_failed">Wiederherstellung fehlgeschlagen: %s</string>
+    <string name="settings_restore_confirm_title">Backup wiederherstellen?</string>
+    <string name="settings_restore_confirm_message">Vorhandene Daten werden nicht gelöscht. Die Daten aus dem Backup werden ergänzt. Fortfahren?</string>
 </resources>
