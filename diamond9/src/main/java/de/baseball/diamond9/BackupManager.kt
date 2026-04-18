@@ -311,6 +311,13 @@ class BackupManager constructor(
      * Applies incremental schema migrations for older backup versions.
      */
     fun restoreFromJson(json: JSONObject) {
+        val type = json.optString("type", "")
+        if (type.isNotEmpty()) {
+            throw IllegalArgumentException("Not a full backup file (type: \"$type\"). Use the game/team import instead.")
+        }
+        if (!json.has("dbVersion") || !json.has("teams")) {
+            throw IllegalArgumentException("Not a valid diamond9 backup file.")
+        }
         val backupVersion = json.optInt("dbVersion", 1)
         val migrated = applyBackupMigrations(json, fromVersion = backupVersion, toVersion = DB_VERSION)
 
