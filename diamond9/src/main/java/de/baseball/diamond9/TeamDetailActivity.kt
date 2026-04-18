@@ -35,6 +35,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Calendar
 
 
 class TeamDetailActivity : ComponentActivity() {
@@ -459,6 +460,7 @@ fun PlayerEditDialog(
     var secondaryPos by remember { mutableStateOf(player?.secondaryPosition ?: 0) }
     var isPitcher by remember { mutableStateOf(player?.isPitcher ?: false) }
     var birthYear by remember { mutableStateOf(if (player != null && player.birthYear > 0) player.birthYear.toString() else "") }
+    var showYearPicker by remember { mutableStateOf(false) }
 
     val enabledPositions = remember { db.getEnabledPositions(teamId).sorted() }
     val positionItems = remember {
@@ -471,7 +473,7 @@ fun PlayerEditDialog(
         text = {
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
                 DialogTextField(label = stringResource(R.string.label_name), value = name, onValueChange = { name = it }, hint = stringResource(R.string.hint_full_name), maxLength = 50)
-                DialogTextField(label = stringResource(R.string.label_jersey_number), value = number, onValueChange = { number = it }, hint = stringResource(R.string.hint_jersey_number), keyboardType = KeyboardType.Number, maxLength = 3)
+                DialogTextField(label = stringResource(R.string.label_jersey_number), value = number, onValueChange = { number = it }, hint = stringResource(R.string.hint_jersey_number), keyboardType = KeyboardType.NumberPassword, maxLength = 3)
 
                 Text(stringResource(R.string.label_primary_position), fontSize = 12.sp, color = Color.Gray)
                 PositionSpinner(
@@ -498,7 +500,23 @@ fun PlayerEditDialog(
                     Text(stringResource(R.string.label_is_pitcher), fontSize = 15.sp)
                 }
 
-                DialogTextField(label = stringResource(R.string.label_birth_year), value = birthYear, onValueChange = { birthYear = it }, hint = stringResource(R.string.hint_birth_year), keyboardType = KeyboardType.Number, maxLength = 4)
+                Column(modifier = Modifier.padding(bottom = 16.dp).clickable { showYearPicker = true }) {
+                    Text(stringResource(R.string.label_birth_year), fontSize = 12.sp, color = Color.Gray)
+                    OutlinedTextField(
+                        value = birthYear,
+                        onValueChange = { },
+                        placeholder = { Text(stringResource(R.string.hint_birth_year)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = false,
+                        readOnly = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                }
             }
         },
         confirmButton = {
@@ -517,6 +535,55 @@ fun PlayerEditDialog(
                 Text(stringResource(if (player == null) R.string.btn_add else R.string.btn_save))
             }
         },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }
+        }
+    )
+
+    if (showYearPicker) {
+        YearPickerDialog(
+            initialYear = birthYear.toIntOrNull() ?: Calendar.getInstance().get(Calendar.YEAR),
+            onDismiss = { showYearPicker = false },
+            onYearSelected = {
+                birthYear = it.toString()
+                showYearPicker = false
+            }
+        )
+    }
+}
+
+@Composable
+fun YearPickerDialog(
+    initialYear: Int,
+    onDismiss: () -> Unit,
+    onYearSelected: (Int) -> Unit
+) {
+    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+    val years = (currentYear downTo 1920).toList()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.label_birth_year)) },
+        text = {
+            Box(modifier = Modifier.height(300.dp).fillMaxWidth()) {
+                LazyColumn(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    items(years) { year ->
+                        Text(
+                            text = year.toString(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onYearSelected(year) }
+                                .padding(12.dp),
+                            textAlign = TextAlign.Center,
+                            fontSize = 20.sp,
+                            fontWeight = if (year == initialYear) FontWeight.Bold else FontWeight.Normal,
+                            color = if (year == initialYear) colorResource(R.color.color_primary) else Color.Unspecified
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }
         }
