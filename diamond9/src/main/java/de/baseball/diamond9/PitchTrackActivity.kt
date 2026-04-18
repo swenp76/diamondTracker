@@ -420,12 +420,11 @@ class PitchTrackActivity : ComponentActivity() {
                         .padding(bottom = 32.dp)
                 ) {
                     Row(modifier = Modifier.fillMaxWidth().height(64.dp)) {
-                        listOf("GO", "FO", "K").forEachIndexed { i, label ->
+                        listOf("GO", "FO", "LO").forEachIndexed { i, label ->
                             if (i > 0) Spacer(modifier = Modifier.width(8.dp))
                             Button(
                                 onClick = {
-                                    val pitchType = if (label == "K") "SO" else label
-                                    db.insertPitch(pitcherId, pitchType, inning)
+                                    db.insertPitch(pitcherId, label, inning)
                                     db.insertPitch(pitcherId, "BF", inning)
                                     recordBatterOut()
                                     refresh()
