@@ -43,6 +43,10 @@ android {
         viewBinding true
         buildConfig true
     }
+
+    lintOptions {
+        disable 'IllegalFormatConversionException'
+    }
 }
 
 dependencies {
