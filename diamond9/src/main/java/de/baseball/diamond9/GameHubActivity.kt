@@ -2,6 +2,8 @@ package de.baseball.diamond9
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -40,18 +42,38 @@ import kotlinx.coroutines.delay
 import java.util.*
 
 class GameHubActivity : ComponentActivity() {
+
+    private var gameId: Long = -1L
+    private var date: String = ""
+    private var opponent: String = ""
+    private lateinit var gameActivityLauncher: ActivityResultLauncher<Intent>
+
+    companion object {
+        const val RESULT_HALF_INNING_SWITCHED = 1001
+        const val EXTRA_NEXT_IS_OFFENSE = "next_is_offense"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
-        val gameId = intent.getLongExtra("game_id", -1L)
-        val date = intent.getStringExtra("date") ?: ""
-        val opponent = intent.getStringExtra("opponent") ?: ""
+        gameId = intent.getLongExtra("game_id", -1L)
+        date = intent.getStringExtra("date") ?: ""
+        opponent = intent.getStringExtra("opponent") ?: ""
         val ownTeam = intent.getStringExtra("own_team") ?: ""
         val ownTeamId = intent.getLongExtra("own_team_id", -1L)
         val isHome = intent.getIntExtra("is_home", 1)
         val db = DatabaseHelper(this)
+
+        gameActivityLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == RESULT_HALF_INNING_SWITCHED) {
+                val nextIsOffense = result.data?.getBooleanExtra(EXTRA_NEXT_IS_OFFENSE, true) ?: true
+                if (nextIsOffense) launchOffense() else launchDefense()
+            }
+        }
 
         setContent {
             GameHubScreen(
@@ -63,20 +85,8 @@ class GameHubActivity : ComponentActivity() {
                 isHome = isHome,
                 db = db,
                 onBack = { finish() },
-                onOffense = {
-                    val intent = Intent(this, BattingTrackActivity::class.java).apply {
-                        putExtra("gameId", gameId)
-                    }
-                    startActivity(intent)
-                },
-                onDefense = {
-                    val intent = Intent(this, PitcherListActivity::class.java).apply {
-                        putExtra("gameId", gameId)
-                        putExtra("gameOpponent", opponent)
-                        putExtra("gameDate", date)
-                    }
-                    startActivity(intent)
-                },
+                onOffense = { launchOffense() },
+                onDefense = { launchDefense() },
                 onLineup = {
                     val intent = Intent(this, OwnLineupActivity::class.java).apply {
                         putExtra("gameId", gameId)
@@ -99,6 +109,24 @@ class GameHubActivity : ComponentActivity() {
             )
         }
     }
+
+    private fun launchOffense() {
+        gameActivityLauncher.launch(
+            Intent(this, BattingTrackActivity::class.java).apply {
+                putExtra("gameId", gameId)
+            }
+        )
+    }
+
+    private fun launchDefense() {
+        gameActivityLauncher.launch(
+            Intent(this, PitcherListActivity::class.java).apply {
+                putExtra("gameId", gameId)
+                putExtra("gameOpponent", opponent)
+                putExtra("gameDate", date)
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,6 +147,20 @@ private fun GameHubScreen(
     onStats: () -> Unit
 ) {
     val leagueSettings = remember { db.getLeagueSettings(ownTeamId) }
+    var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                halfInningState = db.getHalfInningState(gameId)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val isFirstHalfInning = halfInningState.inning == 1 && halfInningState.isTopHalf
+    val offenseEnabled = !(isFirstHalfInning && isHome == 1)
+    val defenseEnabled = !(isFirstHalfInning && isHome == 0)
 
     Scaffold(
         containerColor = colorResource(R.color.color_background),
@@ -160,8 +202,8 @@ private fun GameHubScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            HubButton(stringResource(R.string.gamehub_offense), colorResource(R.color.color_primary), onOffense)
-            HubButton(stringResource(R.string.gamehub_defense), colorResource(R.color.color_primary), onDefense)
+            HubButton(stringResource(R.string.gamehub_offense), colorResource(R.color.color_primary), onOffense, offenseEnabled)
+            HubButton(stringResource(R.string.gamehub_defense), colorResource(R.color.color_primary), onDefense, defenseEnabled)
             HubButton(stringResource(R.string.gamehub_lineup), colorResource(R.color.color_primary), onLineup)
             HubButton(stringResource(R.string.gamehub_oppo_lineup), colorResource(R.color.color_primary), onOpponentLineup)
 
@@ -451,14 +493,18 @@ private fun ScoreCell(
 }
 
 @Composable
-private fun HubButton(text: String, color: Color, onClick: () -> Unit) {
+private fun HubButton(text: String, color: Color, onClick: () -> Unit, enabled: Boolean = true) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .height(56.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = color),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = color,
+            disabledContainerColor = color.copy(alpha = 0.4f)
+        ),
         shape = RoundedCornerShape(12.dp),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
     ) {

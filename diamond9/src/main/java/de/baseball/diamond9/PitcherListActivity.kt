@@ -25,6 +25,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -33,6 +35,7 @@ class PitcherListActivity : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
     private var gameId: Long = -1
+    private lateinit var pitchTrackLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +47,15 @@ class PitcherListActivity : ComponentActivity() {
         gameId = intent.getLongExtra("gameId", -1)
         val gameOpponent = intent.getStringExtra("gameOpponent") ?: ""
         val gameDate = intent.getStringExtra("gameDate") ?: ""
+
+        pitchTrackLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == GameHubActivity.RESULT_HALF_INNING_SWITCHED) {
+                setResult(GameHubActivity.RESULT_HALF_INNING_SWITCHED, result.data)
+                finish()
+            }
+        }
 
         setContent {
             var pitchers by remember { mutableStateOf(db.getPitchersForGame(gameId)) }
@@ -72,11 +84,13 @@ class PitcherListActivity : ComponentActivity() {
                 subtitle = subtitle,
                 pitchers = pitchers,
                 onTrack = { pitcher ->
-                    val intent = Intent(this, PitchTrackActivity::class.java)
-                    intent.putExtra("pitcherId", pitcher.id)
-                    intent.putExtra("pitcherName", pitcher.name)
-                    intent.putExtra("gameId", gameId)
-                    startActivity(intent)
+                    pitchTrackLauncher.launch(
+                        Intent(this, PitchTrackActivity::class.java).apply {
+                            putExtra("pitcherId", pitcher.id)
+                            putExtra("pitcherName", pitcher.name)
+                            putExtra("gameId", gameId)
+                        }
+                    )
                 },
                 onStats = { pitcher ->
                     val intent = Intent(this, StatsActivity::class.java)

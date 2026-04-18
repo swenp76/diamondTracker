@@ -352,6 +352,11 @@ class PitchTrackActivity : ComponentActivity() {
                                     prevLeadoffSlot = prevLeadoffForHalfInning,
                                     prevInning = prevInningForHalfInning
                                 ))
+                                val resultIntent = Intent().apply {
+                                    putExtra(GameHubActivity.EXTRA_NEXT_IS_OFFENSE, true)
+                                }
+                                setResult(GameHubActivity.RESULT_HALF_INNING_SWITCHED, resultIntent)
+                                finish()
                             },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary))
