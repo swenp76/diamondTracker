@@ -428,5 +428,16 @@
     <string name="about_github_url">https://github.com/swenp76/diamondTracker</string>
     <string name="about_disclaimer">This software is provided \"as is\", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement.</string>
 
+    <!-- Backup / Restore -->
+    <string name="settings_backup_title">Backup</string>
+    <string name="settings_backup_subtitle">Export all data as JSON</string>
+    <string name="settings_restore_title">Restore</string>
+    <string name="settings_restore_subtitle">Import data from a backup file</string>
+    <string name="settings_backup_success">Backup saved ✓</string>
+    <string name="settings_backup_failed">Backup failed: %s</string>
+    <string name="settings_restore_success">Data restored ✓</string>
+    <string name="settings_restore_failed">Restore failed: %s</string>
+    <string name="settings_restore_confirm_title">Restore Backup?</string>
+    <string name="settings_restore_confirm_message">Existing data will not be deleted. Data from the backup will be added. Continue?</string>
 
 </resources>

@@ -143,10 +143,163 @@ class BackupManager constructor(
         }
         root.put("league_settings", allLeagueSettings)
 
-        // TODO: add remaining tables in a future commit (issue #18-#20):
-        //  players, team_positions, pitchers, pitches, at_bats,
-        //  own_lineup, substitutions, opponent_lineup, opponent_bench,
-        //  opponent_substitutions, pitcher_appearances
+        // team_positions
+        val allTeamPositions = JSONArray()
+        db.getAllTeams().forEach { team ->
+            db.getEnabledPositions(team.id).forEach { pos ->
+                allTeamPositions.put(JSONObject().apply {
+                    put("team_id", team.id)
+                    put("position", pos)
+                })
+            }
+        }
+        root.put("team_positions", allTeamPositions)
+
+        // players
+        val allPlayers = JSONArray()
+        db.getAllTeams().forEach { team ->
+            db.getPlayersForTeam(team.id).forEach { p ->
+                allPlayers.put(JSONObject().apply {
+                    put("id", p.id)
+                    put("team_id", p.teamId)
+                    put("name", p.name)
+                    put("number", p.number)
+                    put("primary_position", p.primaryPosition)
+                    put("secondary_position", p.secondaryPosition)
+                    put("is_pitcher", if (p.isPitcher) 1 else 0)
+                    put("birth_year", p.birthYear)
+                })
+            }
+        }
+        root.put("players", allPlayers)
+
+        // pitchers + pitches
+        val allPitchers = JSONArray()
+        val allPitches = JSONArray()
+        db.getAllGames().forEach { game ->
+            db.getPitchersForGame(game.id).forEach { pitcher ->
+                allPitchers.put(JSONObject().apply {
+                    put("id", pitcher.id)
+                    put("game_id", pitcher.gameId)
+                    put("name", pitcher.name)
+                    put("player_id", pitcher.playerId)
+                })
+                db.getPitchesForPitcher(pitcher.id).forEach { pitch ->
+                    allPitches.put(JSONObject().apply {
+                        put("id", pitch.id)
+                        put("pitcher_id", pitch.pitcherId)
+                        if (pitch.atBatId == 0L) put("at_bat_id", JSONObject.NULL) else put("at_bat_id", pitch.atBatId)
+                        put("type", pitch.type)
+                        put("sequence_nr", pitch.sequenceNr)
+                        put("inning", pitch.inning)
+                    })
+                }
+            }
+        }
+        root.put("pitchers", allPitchers)
+        root.put("pitches", allPitches)
+
+        // at_bats
+        val allAtBats = JSONArray()
+        db.getAllGames().forEach { game ->
+            db.getAtBatsForGame(game.id).forEach { ab ->
+                allAtBats.put(JSONObject().apply {
+                    put("id", ab.id)
+                    put("game_id", ab.gameId)
+                    put("player_id", ab.playerId)
+                    put("slot", ab.slot)
+                    put("inning", ab.inning)
+                    if (ab.result != null) put("result", ab.result) else put("result", JSONObject.NULL)
+                })
+            }
+        }
+        root.put("at_bats", allAtBats)
+
+        // own_lineup
+        val allOwnLineup = JSONArray()
+        db.getAllGames().forEach { game ->
+            db.getOwnLineup(game.id).forEach { (slot, player) ->
+                allOwnLineup.put(JSONObject().apply {
+                    put("game_id", game.id)
+                    put("slot", slot)
+                    put("player_id", player.id)
+                })
+            }
+        }
+        root.put("own_lineup", allOwnLineup)
+
+        // substitutions (own)
+        val allSubstitutions = JSONArray()
+        db.getAllGames().forEach { game ->
+            db.getSubstitutionsForGame(game.id).forEach { sub ->
+                allSubstitutions.put(JSONObject().apply {
+                    put("id", sub.id)
+                    put("game_id", sub.gameId)
+                    put("slot", sub.slot)
+                    put("player_out_id", sub.playerOutId)
+                    put("player_in_id", sub.playerInId)
+                })
+            }
+        }
+        root.put("substitutions", allSubstitutions)
+
+        // opponent_lineup
+        val allOpponentLineup = JSONArray()
+        db.getAllGames().forEach { game ->
+            db.getLineup(game.id).forEach { entry ->
+                allOpponentLineup.put(JSONObject().apply {
+                    put("game_id", entry.gameId)
+                    put("batting_order", entry.battingOrder)
+                    put("jersey_number", entry.jerseyNumber)
+                })
+            }
+        }
+        root.put("opponent_lineup", allOpponentLineup)
+
+        // opponent_bench
+        val allOpponentBench = JSONArray()
+        db.getAllGames().forEach { game ->
+            db.getBenchPlayers(game.id).forEach { bench ->
+                allOpponentBench.put(JSONObject().apply {
+                    put("id", bench.id)
+                    put("game_id", bench.gameId)
+                    put("jersey_number", bench.jerseyNumber)
+                })
+            }
+        }
+        root.put("opponent_bench", allOpponentBench)
+
+        // opponent_substitutions
+        val allOpponentSubs = JSONArray()
+        db.getAllGames().forEach { game ->
+            db.getOpponentSubstitutionsForGame(game.id).forEach { sub ->
+                allOpponentSubs.put(JSONObject().apply {
+                    put("id", sub.id)
+                    put("game_id", sub.gameId)
+                    put("slot", sub.slot)
+                    put("jersey_out", sub.jerseyOut)
+                    put("jersey_in", sub.jerseyIn)
+                })
+            }
+        }
+        root.put("opponent_substitutions", allOpponentSubs)
+
+        // pitcher_appearances
+        val allAppearances = JSONArray()
+        db.getAllTeams().forEach { team ->
+            db.getPlayersForTeam(team.id).forEach { player ->
+                db.getPitcherAppearances(player.id).forEach { app ->
+                    allAppearances.put(JSONObject().apply {
+                        put("id", app.id)
+                        put("player_id", app.playerId)
+                        put("game_id", app.gameId)
+                        put("date", app.date)
+                        put("batters_faced", app.battersFaced)
+                    })
+                }
+            }
+        }
+        root.put("pitcher_appearances", allAppearances)
 
         return root
     }
@@ -159,14 +312,187 @@ class BackupManager constructor(
      */
     fun restoreFromJson(json: JSONObject) {
         val backupVersion = json.optInt("dbVersion", 1)
-
-        // Apply logical migrations for older backup formats
         val migrated = applyBackupMigrations(json, fromVersion = backupVersion, toVersion = DB_VERSION)
 
+        restoreTeams(migrated)
+        restoreTeamPositions(migrated)
+        restorePlayers(migrated)
+        restoreGames(migrated)
+        restorePitchers(migrated)
+        restorePitches(migrated)
+        restoreAtBats(migrated)
+        restoreOwnLineup(migrated)
+        restoreSubstitutions(migrated)
+        restoreOpponentLineup(migrated)
+        restoreOpponentBench(migrated)
+        restoreOpponentSubstitutions(migrated)
         restoreScoreboardRuns(migrated)
+        restorePitcherAppearances(migrated)
         restoreOpponentTeams(migrated)
         restoreLeagueSettings(migrated)
-        // TODO: restore remaining tables (issue #18-#20)
+    }
+
+    private fun restoreTeams(json: JSONObject) {
+        val arr = json.optJSONArray("teams") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.execSQL(
+                "INSERT OR IGNORE INTO teams (id, name) VALUES (?, ?)",
+                arrayOf(obj.getLong("id"), obj.getString("name"))
+            )
+        }
+    }
+
+    private fun restoreTeamPositions(json: JSONObject) {
+        val arr = json.optJSONArray("team_positions") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.setPositionEnabled(obj.getLong("team_id"), obj.getInt("position"), true)
+        }
+    }
+
+    private fun restorePlayers(json: JSONObject) {
+        val arr = json.optJSONArray("players") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.execSQL(
+                """INSERT OR IGNORE INTO players
+                   (id, team_id, name, number, primary_position, secondary_position, is_pitcher, birth_year)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                arrayOf(
+                    obj.getLong("id"),
+                    obj.getLong("team_id"),
+                    obj.getString("name"),
+                    obj.getString("number"),
+                    obj.getInt("primary_position"),
+                    obj.optInt("secondary_position", 0),
+                    obj.optInt("is_pitcher", 0),
+                    obj.optInt("birth_year", 0)
+                )
+            )
+        }
+    }
+
+    private fun restoreGames(json: JSONObject) {
+        val arr = json.optJSONArray("games") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.execSQL(
+                """INSERT OR IGNORE INTO games
+                   (id, date, opponent, team_id, inning, outs, leadoff_slot,
+                    start_time, elapsed_time_ms, game_time, is_home, current_inning, is_top_half, game_number)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                arrayOf(
+                    obj.getLong("id"),
+                    obj.getString("date"),
+                    obj.getString("opponent"),
+                    obj.optLong("team_id", 0L),
+                    obj.optInt("inning", 1),
+                    obj.optInt("outs", 0),
+                    obj.optInt("leadoff_slot", 1),
+                    obj.optLong("start_time", 0L),
+                    obj.optLong("elapsed_time_ms", 0L),
+                    obj.optString("game_time", ""),
+                    obj.optInt("is_home", 1),
+                    obj.optInt("current_inning", 1),
+                    obj.optInt("is_top_half", 1),
+                    obj.optString("game_number", "")
+                )
+            )
+        }
+    }
+
+    private fun restorePitchers(json: JSONObject) {
+        val arr = json.optJSONArray("pitchers") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.execSQL(
+                "INSERT OR IGNORE INTO pitchers (id, game_id, name, player_id) VALUES (?, ?, ?, ?)",
+                arrayOf(obj.getLong("id"), obj.getLong("game_id"), obj.getString("name"), obj.getLong("player_id"))
+            )
+        }
+    }
+
+    private fun restorePitches(json: JSONObject) {
+        val arr = json.optJSONArray("pitches") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            val atBatId = if (obj.isNull("at_bat_id")) null else obj.optLong("at_bat_id")
+            db.execSQL(
+                "INSERT OR IGNORE INTO pitches (id, pitcher_id, at_bat_id, type, sequence_nr, inning) VALUES (?, ?, ?, ?, ?, ?)",
+                arrayOf(obj.getLong("id"), obj.getLong("pitcher_id"), atBatId, obj.getString("type"), obj.getInt("sequence_nr"), obj.getInt("inning"))
+            )
+        }
+    }
+
+    private fun restoreAtBats(json: JSONObject) {
+        val arr = json.optJSONArray("at_bats") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            val result = if (obj.isNull("result")) null else obj.optString("result")
+            db.execSQL(
+                "INSERT OR IGNORE INTO at_bats (id, game_id, player_id, slot, inning, result) VALUES (?, ?, ?, ?, ?, ?)",
+                arrayOf(obj.getLong("id"), obj.getLong("game_id"), obj.getLong("player_id"), obj.getInt("slot"), obj.getInt("inning"), result)
+            )
+        }
+    }
+
+    private fun restoreOwnLineup(json: JSONObject) {
+        val arr = json.optJSONArray("own_lineup") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.setOwnLineupPlayer(obj.getLong("game_id"), obj.getInt("slot"), obj.getLong("player_id"))
+        }
+    }
+
+    private fun restoreSubstitutions(json: JSONObject) {
+        val arr = json.optJSONArray("substitutions") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.execSQL(
+                "INSERT OR IGNORE INTO substitutions (id, game_id, slot, player_out_id, player_in_id) VALUES (?, ?, ?, ?, ?)",
+                arrayOf(obj.getLong("id"), obj.getLong("game_id"), obj.getInt("slot"), obj.getLong("player_out_id"), obj.getLong("player_in_id"))
+            )
+        }
+    }
+
+    private fun restoreOpponentLineup(json: JSONObject) {
+        val arr = json.optJSONArray("opponent_lineup") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.upsertLineupEntry(obj.getLong("game_id"), obj.getInt("batting_order"), obj.getString("jersey_number"))
+        }
+    }
+
+    private fun restoreOpponentBench(json: JSONObject) {
+        val arr = json.optJSONArray("opponent_bench") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.insertBenchPlayer(obj.getLong("game_id"), obj.getString("jersey_number"))
+        }
+    }
+
+    private fun restoreOpponentSubstitutions(json: JSONObject) {
+        val arr = json.optJSONArray("opponent_substitutions") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.addOpponentSubstitution(
+                obj.getLong("game_id"), obj.getInt("slot"),
+                obj.getString("jersey_out"), obj.getString("jersey_in")
+            )
+        }
+    }
+
+    private fun restorePitcherAppearances(json: JSONObject) {
+        val arr = json.optJSONArray("pitcher_appearances") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.execSQL(
+                """INSERT OR IGNORE INTO pitcher_appearances (id, player_id, game_id, date, batters_faced)
+                   VALUES (?, ?, ?, ?, ?)""",
+                arrayOf(obj.getLong("id"), obj.getLong("player_id"), obj.getLong("game_id"), obj.getString("date"), obj.getInt("batters_faced"))
+            )
+        }
     }
 
     /**
@@ -265,6 +591,18 @@ class BackupManager constructor(
                 current.put("league_settings", JSONArray())
             }
             v = 13
+        }
+
+        // Migration 13 → 14: game_number added to games – default "" for older backups.
+        if (v < 14 && toVersion >= 14) {
+            val games = current.optJSONArray("games")
+            if (games != null) {
+                for (i in 0 until games.length()) {
+                    val g = games.getJSONObject(i)
+                    if (!g.has("game_number")) g.put("game_number", "")
+                }
+            }
+            v = 14
         }
 
         return current
