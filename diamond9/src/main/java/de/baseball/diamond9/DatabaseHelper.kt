@@ -261,8 +261,8 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     private val leagueSettingsDao = db.leagueSettingsDao()
 
     fun rawInsertWithConflictIgnore(table: String, cv: ContentValues) {
-        db.openHelper.writableDatabase.insertWithOnConflict(
-            table, null, cv, android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE
+        db.openHelper.writableDatabase.insert(
+            table, android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE, cv
         )
     }
 
