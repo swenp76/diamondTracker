@@ -9,6 +9,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -92,7 +94,10 @@ class OpponentLineupActivity : ComponentActivity() {
                 gameId = gameId,
                 opponentName = opponentName,
                 db = db,
-                onBackClick = { finish() }
+                onBackClick = {
+                    setResult(Activity.RESULT_OK)
+                    finish()
+                }
             )
         }
     }
@@ -281,7 +286,8 @@ fun OpponentLineupScreen(
                     value = text,
                     onValueChange = { if (it.length <= 3) text = it },
                     label = { Text(stringResource(R.string.dialog_jersey_title)) },
-                    singleLine = true
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
             },
             confirmButton = {

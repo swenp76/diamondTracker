@@ -322,6 +322,10 @@
     <string name="season_stats_empty_pitcher">No pitching data yet.</string>
     <string name="season_stats_unknown_player">Unknown</string>
     <string name="season_stats_btn">Season Stats</string>
+    <string name="season_stats_from">From</string>
+    <string name="season_stats_to">To</string>
+    <string name="season_stats_clear_filter">Clear Filter</string>
+
 
     <!-- ── Game Timer ───────────────────────────────────────────────────── -->
     <string name="timer_btn_start">Start</string>

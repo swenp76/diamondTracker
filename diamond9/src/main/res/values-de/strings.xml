@@ -287,6 +287,10 @@
 
     <!-- ── Season Stats ─────────────────────────────────────────────────── -->
     <string name="season_stats_btn">Saison-Statistiken</string>
+    <string name="season_stats_from">Von</string>
+    <string name="season_stats_to">Bis</string>
+    <string name="season_stats_clear_filter">Filter löschen</string>
+
 
     <!-- ── Game Timer ───────────────────────────────────────────────────── -->
     <string name="timer_btn_start">Start</string>

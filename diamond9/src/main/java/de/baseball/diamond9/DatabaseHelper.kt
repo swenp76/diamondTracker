@@ -614,11 +614,11 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     fun getGamePitcherStats(gameId: Long): List<PitcherStats> =
         getPitchersForGame(gameId).map { getStatsForPitcher(it.id) }
 
-    fun getSeasonBatterStats(teamId: Long): List<SeasonBatterRow> =
-        atBatDao.getSeasonBatterStats(teamId)
+    fun getSeasonBatterStats(teamId: Long, startDate: String? = null, endDate: String? = null): List<SeasonBatterRow> =
+        atBatDao.getSeasonBatterStats(teamId, startDate, endDate)
 
-    fun getSeasonPitcherStats(teamId: Long): List<SeasonPitcherRow> =
-        pitcherDao.getSeasonPitcherStats(teamId)
+    fun getSeasonPitcherStats(teamId: Long, startDate: String? = null, endDate: String? = null): List<SeasonPitcherRow> =
+        pitcherDao.getSeasonPitcherStats(teamId, startDate, endDate)
 
     // ── Scoreboard ─────────────────────────────────────────────────────────────
 
