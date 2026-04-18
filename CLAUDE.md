@@ -62,36 +62,25 @@ diamond9/src/main/java/de/baseball/diamond9/
 ## Entwicklungsregeln (PFLICHT)
 
 ### 1. Backup-Migration bei jeder neuen Room-Migration
-
 Jede neue Room-Migration (`MIGRATION_X_Y` in `AppDatabase.kt`) zieht
 **immer** auch eine entsprechende Backup-Migration in `BackupManager` nach
 sich. Beide müssen im **selben Commit** landen.
 
-Checkliste bei neuer DB-Version:
-- [ ] Neue Migration in `AppDatabase.kt` angelegt (`MIGRATION_X_Y`)
-- [ ] `version` in `@Database(...)` erhöht
-- [ ] Entsprechende Backup-Migration in `BackupManager` ergänzt
-- [ ] `dbVersion` im Backup-Export aktualisiert
-- [ ] Restore-Logik für die neue Version getestet
-
 ### 2. Keine destruktive Migration
-
 `fallbackToDestructiveMigration()` darf **nicht** verwendet werden.
 Jede DB-Versionsänderung braucht eine explizite Migration.
 
 ### 3. Farbkonsistenz
+Alle Farben über `colors.xml` referenzieren. Keine hardcodierten Hex-Werte in Composables.
 
-Alle Farben über `colors.xml` referenzieren:
-```xml
-<color name="color_primary">#1a5fa8</color>
-<color name="color_strike">#c0392b</color>
-<color name="color_ball">#1a5fa8</color>
-<color name="color_green">#2c7a2c</color>
-<color name="color_purple">#7d3c98</color>
-<color name="color_orange">#d35400</color>
-<color name="color_text_primary">#333333</color>
-<color name="color_text_secondary">#888888</color>
-```
+### 4. Test-Driven Security & Logic
+Für jede neue Geschäftslogik oder Sicherheitsfunktion (z. B. Input-Validierung) **muss** ein entsprechender Test existieren:
+- **Unit Tests:** Für reine Logik (z. B. `BackupManagerSecurityTest.kt`).
+- **UI Tests:** Für Oberflächen-Beschränkungen (z. B. `UISecurityTest.kt`).
+- **Checkliste:**
+    - [ ] Input-Längenbegrenzung (meist 50 Zeichen) durch Tests abgedeckt.
+    - [ ] Path-Traversal-Schutz bei Dateioperationen validiert.
+    - [ ] Neue Tests laufen in der CI oder lokal via `./gradlew connectedDebugAndroidTest` erfolgreich durch.
 
 ---
 
