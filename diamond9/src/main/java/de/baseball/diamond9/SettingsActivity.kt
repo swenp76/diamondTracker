@@ -68,7 +68,11 @@ class SettingsActivity : ComponentActivity() {
                     os.write(json.toString(2).toByteArray())
                 }
                 Toast.makeText(this, getString(R.string.settings_backup_success), Toast.LENGTH_SHORT).show()
+/*            } catch (e: Exception) {
+                Toast.makeText(this, getString(R.string.settings_backup_failed, e.message), Toast.LENGTH_LONG).show()
+            } */
             } catch (e: Exception) {
+                android.util.Log.e("BackupManager", "Export failed", e)  // ← NEU
                 Toast.makeText(this, getString(R.string.settings_backup_failed, e.message), Toast.LENGTH_LONG).show()
             }
         }

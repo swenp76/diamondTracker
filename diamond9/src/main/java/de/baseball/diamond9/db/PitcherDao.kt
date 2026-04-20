@@ -21,7 +21,7 @@ abstract class PitcherDao {
     abstract fun getPitchersForGame(gameId: Long): List<Pitcher>
 
     @Query("SELECT id, game_id, name, player_id FROM pitchers WHERE id = :pitcherId")
-    abstract fun getPitcherById(pitcherId: Long): Pitcher
+    abstract fun getPitcherById(pitcherId: Long): Pitcher?
 
     @Transaction
     open fun deletePitcher(pitcherId: Long) {

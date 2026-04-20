@@ -24,6 +24,7 @@ import java.io.File
  *  12 → current_inning and is_top_half columns added to games
  *  13 → league_settings table introduced
  *  14 → game_number column added to games
+ *  15 → pitchers.name backfilled (null → '')
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
@@ -34,7 +35,7 @@ class BackupManager constructor(
     constructor(context: Context) : this(context, DatabaseHelper(context))
 
     companion object {
-        const val DB_VERSION = 14
+        const val DB_VERSION = 15
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
@@ -63,7 +64,27 @@ class BackupManager constructor(
         }
 
         /** Valid pitch type strings stored in the database. */
-        val VALID_PITCH_TYPES = setOf("B", "S", "F", "BF", "SO", "H", "HBP", "W")
+        val VALID_PITCH_TYPES = setOf(
+            // Core pitch types
+            "B",    // Ball
+            "S",    // Strike
+            "F",    // Foul
+            "BF",   // Batter Faced (marker)
+            "RO",   // Runner Out (marker)
+            // Outcomes recorded as pitches (defense)
+            "SO",   // Strikeout pitch
+            "H",    // Hit (generic, legacy)
+            "1B",   // Single
+            "2B",   // Double
+            "3B",   // Triple
+            "HR",   // Home Run
+            "HBP",  // Hit by Pitch
+            "W",    // Walk
+            "GO",   // Ground Out
+            "FO",   // Fly Out
+            "LO",   // Line Out
+            "KL"    // Strikeout Looking
+        )
 
         /** Valid at-bat result strings stored in the database. */
         val VALID_AT_BAT_RESULTS = setOf(
@@ -84,7 +105,7 @@ class BackupManager constructor(
         root.put("teams", JSONArray(db.getAllTeams().map { t ->
             JSONObject().apply {
                 put("id", t.id)
-                put("name", t.name)
+                put("name", t.name ?: "")
             }
         }))
 
@@ -92,19 +113,19 @@ class BackupManager constructor(
         root.put("games", JSONArray(db.getAllGames().map { g ->
             JSONObject().apply {
                 put("id", g.id)
-                put("date", g.date)
-                put("opponent", g.opponent)
+                put("date", g.date ?: "")
+                put("opponent", g.opponent ?: "")
                 put("team_id", g.teamId)
                 put("inning", g.inning)
                 put("outs", g.outs)
                 put("leadoff_slot", g.leadoffSlot)
                 put("start_time", g.startTime)
                 put("elapsed_time_ms", g.elapsedTimeMs)
-                put("game_time", g.gameTime)
+                put("game_time", g.gameTime ?: "")
                 put("is_home", g.isHome)
                 put("current_inning", g.currentInning)
                 put("is_top_half", g.isTopHalf)
-                put("game_number", g.gameNumber)
+                put("game_number", g.gameNumber ?: "")
             }
         }))
 
@@ -129,7 +150,7 @@ class BackupManager constructor(
             db.getOpponentTeamsForTeam(team.id).forEach { opp ->
                 allOpponentTeams.put(JSONObject().apply {
                     put("id", opp.id)
-                    put("name", opp.name)
+                    put("name", opp.name ?: "")
                     put("team_id", opp.teamId)
                 })
             }
@@ -168,8 +189,8 @@ class BackupManager constructor(
                 allPlayers.put(JSONObject().apply {
                     put("id", p.id)
                     put("team_id", p.teamId)
-                    put("name", p.name)
-                    put("number", p.number)
+                    put("name", p.name ?: "")
+                    put("number", p.number ?: "")
                     put("primary_position", p.primaryPosition)
                     put("secondary_position", p.secondaryPosition)
                     put("is_pitcher", if (p.isPitcher) 1 else 0)
@@ -187,15 +208,18 @@ class BackupManager constructor(
                 allPitchers.put(JSONObject().apply {
                     put("id", pitcher.id)
                     put("game_id", pitcher.gameId)
-                    put("name", pitcher.name)
+                    put("name", pitcher.name.ifEmpty { "" })
                     put("player_id", pitcher.playerId)
                 })
                 db.getPitchesForPitcher(pitcher.id).forEach { pitch ->
                     allPitches.put(JSONObject().apply {
                         put("id", pitch.id)
                         put("pitcher_id", pitch.pitcherId)
-                        if (pitch.atBatId == 0L) put("at_bat_id", JSONObject.NULL) else put("at_bat_id", pitch.atBatId)
-                        put("type", pitch.type)
+                        if (pitch.atBatId == null || pitch.atBatId == 0L)
+                            put("at_bat_id", JSONObject.NULL)
+                        else
+                            put("at_bat_id", pitch.atBatId)
+                        put("type", pitch.type ?: "")
                         put("sequence_nr", pitch.sequenceNr)
                         put("inning", pitch.inning)
                     })
@@ -256,7 +280,7 @@ class BackupManager constructor(
                 allOpponentLineup.put(JSONObject().apply {
                     put("game_id", entry.gameId)
                     put("batting_order", entry.battingOrder)
-                    put("jersey_number", entry.jerseyNumber)
+                    put("jersey_number", entry.jerseyNumber ?: "")
                 })
             }
         }
@@ -269,7 +293,7 @@ class BackupManager constructor(
                 allOpponentBench.put(JSONObject().apply {
                     put("id", bench.id)
                     put("game_id", bench.gameId)
-                    put("jersey_number", bench.jerseyNumber)
+                    put("jersey_number", bench.jerseyNumber ?: "")
                 })
             }
         }
@@ -283,8 +307,8 @@ class BackupManager constructor(
                     put("id", sub.id)
                     put("game_id", sub.gameId)
                     put("slot", sub.slot)
-                    put("jersey_out", sub.jerseyOut)
-                    put("jersey_in", sub.jerseyIn)
+                    put("jersey_out", sub.jerseyOut ?: "")
+                    put("jersey_in", sub.jerseyIn ?: "")
                 })
             }
         }
@@ -299,7 +323,7 @@ class BackupManager constructor(
                         put("id", app.id)
                         put("player_id", app.playerId)
                         put("game_id", app.gameId)
-                        put("date", app.date)
+                        put("date", app.date ?: "")
                         put("batters_faced", app.battersFaced)
                     })
                 }
@@ -630,6 +654,20 @@ class BackupManager constructor(
             v = 14
         }
 
+        // Migration 14 → 15: pitcher name backfill – null names default to empty string.
+        if (v < 15 && toVersion >= 15) {
+            val pitchers = current.optJSONArray("pitchers")
+            if (pitchers != null) {
+                for (i in 0 until pitchers.length()) {
+                    val p = pitchers.getJSONObject(i)
+                    if (!p.has("name") || p.isNull("name")) {
+                        p.put("name", "")
+                    }
+                }
+            }
+            v = 15
+        }
+
         return current
     }
 
@@ -682,18 +720,18 @@ class BackupManager constructor(
 
         // Game metadata
         val gObj = JSONObject().apply {
-            put("date", game.date)
-            put("opponent", game.opponent)
+            put("date", game.date ?: "")
+            put("opponent", game.opponent ?: "")
             put("inning", game.inning)
             put("outs", game.outs)
             put("leadoff_slot", game.leadoffSlot)
             put("start_time", game.startTime)
             put("elapsed_time_ms", game.elapsedTimeMs)
-            put("game_time", game.gameTime)
+            put("game_time", game.gameTime ?: "")
             put("is_home", game.isHome)
             put("current_inning", game.currentInning)
             put("is_top_half", game.isTopHalf)
-            put("game_number", game.gameNumber)
+            put("game_number", game.gameNumber ?: "")
         }
         root.put("game", gObj)
 
@@ -761,7 +799,7 @@ class BackupManager constructor(
         val pitcherArr = JSONArray()
         db.getPitchersForGame(gameId).forEach { p ->
             val pObj = JSONObject().apply {
-                put("name", p.name)
+                put("name", p.name.ifEmpty { "" })
                 put("player", getPlayerInfo(p.playerId))
                 put("pitches", JSONArray(db.getPitchesForPitcher(p.id).map { pitch ->
                     JSONObject().apply {

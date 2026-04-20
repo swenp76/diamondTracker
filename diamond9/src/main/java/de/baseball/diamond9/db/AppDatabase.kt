@@ -27,7 +27,7 @@ import de.baseball.diamond9.*
         ScoreboardRun::class,
         LeagueSettings::class
     ],
-    version = 14,
+    version = 17,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -146,6 +146,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Recreate table to make 'name' NOT NULL with DEFAULT ''
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS pitchers_new " +
+                    "(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "game_id INTEGER NOT NULL, " +
+                    "name TEXT NOT NULL DEFAULT '', " +
+                    "player_id INTEGER NOT NULL DEFAULT 0)"
+                )
+                db.execSQL(
+                    "INSERT INTO pitchers_new (id, game_id, name, player_id) " +
+                    "SELECT id, game_id, IFNULL(name, ''), player_id FROM pitchers"
+                )
+                db.execSQL("DROP TABLE pitchers")
+                db.execSQL("ALTER TABLE pitchers_new RENAME TO pitchers")
+            }
+        }
+
         private val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Recreate opponent_teams with team_id column.
@@ -170,6 +189,95 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Recreate pitches table to add DEFAULT '' to 'type' column
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS pitches_new " +
+                    "(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "pitcher_id INTEGER NOT NULL, " +
+                    "at_bat_id INTEGER NOT NULL, " +
+                    "type TEXT NOT NULL DEFAULT '', " +
+                    "sequence_nr INTEGER NOT NULL, " +
+                    "inning INTEGER NOT NULL DEFAULT 1)"
+                )
+                db.execSQL(
+                    "INSERT INTO pitches_new (id, pitcher_id, at_bat_id, type, sequence_nr, inning) " +
+                    "SELECT id, pitcher_id, at_bat_id, type, sequence_nr, inning FROM pitches"
+                )
+                db.execSQL("DROP TABLE pitches")
+                db.execSQL("ALTER TABLE pitches_new RENAME TO pitches")
+            }
+        }
+
+        private val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Fix 'teams'
+                db.execSQL("CREATE TABLE IF NOT EXISTS teams_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, name TEXT NOT NULL DEFAULT '')")
+                db.execSQL("INSERT INTO teams_new (id, name) SELECT id, IFNULL(name, '') FROM teams")
+                db.execSQL("DROP TABLE teams")
+                db.execSQL("ALTER TABLE teams_new RENAME TO teams")
+
+                // Fix 'players'
+                db.execSQL("CREATE TABLE IF NOT EXISTS players_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, team_id INTEGER NOT NULL, name TEXT NOT NULL DEFAULT '', number TEXT NOT NULL DEFAULT '', primary_position INTEGER NOT NULL, secondary_position INTEGER NOT NULL, is_pitcher INTEGER NOT NULL, birth_year INTEGER NOT NULL)")
+                db.execSQL("INSERT INTO players_new (id, team_id, name, number, primary_position, secondary_position, is_pitcher, birth_year) SELECT id, team_id, IFNULL(name, ''), IFNULL(number, ''), primary_position, secondary_position, is_pitcher, birth_year FROM players")
+                db.execSQL("DROP TABLE players")
+                db.execSQL("ALTER TABLE players_new RENAME TO players")
+
+                // Fix 'opponent_teams'
+                db.execSQL("CREATE TABLE IF NOT EXISTS opponent_teams_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, name TEXT NOT NULL DEFAULT '', team_id INTEGER NOT NULL DEFAULT 0)")
+                db.execSQL("INSERT INTO opponent_teams_new (id, name, team_id) SELECT id, IFNULL(name, ''), team_id FROM opponent_teams")
+                db.execSQL("DROP TABLE opponent_teams")
+                db.execSQL("ALTER TABLE opponent_teams_new RENAME TO opponent_teams")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_opponent_teams_name_team_id ON opponent_teams (name, team_id)")
+
+                // Fix 'pitcher_appearances'
+                db.execSQL("CREATE TABLE IF NOT EXISTS pitcher_appearances_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, player_id INTEGER NOT NULL, game_id INTEGER NOT NULL, date TEXT NOT NULL DEFAULT '', batters_faced INTEGER NOT NULL)")
+                db.execSQL("INSERT INTO pitcher_appearances_new (id, player_id, game_id, date, batters_faced) SELECT id, player_id, game_id, IFNULL(date, ''), batters_faced FROM pitcher_appearances")
+                db.execSQL("DROP TABLE pitcher_appearances")
+                db.execSQL("ALTER TABLE pitcher_appearances_new RENAME TO pitcher_appearances")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_pitcher_appearances_player_id_game_id ON pitcher_appearances (player_id, game_id)")
+
+                // Fix 'opponent_lineup'
+                db.execSQL("CREATE TABLE IF NOT EXISTS opponent_lineup_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, game_id INTEGER NOT NULL, batting_order INTEGER NOT NULL, jersey_number TEXT NOT NULL DEFAULT '')")
+                db.execSQL("INSERT INTO opponent_lineup_new (id, game_id, batting_order, jersey_number) SELECT id, game_id, batting_order, IFNULL(jersey_number, '') FROM opponent_lineup")
+                db.execSQL("DROP TABLE opponent_lineup")
+                db.execSQL("ALTER TABLE opponent_lineup_new RENAME TO opponent_lineup")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_opponent_lineup_game_id_batting_order ON opponent_lineup (game_id, batting_order)")
+
+                // Fix 'opponent_bench'
+                db.execSQL("CREATE TABLE IF NOT EXISTS opponent_bench_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, game_id INTEGER NOT NULL, jersey_number TEXT NOT NULL DEFAULT '')")
+                db.execSQL("INSERT INTO opponent_bench_new (id, game_id, jersey_number) SELECT id, game_id, IFNULL(jersey_number, '') FROM opponent_bench")
+                db.execSQL("DROP TABLE opponent_bench")
+                db.execSQL("ALTER TABLE opponent_bench_new RENAME TO opponent_bench")
+
+                // Fix 'opponent_substitutions'
+                db.execSQL("CREATE TABLE IF NOT EXISTS opponent_substitutions_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, game_id INTEGER NOT NULL, slot INTEGER NOT NULL, jersey_out TEXT NOT NULL DEFAULT '', jersey_in TEXT NOT NULL DEFAULT '')")
+                db.execSQL("INSERT INTO opponent_substitutions_new (id, game_id, slot, jersey_out, jersey_in) SELECT id, game_id, slot, IFNULL(jersey_out, ''), IFNULL(jersey_in, '') FROM opponent_substitutions")
+                db.execSQL("DROP TABLE opponent_substitutions")
+                db.execSQL("ALTER TABLE opponent_substitutions_new RENAME TO opponent_substitutions")
+
+                // Fix 'league_settings'
+                db.execSQL("CREATE TABLE IF NOT EXISTS league_settings_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, team_id INTEGER NOT NULL, innings INTEGER NOT NULL DEFAULT 9, time_limit_minutes INTEGER)")
+                db.execSQL("INSERT INTO league_settings_new (id, team_id, innings, time_limit_minutes) SELECT id, team_id, innings, time_limit_minutes FROM league_settings")
+                db.execSQL("DROP TABLE league_settings")
+                db.execSQL("ALTER TABLE league_settings_new RENAME TO league_settings")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_league_settings_team_id ON league_settings (team_id)")
+
+                // Fix 'scoreboard_runs'
+                db.execSQL("CREATE TABLE IF NOT EXISTS scoreboard_runs_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, game_id INTEGER NOT NULL, inning INTEGER NOT NULL, is_home INTEGER NOT NULL, runs INTEGER NOT NULL DEFAULT 0)")
+                db.execSQL("INSERT INTO scoreboard_runs_new (id, game_id, inning, is_home, runs) SELECT id, game_id, inning, is_home, runs FROM scoreboard_runs")
+                db.execSQL("DROP TABLE scoreboard_runs")
+                db.execSQL("ALTER TABLE scoreboard_runs_new RENAME TO scoreboard_runs")
+
+                // Fix 'games'
+                db.execSQL("CREATE TABLE IF NOT EXISTS games_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, date TEXT NOT NULL, opponent TEXT NOT NULL, team_id INTEGER NOT NULL, inning INTEGER NOT NULL DEFAULT 1, outs INTEGER NOT NULL DEFAULT 0, leadoff_slot INTEGER NOT NULL DEFAULT 1, start_time INTEGER NOT NULL DEFAULT 0, elapsed_time_ms INTEGER NOT NULL DEFAULT 0, game_time TEXT NOT NULL DEFAULT '', is_home INTEGER NOT NULL DEFAULT 1, current_inning INTEGER NOT NULL DEFAULT 1, is_top_half INTEGER NOT NULL DEFAULT 1, game_number TEXT NOT NULL DEFAULT '')")
+                db.execSQL("INSERT INTO games_new (id, date, opponent, team_id, inning, outs, leadoff_slot, start_time, elapsed_time_ms, game_time, is_home, current_inning, is_top_half, game_number) SELECT id, date, opponent, team_id, inning, outs, leadoff_slot, start_time, elapsed_time_ms, game_time, is_home, current_inning, is_top_half, game_number FROM games")
+                db.execSQL("DROP TABLE games")
+                db.execSQL("ALTER TABLE games_new RENAME TO games")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -178,7 +286,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "pitcher.db"
                 )
                     .allowMainThreadQueries()
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                     .build().also { INSTANCE = it }
             }
         }

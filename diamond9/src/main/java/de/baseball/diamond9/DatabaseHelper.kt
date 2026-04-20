@@ -29,8 +29,8 @@ data class Game(
 data class Pitcher(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "game_id") val gameId: Long,
-    val name: String,
-    @ColumnInfo(name = "player_id") val playerId: Long = 0
+    @ColumnInfo(defaultValue = "") val name: String = "",
+    @ColumnInfo(name = "player_id", defaultValue = "0") val playerId: Long = 0
 )
 
 @Entity(tableName = "pitches")
@@ -38,7 +38,7 @@ data class Pitch(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "pitcher_id") val pitcherId: Long = 0,
     @ColumnInfo(name = "at_bat_id") val atBatId: Long = 0,
-    val type: String,
+    @ColumnInfo(defaultValue = "") val type: String = "",
     @ColumnInfo(name = "sequence_nr") val sequenceNr: Int,
     @ColumnInfo(name = "inning", defaultValue = "1") val inning: Int = 1
 )
@@ -57,15 +57,15 @@ data class AtBat(
 @Entity(tableName = "teams")
 data class Team(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String
+    @ColumnInfo(defaultValue = "") val name: String = ""
 )
 
 @Entity(tableName = "players")
 data class Player(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "team_id") val teamId: Long,
-    val name: String,
-    val number: String,
+    @ColumnInfo(defaultValue = "") val name: String = "",
+    @ColumnInfo(defaultValue = "") val number: String = "",
     @ColumnInfo(name = "primary_position") val primaryPosition: Int,
     @ColumnInfo(name = "secondary_position") val secondaryPosition: Int = 0,
     @ColumnInfo(name = "is_pitcher") val isPitcher: Boolean = false,
@@ -80,7 +80,7 @@ data class PitcherAppearance(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "player_id") val playerId: Long,
     @ColumnInfo(name = "game_id") val gameId: Long,
-    val date: String,
+    @ColumnInfo(defaultValue = "") val date: String = "",
     @ColumnInfo(name = "batters_faced") val battersFaced: Int
 )
 
@@ -92,14 +92,14 @@ data class LineupEntry(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "game_id") val gameId: Long,
     @ColumnInfo(name = "batting_order") val battingOrder: Int,
-    @ColumnInfo(name = "jersey_number") val jerseyNumber: String
+    @ColumnInfo(name = "jersey_number", defaultValue = "") val jerseyNumber: String = ""
 )
 
 @Entity(tableName = "opponent_bench")
 data class BenchPlayer(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "game_id") val gameId: Long,
-    @ColumnInfo(name = "jersey_number") val jerseyNumber: String
+    @ColumnInfo(name = "jersey_number", defaultValue = "") val jerseyNumber: String = ""
 )
 
 @Entity(tableName = "substitutions")
@@ -114,7 +114,7 @@ data class Substitution(
 @Entity(tableName = "opponent_teams", indices = [Index(value = ["name", "team_id"], unique = true)])
 data class OpponentTeam(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String,
+    @ColumnInfo(defaultValue = "") val name: String = "",
     @ColumnInfo(name = "team_id", defaultValue = "0") val teamId: Long = 0L
 )
 
@@ -124,10 +124,10 @@ data class ScoreboardRun(
     @ColumnInfo(name = "game_id") val gameId: Long,
     @ColumnInfo(name = "inning") val inning: Int,
     @ColumnInfo(name = "is_home") val isHome: Int, // 0 = away, 1 = home
-    @ColumnInfo(name = "runs") val runs: Int = 0
+    @ColumnInfo(name = "runs", defaultValue = "0") val runs: Int = 0
 )
 
-@Entity(tableName = "league_settings")
+@Entity(tableName = "league_settings", indices = [Index(value = ["team_id"], unique = true)])
 data class LeagueSettings(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "team_id") val teamId: Long,
@@ -140,8 +140,8 @@ data class OppSubstitution(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "game_id") val gameId: Long,
     val slot: Int,
-    @ColumnInfo(name = "jersey_out") val jerseyOut: String,
-    @ColumnInfo(name = "jersey_in") val jerseyIn: String
+    @ColumnInfo(name = "jersey_out", defaultValue = "") val jerseyOut: String = "",
+    @ColumnInfo(name = "jersey_in", defaultValue = "") val jerseyIn: String = ""
 )
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
@@ -355,8 +355,8 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
 
     private fun formatIP(outs: Int) = "${outs / 3}.${outs % 3}"
 
-    fun getStatsForPitcher(pitcherId: Long): PitcherStats {
-        val pitcher = pitcherDao.getPitcherById(pitcherId)
+    fun getStatsForPitcher(pitcherId: Long): PitcherStats? {
+        val pitcher = pitcherDao.getPitcherById(pitcherId) ?: return null
         val pitches = getPitchesForPitcher(pitcherId)
         val outs = atBatDao.getOutsForGame(pitcher.gameId)
 
@@ -612,7 +612,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
         atBatDao.getGameBatterStats(gameId)
 
     fun getGamePitcherStats(gameId: Long): List<PitcherStats> =
-        getPitchersForGame(gameId).map { getStatsForPitcher(it.id) }
+        getPitchersForGame(gameId).mapNotNull { getStatsForPitcher(it.id) }
 
     fun getSeasonBatterStats(teamId: Long, startDate: String? = null, endDate: String? = null): List<SeasonBatterRow> =
         atBatDao.getSeasonBatterStats(teamId, startDate, endDate)

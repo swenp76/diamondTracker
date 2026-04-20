@@ -160,21 +160,21 @@ class PitchTrackActivity : ComponentActivity() {
             if (result.resultCode == Activity.RESULT_OK) {
                 val jumpToSlot = result.data?.getIntExtra("jumpToSlot", -1) ?: -1
                 if (jumpToSlot != -1) {
-                    val gameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
+                    val gameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else (stats?.bf ?: 0)
                     val currentSlot = (gameBF % 9) + 1
 
                     if (currentSlot != jumpToSlot) {
-                        val lastPitches = stats.pitches.takeLastWhile { it.type != "BF" }
+                        val lastPitches = (stats?.pitches ?: emptyList()).takeLastWhile { it.type != "BF" }
                         if (lastPitches.isNotEmpty()) {
                             db.insertPitch(pitcherId, "BF", inning)
                             recordBatterOut()
                         }
 
-                        var newGameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
+                        var newGameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else (stats?.bf ?: 0)
                         var nextSlot = (newGameBF % 9) + 1
                         while (nextSlot != jumpToSlot) {
                             db.insertPitch(pitcherId, "BF", inning)
-                            newGameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
+                            newGameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else (stats?.bf ?: 0)
                             nextSlot = (newGameBF % 9) + 1
                         }
                     }
@@ -234,14 +234,16 @@ class PitchTrackActivity : ComponentActivity() {
                     .fillMaxSize()
                     .background(colorResource(R.color.color_background))
             ) {
-                StatsBar(stats, inning, outs, onRunnerOut = { recordRunnerOut() })
-                BatterStrip(stats, opponentLineupLauncher)
-                Box(modifier = Modifier.weight(1f)) {
-                    PitchLog(stats, listState)
+                stats?.let { s ->
+                    StatsBar(s, inning, outs, onRunnerOut = { recordRunnerOut() })
+                    BatterStrip(s, opponentLineupLauncher)
+                    Box(modifier = Modifier.weight(1f)) {
+                        PitchLog(s, listState)
+                    }
                 }
                 ActionButtons(
                     onBall = {
-                        val (ballsBefore, _) = currentAtBatCount(stats.pitches)
+                        val (ballsBefore, _) = currentAtBatCount(stats?.pitches ?: emptyList())
                         db.insertPitch(pitcherId, "B", inning)
                         actionStack.push(GameAction.Pitch(-1L))
                         if (ballsBefore >= 3) {
@@ -251,7 +253,7 @@ class PitchTrackActivity : ComponentActivity() {
                         refresh()
                     },
                     onStrike = {
-                        val (_, strikesBefore) = currentAtBatCount(stats.pitches)
+                        val (_, strikesBefore) = currentAtBatCount(stats?.pitches ?: emptyList())
                         db.insertPitch(pitcherId, "S", inning)
                         actionStack.push(GameAction.Pitch(-1L))
                         if (strikesBefore >= 2) {
@@ -375,7 +377,7 @@ class PitchTrackActivity : ComponentActivity() {
                 onDismissRequest = { showTrendSheet = false },
                 containerColor = Color.White
             ) {
-                PitcherTrendSheet(stats)
+                stats?.let { PitcherTrendSheet(it) }
             }
         }
 
