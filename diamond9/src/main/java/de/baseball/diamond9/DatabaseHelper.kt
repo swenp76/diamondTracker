@@ -355,8 +355,8 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
 
     private fun formatIP(outs: Int) = "${outs / 3}.${outs % 3}"
 
-    fun getStatsForPitcher(pitcherId: Long): PitcherStats {
-        val pitcher = pitcherDao.getPitcherById(pitcherId)
+    fun getStatsForPitcher(pitcherId: Long): PitcherStats? {
+        val pitcher = pitcherDao.getPitcherById(pitcherId) ?: return null
         val pitches = getPitchesForPitcher(pitcherId)
         val outs = atBatDao.getOutsForGame(pitcher.gameId)
 
@@ -612,7 +612,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
         atBatDao.getGameBatterStats(gameId)
 
     fun getGamePitcherStats(gameId: Long): List<PitcherStats> =
-        getPitchersForGame(gameId).map { getStatsForPitcher(it.id) }
+        getPitchersForGame(gameId).mapNotNull { getStatsForPitcher(it.id) }
 
     fun getSeasonBatterStats(teamId: Long): List<SeasonBatterRow> =
         atBatDao.getSeasonBatterStats(teamId)
