@@ -24,6 +24,7 @@ import java.io.File
  *  12 → current_inning and is_top_half columns added to games
  *  13 → league_settings table introduced
  *  14 → game_number column added to games
+ *  15 → pitchers.name backfilled (null → '')
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
@@ -34,7 +35,7 @@ class BackupManager constructor(
     constructor(context: Context) : this(context, DatabaseHelper(context))
 
     companion object {
-        const val DB_VERSION = 14
+        const val DB_VERSION = 15
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
@@ -202,7 +203,7 @@ class BackupManager constructor(
                 allPitchers.put(JSONObject().apply {
                     put("id", pitcher.id)
                     put("game_id", pitcher.gameId)
-                    put("name", pitcher.name ?: "")
+                    put("name", pitcher.name.ifEmpty { "" })
                     put("player_id", pitcher.playerId)
                 })
                 db.getPitchesForPitcher(pitcher.id).forEach { pitch ->
@@ -648,6 +649,20 @@ class BackupManager constructor(
             v = 14
         }
 
+        // Migration 14 → 15: pitcher name backfill – null names default to empty string.
+        if (v < 15 && toVersion >= 15) {
+            val pitchers = current.optJSONArray("pitchers")
+            if (pitchers != null) {
+                for (i in 0 until pitchers.length()) {
+                    val p = pitchers.getJSONObject(i)
+                    if (!p.has("name") || p.isNull("name")) {
+                        p.put("name", "")
+                    }
+                }
+            }
+            v = 15
+        }
+
         return current
     }
 
@@ -779,7 +794,7 @@ class BackupManager constructor(
         val pitcherArr = JSONArray()
         db.getPitchersForGame(gameId).forEach { p ->
             val pObj = JSONObject().apply {
-                put("name", p.name)
+                put("name", p.name.ifEmpty { "" })
                 put("player", getPlayerInfo(p.playerId))
                 put("pitches", JSONArray(db.getPitchesForPitcher(p.id).map { pitch ->
                     JSONObject().apply {

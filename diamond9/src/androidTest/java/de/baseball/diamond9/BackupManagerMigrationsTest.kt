@@ -39,9 +39,9 @@ class BackupManagerMigrationsTest {
     // ── DB_VERSION sanity ─────────────────────────────────────────────────────
 
     @Test
-    fun dbVersion_is14() {
+    fun dbVersion_is15() {
         // Bumping AppDatabase.version without updating DB_VERSION breaks backup compatibility.
-        assertEquals(14, BackupManager.DB_VERSION)
+        assertEquals(15, BackupManager.DB_VERSION)
     }
 
     // ── Migration 5 → 6 : scoreboard_runs array added ─────────────────────────
@@ -227,6 +227,47 @@ class BackupManagerMigrationsTest {
         }
         val result = migrate(json, fromVersion = 14)
         assertEquals("1234", result.getJSONArray("games").getJSONObject(0).getString("game_number"))
+    }
+
+    // ── Migration 14 → 15 : pitcher name null backfill ────────────────────────
+
+    @Test
+    fun migration_v14_backfillsNullPitcherName() {
+        val pitcher = JSONObject().apply {
+            put("id", 1)
+            put("game_id", 1)
+            put("name", JSONObject.NULL)
+            put("player_id", 0)
+        }
+        val json = JSONObject().apply {
+            put("dbVersion", 14)
+            put("games", JSONArray())
+            put("pitchers", JSONArray().put(pitcher))
+            put("opponent_teams", JSONArray())
+            put("league_settings", JSONArray())
+        }
+        val result = migrate(json, fromVersion = 14)
+        val p = result.getJSONArray("pitchers").getJSONObject(0)
+        assertEquals("", p.getString("name"))
+    }
+
+    @Test
+    fun migration_v14_doesNotOverwriteExistingPitcherName() {
+        val pitcher = JSONObject().apply {
+            put("id", 1)
+            put("game_id", 1)
+            put("name", "Müller")
+            put("player_id", 0)
+        }
+        val json = JSONObject().apply {
+            put("dbVersion", 14)
+            put("games", JSONArray())
+            put("pitchers", JSONArray().put(pitcher))
+            put("opponent_teams", JSONArray())
+            put("league_settings", JSONArray())
+        }
+        val result = migrate(json, fromVersion = 14)
+        assertEquals("Müller", result.getJSONArray("pitchers").getJSONObject(0).getString("name"))
     }
 
     // ── Full chain: v5 → latest ───────────────────────────────────────────────
