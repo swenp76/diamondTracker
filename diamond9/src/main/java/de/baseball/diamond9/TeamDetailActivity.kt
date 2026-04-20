@@ -596,7 +596,10 @@ fun DialogTextField(label: String, value: String, onValueChange: (String) -> Uni
         Text(label, fontSize = 12.sp, color = Color.Gray)
         OutlinedTextField(
             value = value,
-            onValueChange = { if (it.length <= maxLength) onValueChange(it) },
+            onValueChange = {
+                val newValue = if (it.length > maxLength) it.take(maxLength) else it
+                onValueChange(newValue)
+            },
             placeholder = { Text(hint) },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(

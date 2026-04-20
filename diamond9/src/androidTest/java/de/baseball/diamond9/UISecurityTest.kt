@@ -1,17 +1,15 @@
 package de.baseball.diamond9
 
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.performTextReplacement
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.*
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import org.hamcrest.CoreMatchers.anyOf
-import org.hamcrest.CoreMatchers.equalTo
+import androidx.test.platform.app.InstrumentationRegistry
+import org.hamcrest.CoreMatchers.allOf
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,55 +18,83 @@ import org.junit.runner.RunWith
 class UISecurityTest {
 
     @get:Rule
-    val composeTestRule = createAndroidComposeRule<TeamListActivity>()
+    val composeTestRule = createAndroidComposeRule<CoachAct>()
+
+    private fun getString(resId: Int): String {
+        return InstrumentationRegistry.getInstrumentation().targetContext.getString(resId)
+    }
+
+    private fun navigateToTeamList() {
+        // Open drawer (using the content description of the menu button in CoachAct)
+        composeTestRule.onNodeWithContentDescription(getString(R.string.nav_home)).performClick()
+        // Click Teams
+        composeTestRule.onNodeWithText(getString(R.string.nav_teams)).performClick()
+    }
 
     @Test
     fun teamNameEntry_enforcesLengthLimit() {
-        // 1. Click FAB to add team (uses Compose)
-        composeTestRule.onNodeWithText("Add Team", useUnmergedTree = true).performClick()
+        navigateToTeamList()
 
-        // 2. Try to type 60 characters into the EditText (uses View-based AlertDialog)
+        // 1. Click FAB to add team (Compose-based ExtendedFloatingActionButton)
+        val addTeamText = getString(R.string.fab_add_team)
+        composeTestRule.onNodeWithText(addTeamText, useUnmergedTree = true).performClick()
+
+        // 2. Try to type 60 characters into the EditText (View-based AlertDialog)
         val longName = "A".repeat(60)
         onView(isAssignableFrom(android.widget.EditText::class.java))
             .inRoot(isDialog())
             .perform(typeText(longName), closeSoftKeyboard())
 
-        // 3. Verify only 50 characters were accepted
+        // 3. Verify only 50 characters were accepted (InputFilter.LengthFilter(50))
         onView(withText(longName.take(50))).check(matches(isDisplayed()))
+        
+        // Cleanup: Click create to close dialog
+        onView(withText(getString(R.string.btn_create))).perform(click())
     }
 
     @Test
     fun playerNameEntry_enforcesLengthLimit() {
-        // 1. Click on the first team in the list to go to TeamDetailActivity
-        // We assume there's at least one team if we are testing this, 
-        // or we rely on the rule starting TeamListActivity and we can click a team.
-        // For a robust test, we might want to ensure a team exists.
-        // But let's assume the UI state allows navigation.
-        
-        // Let's try to find a team item and click it. 
-        // If the list is empty, we might need to create one first.
-        
-        // For now, let's assume we are in TeamDetailActivity or can get there.
-        // Actually, the rule starts TeamListActivity.
+        navigateToTeamList()
+        val teamName = "Security Test Team"
         
         // 1. Create a team first to ensure we have something to click
-        composeTestRule.onNodeWithText("Add Team", useUnmergedTree = true).performClick()
+        composeTestRule.onNodeWithText(getString(R.string.fab_add_team), useUnmergedTree = true).performClick()
         onView(isAssignableFrom(android.widget.EditText::class.java))
             .inRoot(isDialog())
-            .perform(typeText("Test Team"), closeSoftKeyboard())
-        onView(withText("Create")).perform(click())
+            .perform(typeText(teamName), closeSoftKeyboard())
+        onView(withText(getString(R.string.btn_create))).perform(click())
 
-        // 2. Click the team to go to details
-        composeTestRule.onNodeWithText("Test Team").performClick()
+        // 2. Click the team to go to TeamHubActivity
+        composeTestRule.onNodeWithText(teamName).performClick()
 
-        // 3. Click FAB to add player
-        composeTestRule.onNodeWithText("Add Player", useUnmergedTree = true).performClick()
+        // 3. Click "Kader" (Roster) in TeamHubActivity to go to TeamDetailActivity
+        composeTestRule.onNodeWithText(getString(R.string.teamhub_edit_roster)).performClick()
 
-        // 4. Try to type 60 characters into the Name field (Compose OutlinedTextField)
-        val longName = "P".repeat(60)
-        composeTestRule.onNodeWithText("Full Name").performTextReplacement(longName)
+        // 4. Click FAB to add player
+        composeTestRule.onNodeWithText(getString(R.string.fab_add_player), useUnmergedTree = true).performClick()
 
-        // 5. Verify only 50 characters were accepted in the TextField
-        composeTestRule.onNodeWithText(longName.take(50)).assertExists()
+        // 5. Test Name field limit (maxLength = 50)
+        val longName = "B".repeat(60)
+        val expectedName = "B".repeat(50)
+        
+        // Find by hint text and filter for nodes that have the SetText action
+        composeTestRule.onAllNodesWithText(getString(R.string.hint_full_name))
+            .filterToOne(hasSetTextAction())
+            .performTextReplacement(longName)
+        
+        // Verify the text was truncated
+        composeTestRule.onNodeWithText(expectedName).assertExists()
+        
+        // 6. Test Jersey Number limit (maxLength = 3)
+        val longNumber = "12345"
+        val expectedNumber = "123"
+        composeTestRule.onAllNodesWithText(getString(R.string.hint_jersey_number))
+            .filterToOne(hasSetTextAction())
+            .performTextReplacement(longNumber)
+            
+        composeTestRule.onNodeWithText(expectedNumber).assertExists()
+
+        // Cleanup: Click Add to close dialog
+        composeTestRule.onNodeWithText(getString(R.string.btn_add)).performClick()
     }
 }
