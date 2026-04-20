@@ -30,7 +30,7 @@ data class Pitcher(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "game_id") val gameId: Long,
     @ColumnInfo(defaultValue = "") val name: String = "",
-    @ColumnInfo(name = "player_id") val playerId: Long = 0
+    @ColumnInfo(name = "player_id", defaultValue = "0") val playerId: Long = 0
 )
 
 @Entity(tableName = "pitches")
@@ -124,10 +124,10 @@ data class ScoreboardRun(
     @ColumnInfo(name = "game_id") val gameId: Long,
     @ColumnInfo(name = "inning") val inning: Int,
     @ColumnInfo(name = "is_home") val isHome: Int, // 0 = away, 1 = home
-    @ColumnInfo(name = "runs") val runs: Int = 0
+    @ColumnInfo(name = "runs", defaultValue = "0") val runs: Int = 0
 )
 
-@Entity(tableName = "league_settings")
+@Entity(tableName = "league_settings", indices = [Index(value = ["team_id"], unique = true)])
 data class LeagueSettings(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "team_id") val teamId: Long,
