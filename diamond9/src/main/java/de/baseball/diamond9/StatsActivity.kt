@@ -39,10 +39,15 @@ class StatsActivity : ComponentActivity() {
         val stats = db.getStatsForPitcher(pitcherId)
 
         setContent {
-            StatsScreen(
-                stats = stats,
-                onBackClick = { finish() }
-            )
+            stats?.let {
+                StatsScreen(
+                    stats = it,
+                    onBackClick = { finish() }
+                )
+            } ?: run {
+                // Fallback UI or finish
+                finish()
+            }
         }
     }
 }
