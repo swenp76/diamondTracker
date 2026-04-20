@@ -58,7 +58,27 @@ class BackupManager constructor(
         }
 
         /** Valid pitch type strings stored in the database. */
-        val VALID_PITCH_TYPES = setOf("B", "S", "F", "BF", "SO", "H", "HBP", "W")
+        val VALID_PITCH_TYPES = setOf(
+            // Core pitch types
+            "B",    // Ball
+            "S",    // Strike
+            "F",    // Foul
+            "BF",   // Batter Faced (marker)
+            "RO",   // Runner Out (marker)
+            // Outcomes recorded as pitches (defense)
+            "SO",   // Strikeout pitch
+            "H",    // Hit (generic, legacy)
+            "1B",   // Single
+            "2B",   // Double
+            "3B",   // Triple
+            "HR",   // Home Run
+            "HBP",  // Hit by Pitch
+            "W",    // Walk
+            "GO",   // Ground Out
+            "FO",   // Fly Out
+            "LO",   // Line Out
+            "KL"    // Strikeout Looking
+        )
 
         /** Valid at-bat result strings stored in the database. */
         val VALID_AT_BAT_RESULTS = setOf(

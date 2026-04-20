@@ -284,4 +284,19 @@ class BackupManagerMigrationsTest {
         assertEquals(0,       g.getInt("is_home"))
         assertEquals(9000L,   g.getLong("elapsed_time_ms"))
     }
+
+    @Test
+    fun validPitchTypes_containsAllUsedTypes() {
+        val required = listOf(
+            "B", "S", "F", "BF", "RO",
+            "SO", "H", "1B", "2B", "3B", "HR",
+            "HBP", "W", "GO", "FO", "LO", "KL"
+        )
+        required.forEach { type ->
+            assertTrue(
+                "VALID_PITCH_TYPES missing: $type",
+                BackupManager.VALID_PITCH_TYPES.contains(type)
+            )
+        }
+    }
 }
