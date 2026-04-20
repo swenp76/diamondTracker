@@ -79,7 +79,7 @@ class BackupManager constructor(
         root.put("teams", JSONArray(db.getAllTeams().map { t ->
             JSONObject().apply {
                 put("id", t.id)
-                put("name", t.name)
+                put("name", t.name ?: "")
             }
         }))
 
@@ -87,19 +87,19 @@ class BackupManager constructor(
         root.put("games", JSONArray(db.getAllGames().map { g ->
             JSONObject().apply {
                 put("id", g.id)
-                put("date", g.date)
-                put("opponent", g.opponent)
+                put("date", g.date ?: "")
+                put("opponent", g.opponent ?: "")
                 put("team_id", g.teamId)
                 put("inning", g.inning)
                 put("outs", g.outs)
                 put("leadoff_slot", g.leadoffSlot)
                 put("start_time", g.startTime)
                 put("elapsed_time_ms", g.elapsedTimeMs)
-                put("game_time", g.gameTime)
+                put("game_time", g.gameTime ?: "")
                 put("is_home", g.isHome)
                 put("current_inning", g.currentInning)
                 put("is_top_half", g.isTopHalf)
-                put("game_number", g.gameNumber)
+                put("game_number", g.gameNumber ?: "")
             }
         }))
 
@@ -124,7 +124,7 @@ class BackupManager constructor(
             db.getOpponentTeamsForTeam(team.id).forEach { opp ->
                 allOpponentTeams.put(JSONObject().apply {
                     put("id", opp.id)
-                    put("name", opp.name)
+                    put("name", opp.name ?: "")
                     put("team_id", opp.teamId)
                 })
             }
@@ -163,8 +163,8 @@ class BackupManager constructor(
                 allPlayers.put(JSONObject().apply {
                     put("id", p.id)
                     put("team_id", p.teamId)
-                    put("name", p.name)
-                    put("number", p.number)
+                    put("name", p.name ?: "")
+                    put("number", p.number ?: "")
                     put("primary_position", p.primaryPosition)
                     put("secondary_position", p.secondaryPosition)
                     put("is_pitcher", if (p.isPitcher) 1 else 0)
@@ -182,15 +182,18 @@ class BackupManager constructor(
                 allPitchers.put(JSONObject().apply {
                     put("id", pitcher.id)
                     put("game_id", pitcher.gameId)
-                    put("name", pitcher.name)
+                    put("name", pitcher.name ?: "")
                     put("player_id", pitcher.playerId)
                 })
                 db.getPitchesForPitcher(pitcher.id).forEach { pitch ->
                     allPitches.put(JSONObject().apply {
                         put("id", pitch.id)
                         put("pitcher_id", pitch.pitcherId)
-                        if (pitch.atBatId == 0L) put("at_bat_id", JSONObject.NULL) else put("at_bat_id", pitch.atBatId)
-                        put("type", pitch.type)
+                        if (pitch.atBatId == null || pitch.atBatId == 0L)
+                            put("at_bat_id", JSONObject.NULL)
+                        else
+                            put("at_bat_id", pitch.atBatId)
+                        put("type", pitch.type ?: "")
                         put("sequence_nr", pitch.sequenceNr)
                         put("inning", pitch.inning)
                     })
@@ -251,7 +254,7 @@ class BackupManager constructor(
                 allOpponentLineup.put(JSONObject().apply {
                     put("game_id", entry.gameId)
                     put("batting_order", entry.battingOrder)
-                    put("jersey_number", entry.jerseyNumber)
+                    put("jersey_number", entry.jerseyNumber ?: "")
                 })
             }
         }
@@ -264,7 +267,7 @@ class BackupManager constructor(
                 allOpponentBench.put(JSONObject().apply {
                     put("id", bench.id)
                     put("game_id", bench.gameId)
-                    put("jersey_number", bench.jerseyNumber)
+                    put("jersey_number", bench.jerseyNumber ?: "")
                 })
             }
         }
@@ -278,8 +281,8 @@ class BackupManager constructor(
                     put("id", sub.id)
                     put("game_id", sub.gameId)
                     put("slot", sub.slot)
-                    put("jersey_out", sub.jerseyOut)
-                    put("jersey_in", sub.jerseyIn)
+                    put("jersey_out", sub.jerseyOut ?: "")
+                    put("jersey_in", sub.jerseyIn ?: "")
                 })
             }
         }
@@ -294,7 +297,7 @@ class BackupManager constructor(
                         put("id", app.id)
                         put("player_id", app.playerId)
                         put("game_id", app.gameId)
-                        put("date", app.date)
+                        put("date", app.date ?: "")
                         put("batters_faced", app.battersFaced)
                     })
                 }
@@ -677,18 +680,18 @@ class BackupManager constructor(
 
         // Game metadata
         val gObj = JSONObject().apply {
-            put("date", game.date)
-            put("opponent", game.opponent)
+            put("date", game.date ?: "")
+            put("opponent", game.opponent ?: "")
             put("inning", game.inning)
             put("outs", game.outs)
             put("leadoff_slot", game.leadoffSlot)
             put("start_time", game.startTime)
             put("elapsed_time_ms", game.elapsedTimeMs)
-            put("game_time", game.gameTime)
+            put("game_time", game.gameTime ?: "")
             put("is_home", game.isHome)
             put("current_inning", game.currentInning)
             put("is_top_half", game.isTopHalf)
-            put("game_number", game.gameNumber)
+            put("game_number", game.gameNumber ?: "")
         }
         root.put("game", gObj)
 
