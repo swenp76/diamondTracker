@@ -453,8 +453,7 @@ class BackupManager constructor(
             db.rawInsertWithConflictIgnore("pitches", ContentValues().apply {
                 put("id", obj.getLong("id"))
                 put("pitcher_id", obj.getLong("pitcher_id"))
-                if (obj.isNull("at_bat_id")) putNull("at_bat_id")
-                else put("at_bat_id", obj.getLong("at_bat_id"))
+                put("at_bat_id", if (obj.isNull("at_bat_id")) 0L else obj.getLong("at_bat_id"))
                 put("type", obj.getString("type"))
                 put("sequence_nr", obj.getInt("sequence_nr"))
                 put("inning", obj.getInt("inning"))

@@ -392,7 +392,9 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper, startDate: String?
     var sortAsc by remember { mutableStateOf(false) }
 
     val rows = remember(rawRows, sortCol, sortAsc) {
-        fun name(r: SeasonPitcherRow) = players[r.playerId]?.name ?: ""
+        fun name(r: SeasonPitcherRow) =
+            if (r.playerId > 0) players[r.playerId]?.name ?: r.name ?: ""
+            else r.name ?: ""
         fun spct(r: SeasonPitcherRow) =
             if (r.totalPitches > 0) (r.strikes + r.fouls).toFloat() / r.totalPitches else -1f
         val sorted = when (sortCol) {
@@ -470,8 +472,10 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper, startDate: String?
 
         LazyColumn {
             itemsIndexed(rows) { index, row ->
-                val name = players[row.playerId]?.let { "#${it.number} ${it.name}" }
-                    ?: stringResource(R.string.season_stats_unknown_player)
+                val name = if (row.playerId > 0)
+                    players[row.playerId]?.let { "#${it.number} ${it.name}" }
+                        ?: row.name ?: stringResource(R.string.season_stats_unknown_player)
+                else row.name ?: stringResource(R.string.season_stats_unknown_player)
                 val strikePctStr = if (row.totalPitches > 0)
                     "%.0f%%".format((row.strikes + row.fouls).toFloat() / row.totalPitches * 100)
                 else "---"
