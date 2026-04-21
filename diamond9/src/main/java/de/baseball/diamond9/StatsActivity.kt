@@ -1,9 +1,11 @@
 package de.baseball.diamond9
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,9 +14,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,6 +30,21 @@ import androidx.compose.ui.unit.sp
 class StatsActivity : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
+    private var pendingSaveFile: java.io.File? = null
+
+    private val saveLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
+        uri ?: return@registerForActivityResult
+        try {
+            pendingSaveFile?.let { file ->
+                contentResolver.openOutputStream(uri)?.use { out ->
+                    file.inputStream().use { it.copyTo(out) }
+                }
+                Toast.makeText(this, R.string.toast_stats_saved, Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,10 +59,19 @@ class StatsActivity : ComponentActivity() {
             stats?.let {
                 StatsScreen(
                     stats = it,
-                    onBackClick = { finish() }
+                    onBackClick = { finish() },
+                    onExport = { format, action ->
+                        val file = StatsExporter.buildPitcherDetail(this, it, format)
+                        when (action) {
+                            ExportAction.SHARE -> StatsExporter.shareFile(this, file, format)
+                            ExportAction.SAVE  -> {
+                                pendingSaveFile = file
+                                saveLauncher.launch("pitcher_stats.${format.extension()}")
+                            }
+                        }
+                    }
                 )
             } ?: run {
-                // Fallback UI or finish
                 finish()
             }
         }
@@ -56,8 +82,11 @@ class StatsActivity : ComponentActivity() {
 @Composable
 fun StatsScreen(
     stats: PitcherStats,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onExport: (ExportFormat, ExportAction) -> Unit = { _, _ -> }
 ) {
+    var showFormatDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         containerColor = colorResource(R.color.color_background),
         topBar = {
@@ -66,6 +95,11 @@ fun StatsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showFormatDialog = true }) {
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_share))
                     }
                 }
             )
@@ -116,6 +150,16 @@ fun StatsScreen(
 
             PitchGrid(stats.pitches)
         }
+    }
+
+    if (showFormatDialog) {
+        ExportFormatDialog(
+            onDismiss = { showFormatDialog = false },
+            onSelect = { format, action ->
+                showFormatDialog = false
+                onExport(format, action)
+            }
+        )
     }
 }
 

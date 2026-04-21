@@ -1,10 +1,11 @@
 package de.baseball.diamond9
 
-import android.app.DatePickerDialog
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.clickable
@@ -15,14 +16,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.FilterAltOff
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -30,11 +29,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 
 class SeasonStatsActivity : ComponentActivity() {
+
+    private var pendingSaveFile: java.io.File? = null
+    private var pendingSaveFormat: ExportFormat = ExportFormat.PDF
+
+    private val saveLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
+        uri ?: return@registerForActivityResult
+        try {
+            pendingSaveFile?.let { file ->
+                contentResolver.openOutputStream(uri)?.use { out ->
+                    file.inputStream().use { it.copyTo(out) }
+                }
+                Toast.makeText(this, R.string.toast_stats_saved, Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,7 +64,22 @@ class SeasonStatsActivity : ComponentActivity() {
                 teamId = teamId,
                 teamName = teamName,
                 db = db,
-                onBackClick = { finish() }
+                onBackClick = { finish() },
+                onExport = { tab, format, action ->
+                    val players = db.getPlayersForTeam(teamId).associateBy { it.id }
+                    val file = when (tab) {
+                        0 -> StatsExporter.buildBatterTable(this, teamName, "", db.getSeasonBatterStats(teamId), players, format)
+                        else -> StatsExporter.buildSeasonPitcherTable(this, teamName, "", db.getSeasonPitcherStats(teamId), players, format)
+                    }
+                    when (action) {
+                        ExportAction.SHARE -> StatsExporter.shareFile(this, file, format)
+                        ExportAction.SAVE  -> {
+                            pendingSaveFile = file
+                            pendingSaveFormat = format
+                            saveLauncher.launch("${if (tab == 0) "batter" else "pitcher"}_stats.${format.extension()}")
+                        }
+                    }
+                }
             )
         }
     }
@@ -63,28 +91,15 @@ private fun SeasonStatsScreen(
     teamId: Long,
     teamName: String,
     db: DatabaseHelper,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onExport: (tab: Int, format: ExportFormat, action: ExportAction) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
+    var showFormatDialog by remember { mutableStateOf(false) }
     val tabs = listOf(
         stringResource(R.string.season_stats_tab_batter),
         stringResource(R.string.season_stats_tab_pitcher)
     )
-
-    var startDate by remember { mutableStateOf<String?>(null) }
-    var endDate by remember { mutableStateOf<String?>(null) }
-
-    fun parseDateToYYYYMMDD(date: String?): String? {
-        if (date == null) return null
-        val parts = date.split(".")
-        if (parts.size == 3) {
-            return "${parts[2]}${parts[1]}${parts[0]}"
-        }
-        return null
-    }
-
-    val startYYYYMMDD = remember(startDate) { parseDateToYYYYMMDD(startDate) }
-    val endYYYYMMDD = remember(endDate) { parseDateToYYYYMMDD(endDate) }
 
     Scaffold(
         containerColor = colorResource(R.color.color_background),
@@ -104,10 +119,8 @@ private fun SeasonStatsScreen(
                     }
                 },
                 actions = {
-                    if (startDate != null || endDate != null) {
-                        IconButton(onClick = { startDate = null; endDate = null }) {
-                            Icon(Icons.Default.FilterAltOff, contentDescription = stringResource(R.string.season_stats_clear_filter))
-                        }
+                    IconButton(onClick = { showFormatDialog = true }) {
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_share))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -119,13 +132,6 @@ private fun SeasonStatsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            DateFilterRow(
-                startDate = startDate,
-                endDate = endDate,
-                onStartDateChange = { startDate = it },
-                onEndDateChange = { endDate = it }
-            )
-
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = Color.White,
@@ -141,78 +147,26 @@ private fun SeasonStatsScreen(
             }
 
             when (selectedTab) {
-                0 -> BatterStatsTab(teamId = teamId, db = db, startDate = startYYYYMMDD, endDate = endYYYYMMDD)
-                1 -> PitcherStatsTab(teamId = teamId, db = db, startDate = startYYYYMMDD, endDate = endYYYYMMDD)
+                0 -> BatterStatsTab(teamId = teamId, db = db)
+                1 -> PitcherStatsTab(teamId = teamId, db = db)
             }
         }
+    }
+
+    if (showFormatDialog) {
+        ExportFormatDialog(
+            onDismiss = { showFormatDialog = false },
+            onSelect = { format, action ->
+                showFormatDialog = false
+                onExport(selectedTab, format, action)
+            }
+        )
     }
 }
 
 @Composable
-private fun DateFilterRow(
-    startDate: String?,
-    endDate: String?,
-    onStartDateChange: (String?) -> Unit,
-    onEndDateChange: (String?) -> Unit
-) {
-    val context = LocalContext.current
-    val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.US)
-
-    fun showDatePicker(initialDate: String?, onDateSelected: (String) -> Unit) {
-        val calendar = Calendar.getInstance()
-        if (initialDate != null) {
-            try {
-                val parts = initialDate.split(".")
-                if (parts.size == 3) {
-                    calendar.set(Calendar.DAY_OF_MONTH, parts[0].toInt())
-                    calendar.set(Calendar.MONTH, parts[1].toInt() - 1)
-                    calendar.set(Calendar.YEAR, parts[2].toInt())
-                }
-            } catch (_: Exception) {}
-        }
-        DatePickerDialog(
-            context,
-            { _, year, month, day ->
-                val c = Calendar.getInstance()
-                c.set(year, month, day)
-                onDateSelected(sdf.format(c.time))
-            },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        ).show()
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Column(modifier = Modifier.weight(1f).clickable { showDatePicker(startDate, onStartDateChange) }) {
-            Text(stringResource(R.string.season_stats_from), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(16.dp), tint = colorResource(R.color.color_primary))
-                Spacer(Modifier.width(4.dp))
-                Text(startDate ?: "--.--.----", fontSize = 14.sp)
-            }
-        }
-        Column(modifier = Modifier.weight(1f).clickable { showDatePicker(endDate, onEndDateChange) }) {
-            Text(stringResource(R.string.season_stats_to), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(16.dp), tint = colorResource(R.color.color_primary))
-                Spacer(Modifier.width(4.dp))
-                Text(endDate ?: "--.--.----", fontSize = 14.sp)
-            }
-        }
-    }
-}
-
-@Composable
-private fun BatterStatsTab(teamId: Long, db: DatabaseHelper, startDate: String?, endDate: String?) {
-    val rawRows = remember(teamId, startDate, endDate) { db.getSeasonBatterStats(teamId, startDate, endDate) }
+private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
+    val rawRows = remember(teamId) { db.getSeasonBatterStats(teamId) }
     val players = remember(teamId) { db.getPlayersForTeam(teamId).associateBy { it.id } }
 
     // Default: sort by AVG descending (col index 7)
@@ -383,8 +337,8 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper, startDate: String?,
 }
 
 @Composable
-private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper, startDate: String?, endDate: String?) {
-    val rawRows = remember(teamId, startDate, endDate) { db.getSeasonPitcherStats(teamId, startDate, endDate) }
+private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper) {
+    val rawRows = remember(teamId) { db.getSeasonPitcherStats(teamId) }
     val players = remember(teamId) { db.getPlayersForTeam(teamId).associateBy { it.id } }
 
     // Default: sort by S% descending (col index 3)
@@ -392,11 +346,9 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper, startDate: String?
     var sortAsc by remember { mutableStateOf(false) }
 
     val rows = remember(rawRows, sortCol, sortAsc) {
-        fun name(r: SeasonPitcherRow) =
-            if (r.playerId > 0) players[r.playerId]?.name ?: r.name ?: ""
-            else r.name ?: ""
+        fun name(r: SeasonPitcherRow) = players[r.playerId]?.name ?: ""
         fun spct(r: SeasonPitcherRow) =
-            if (r.totalPitches > 0) (r.strikes + r.fouls).toFloat() / r.totalPitches else -1f
+            if (r.totalPitches > 0) r.strikes.toFloat() / r.totalPitches else -1f
         val sorted = when (sortCol) {
             0  -> rawRows.sortedBy { name(it) }
             1  -> rawRows.sortedBy { it.bf }
@@ -472,12 +424,10 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper, startDate: String?
 
         LazyColumn {
             itemsIndexed(rows) { index, row ->
-                val name = if (row.playerId > 0)
-                    players[row.playerId]?.let { "#${it.number} ${it.name}" }
-                        ?: row.name ?: stringResource(R.string.season_stats_unknown_player)
-                else row.name ?: stringResource(R.string.season_stats_unknown_player)
+                val name = players[row.playerId]?.let { "#${it.number} ${it.name}" }
+                    ?: stringResource(R.string.season_stats_unknown_player)
                 val strikePctStr = if (row.totalPitches > 0)
-                    "%.0f%%".format((row.strikes + row.fouls).toFloat() / row.totalPitches * 100)
+                    "%.0f%%".format(row.strikes.toFloat() / row.totalPitches * 100)
                 else "---"
 
                 Row(

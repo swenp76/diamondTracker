@@ -1,9 +1,11 @@
 package de.baseball.diamond9
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,6 +16,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +31,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 class BatterStatsActivity : ComponentActivity() {
+
+    private var pendingSaveFile: java.io.File? = null
+
+    private val saveLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
+        uri ?: return@registerForActivityResult
+        try {
+            pendingSaveFile?.let { file ->
+                contentResolver.openOutputStream(uri)?.use { out ->
+                    file.inputStream().use { it.copyTo(out) }
+                }
+                Toast.makeText(this, R.string.toast_stats_saved, Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,7 +65,22 @@ class BatterStatsActivity : ComponentActivity() {
                 gameOpponent = gameOpponent,
                 gameDate     = gameDate,
                 db           = db,
-                onBackClick  = { finish() }
+                onBackClick  = { finish() },
+                onExport     = { tab, format, action ->
+                    val teamId = db.getGame(gameId)?.teamId ?: -1L
+                    val players = if (teamId > 0) db.getPlayersForTeam(teamId).associateBy { it.id } else emptyMap()
+                    val file = when (tab) {
+                        0 -> StatsExporter.buildGameBatterTable(this, gameOpponent, gameDate, db.getGameBatterStats(gameId), players, format)
+                        else -> StatsExporter.buildGamePitcherTable(this, gameOpponent, gameDate, db.getGamePitcherStats(gameId), players, format)
+                    }
+                    when (action) {
+                        ExportAction.SHARE -> StatsExporter.shareFile(this, file, format)
+                        ExportAction.SAVE  -> {
+                            pendingSaveFile = file
+                            saveLauncher.launch("${if (tab == 0) "batter" else "pitcher"}_stats.${format.extension()}")
+                        }
+                    }
+                }
             )
         }
     }
@@ -59,9 +93,11 @@ private fun BatterStatsScreen(
     gameOpponent: String,
     gameDate: String,
     db: DatabaseHelper,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onExport: (tab: Int, format: ExportFormat, action: ExportAction) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
+    var showFormatDialog by remember { mutableStateOf(false) }
     val tabs = listOf(
         stringResource(R.string.season_stats_tab_batter),
         stringResource(R.string.season_stats_tab_pitcher)
@@ -82,6 +118,11 @@ private fun BatterStatsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showFormatDialog = true }) {
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_share))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -112,6 +153,16 @@ private fun BatterStatsScreen(
                 1 -> GamePitcherTab(gameId = gameId, db = db)
             }
         }
+    }
+
+    if (showFormatDialog) {
+        ExportFormatDialog(
+            onDismiss = { showFormatDialog = false },
+            onSelect = { format, action ->
+                showFormatDialog = false
+                onExport(selectedTab, format, action)
+            }
+        )
     }
 }
 
@@ -299,7 +350,7 @@ private fun GamePitcherTab(gameId: Long, db: DatabaseHelper) {
     var sortAsc by remember { mutableStateOf(false) }
 
     fun spct(r: PitcherStats) =
-        if (r.totalPitches > 0) r.strikes.toFloat() / r.totalPitches else -1f
+        if (r.totalPitches > 0) (r.strikes).toFloat() / r.totalPitches else -1f
     fun name(r: PitcherStats) =
         players[r.pitcher.playerId]?.name ?: r.pitcher.name
 

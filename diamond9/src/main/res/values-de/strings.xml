@@ -20,6 +20,15 @@
 
     <!-- ── Barrierefreiheit / Content Descriptions ───────────────────────── -->
     <string name="content_desc_back">Zurück</string>
+    <string name="action_share">Teilen</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="export_format_dialog_title">Exportieren als…</string>
+    <string name="export_format_pdf">PDF</string>
+    <string name="export_format_jpg">JPG</string>
+    <string name="export_format_csv">CSV</string>
+    <string name="export_action_share">Teilen</string>
+    <string name="export_action_save">Auf Gerät speichern</string>
+    <string name="toast_stats_saved">Statistik gespeichert</string>
     <string name="content_desc_more">Mehr</string>
     <string name="content_desc_delete">Löschen</string>
     <string name="content_desc_add">Hinzufügen</string>

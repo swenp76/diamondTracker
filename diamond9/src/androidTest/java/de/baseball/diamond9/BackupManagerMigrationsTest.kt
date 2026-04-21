@@ -39,9 +39,9 @@ class BackupManagerMigrationsTest {
     // ── DB_VERSION sanity ─────────────────────────────────────────────────────
 
     @Test
-    fun dbVersion_is15() {
+    fun dbVersion_is17() {
         // Bumping AppDatabase.version without updating DB_VERSION breaks backup compatibility.
-        assertEquals(15, BackupManager.DB_VERSION)
+        assertEquals(17, BackupManager.DB_VERSION)
     }
 
     // ── Migration 5 → 6 : scoreboard_runs array added ─────────────────────────
@@ -270,6 +270,46 @@ class BackupManagerMigrationsTest {
         assertEquals("Müller", result.getJSONArray("pitchers").getJSONObject(0).getString("name"))
     }
 
+    // ── Migration 15 → 16 : pitch type null backfill ─────────────────────────
+
+    @Test
+    fun migration_v15_backfillsNullPitchType() {
+        val pitch = JSONObject().apply {
+            put("id", 1)
+            put("pitcher_id", 1)
+            put("type", JSONObject.NULL)
+        }
+        val json = JSONObject().apply {
+            put("dbVersion", 15)
+            put("games", JSONArray())
+            put("pitches", JSONArray().put(pitch))
+            put("opponent_teams", JSONArray())
+        }
+        val result = migrate(json, fromVersion = 15)
+        val p = result.getJSONArray("pitches").getJSONObject(0)
+        assertEquals("", p.getString("type"))
+    }
+
+    // ── Migration 16 → 17 : pitch at_bat_id null backfill ───────────────────
+
+    @Test
+    fun migration_v16_backfillsNullAtBatId() {
+        val pitch = JSONObject().apply {
+            put("id", 1)
+            put("pitcher_id", 1)
+            put("at_bat_id", JSONObject.NULL)
+        }
+        val json = JSONObject().apply {
+            put("dbVersion", 16)
+            put("games", JSONArray())
+            put("pitches", JSONArray().put(pitch))
+            put("opponent_teams", JSONArray())
+        }
+        val result = migrate(json, fromVersion = 16)
+        val p = result.getJSONArray("pitches").getJSONObject(0)
+        assertEquals(0L, p.getLong("at_bat_id"))
+    }
+
     // ── Full chain: v5 → latest ───────────────────────────────────────────────
 
     @Test
@@ -278,15 +318,20 @@ class BackupManagerMigrationsTest {
             put("id", 1); put("date", "01.04.2026"); put("opponent", "Bears")
         }
         val opp = JSONObject().apply { put("id", 1); put("name", "Bears") }
+        val pitch = JSONObject().apply {
+            put("id", 1); put("pitcher_id", 1); put("type", JSONObject.NULL); put("at_bat_id", JSONObject.NULL)
+        }
         val json = JSONObject().apply {
             put("dbVersion", 5)
             put("games", JSONArray().put(game))
             put("opponent_teams", JSONArray().put(opp))
+            put("pitches", JSONArray().put(pitch))
         }
 
         val result = migrate(json, fromVersion = 5)
         val g = result.getJSONArray("games").getJSONObject(0)
         val o = result.getJSONArray("opponent_teams").getJSONObject(0)
+        val p = result.getJSONArray("pitches").getJSONObject(0)
 
         // All game fields should have their defaults
         assertEquals(0L,  g.getLong("start_time"))
@@ -294,6 +339,10 @@ class BackupManagerMigrationsTest {
         assertEquals(1,   g.getInt("is_home"))
         assertEquals(0L,  g.getLong("elapsed_time_ms"))
         assertEquals("",  g.getString("game_number"))
+
+        // Pitch defaults
+        assertEquals("", p.getString("type"))
+        assertEquals(0L, p.getLong("at_bat_id"))
 
         // scoreboard_runs array should be present
         assertTrue(result.has("scoreboard_runs"))

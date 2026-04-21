@@ -110,8 +110,6 @@ class SettingsActivity : ComponentActivity() {
             ) {
                 SettingsScreen(
                     onMenuClick = { scope.launch { drawerState.open() } },
-                    onTeamsClick = { startActivity(Intent(this, TeamListActivity::class.java)) },
-                    onOpponentsClick = { startActivity(Intent(this, ManageOpponentsActivity::class.java)) },
                     onBackupClick = {
                         val fileName = "diamond9_backup_${
                             SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date())
@@ -138,8 +136,6 @@ class SettingsActivity : ComponentActivity() {
 @Composable
 private fun SettingsScreen(
     onMenuClick: () -> Unit,
-    onTeamsClick: () -> Unit,
-    onOpponentsClick: () -> Unit,
     onBackupClick: () -> Unit,
     onRestoreClick: () -> Unit
 ) {
@@ -184,26 +180,6 @@ private fun SettingsScreen(
                     letterSpacing = 1.sp,
                     modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
                 )
-
-                SettingsCard(
-                    title = stringResource(R.string.settings_teams_title),
-                    subtitle = stringResource(R.string.settings_teams_subtitle),
-                    icon = Icons.Default.Build,
-                    iconColor = colorResource(R.color.color_primary),
-                    onClick = onTeamsClick
-                )
-
-                Spacer(modifier = Modifier.size(8.dp))
-
-                SettingsCard(
-                    title = stringResource(R.string.settings_opponents_title),
-                    subtitle = stringResource(R.string.settings_opponents_subtitle),
-                    icon = Icons.Default.Group,
-                    iconColor = colorResource(R.color.color_strike),
-                    onClick = onOpponentsClick
-                )
-
-                Spacer(modifier = Modifier.size(8.dp))
 
                 SettingsCard(
                     title = stringResource(R.string.settings_backup_title),

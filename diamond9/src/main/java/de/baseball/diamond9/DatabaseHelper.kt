@@ -359,40 +359,94 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     fun getStatsForPitcher(pitcherId: Long): PitcherStats? {
         val pitcher = pitcherDao.getPitcherById(pitcherId) ?: return null
         val pitches = getPitchesForPitcher(pitcherId)
-        val outs = atBatDao.getOutsForGame(pitcher.gameId)
 
+        var bfCount = 0
+        var balls = 0
         var strikes = 0
+        var walks = 0
+        var hbp = 0
+        var hits = 0
+        var strikeouts = 0
+        var totalPitchesCount = 0
+        
         var currentStrikesAtBat = 0
-        for (p in pitches) {
-            when (p.type) {
-                "S", "SO" -> {
+        val resultMarkers = setOf("W", "HBP", "H", "1B", "2B", "3B", "HR", "SO", "KL", "GO", "FO", "LO", "FC", "E", "DP", "SAC")
+
+        for (i in pitches.indices) {
+            val p = pitches[i]
+            val type = p.type
+
+            // BF counting: prefer 'BF' marker, otherwise infer from result markers if not followed by 'BF'
+            if (type == "BF") {
+                bfCount++
+                currentStrikesAtBat = 0
+            } else if (type in resultMarkers) {
+                val nextIsBF = i + 1 < pitches.size && pitches[i + 1].type == "BF"
+                if (!nextIsBF) {
+                    bfCount++
+                    currentStrikesAtBat = 0
+                }
+            }
+
+            // Pitch counting
+            if (type in setOf("B", "S", "F", "HBP", "H", "1B", "2B", "3B", "HR", "GO", "FO", "LO", "FC", "E", "DP", "SAC")) {
+                totalPitchesCount++
+            } else if (type == "SO" || type == "KL") {
+                val prevIsS = i > 0 && pitches[i - 1].type == "S"
+                if (!prevIsS) totalPitchesCount++
+            } else if (type == "W") {
+                val prevIsB = i > 0 && pitches[i - 1].type == "B"
+                if (!prevIsB) totalPitchesCount++
+            }
+
+            // Stat specific counting
+            when (type) {
+                "B" -> balls++
+                "S" -> {
                     strikes++
                     currentStrikesAtBat++
                 }
-                "F" -> {
-                    if (currentStrikesAtBat < 2) {
+                "SO", "KL" -> {
+                    strikeouts++
+                    val prevIsS = i > 0 && pitches[i - 1].type == "S"
+                    if (!prevIsS) {
                         strikes++
                         currentStrikesAtBat++
                     }
                 }
-                "BF" -> {
-                    currentStrikesAtBat = 0
+                "F" -> {
+                    strikes++
+                    currentStrikesAtBat++
                 }
+                "W" -> walks++
+                "HBP" -> hbp++
+                "H", "1B", "2B", "3B", "HR", "GO", "FO", "LO", "FC", "E", "DP", "SAC" -> {
+                    strikes++ // Ball-in-play counts as a strike for S%
+                    if (type in setOf("H", "1B", "2B", "3B", "HR")) {
+                        hits++
+                    }
+                }
+            }
+            
+            if (type == "RO") {
+                currentStrikesAtBat = 0
             }
         }
 
+        val pitcherOuts = pitches.count { it.type in setOf("SO", "KL", "GO", "FO", "LO", "RO", "FC", "DP", "SAC") }
+
         return PitcherStats(
             pitcher = pitcher,
-            bf = pitches.count { it.type == "BF" },
-            balls = pitches.count { it.type == "B" },
+            bf = bfCount,
+            balls = balls,
             strikes = strikes,
-            walks = pitches.count { it.type == "W" },
-            hbp = pitches.count { it.type == "HBP" },
-            hits = pitches.count { it.type in setOf("H", "1B", "2B", "3B", "HR") },
-            strikeouts = pitches.count { it.type == "SO" },
-            totalPitches = pitches.count { it.type == "B" || it.type == "S" || it.type == "SO" || it.type == "F" || it.type == "HBP" },
+            walks = walks,
+            hbp = hbp,
+            hits = hits,
+            strikeouts = strikeouts,
+            totalPitches = totalPitchesCount,
             pitches = pitches,
-            ip = formatIP(outs)
+            ip = formatIP(pitcherOuts)
         )
     }
 

@@ -17,6 +17,9 @@ fun buildBatterStats(pitches: List<Pitch>): List<BatterStats> {
     var other = 0  // HBP, H: real thrown pitches that end the at-bat
     var batterNr = 1
 
+    // Result markers that end an at-bat
+    val resultTypes = setOf("BF", "W", "HBP", "H", "1B", "2B", "3B", "HR", "SO", "GO", "FO", "LO")
+
     pitches.forEach { pitch ->
         when (pitch.type) {
             "B"   -> balls++
@@ -25,24 +28,25 @@ fun buildBatterStats(pitches: List<Pitch>): List<BatterStats> {
             "F"   -> fouls++
             "HBP" -> other++     // hit by pitch counts in total, not strikes
             "H", "1B", "2B", "3B", "HR" -> other++  // ball-in-play counts in total, not strikes
-            "GO", "FO" -> other++  // ground out / fly out counts in total
-            "BF" -> {
-                val total = balls + strikes + fouls + other
-                if (total > 0) {
-                    batters.add(
-                        BatterStats(
-                            batterNr = batterNr,
-                            balls = balls,
-                            strikes = strikes,
-                            fouls = fouls,
-                            total = total,
-                            strikePercent = (strikes + fouls).toFloat() / total
-                        )
+            "GO", "FO", "LO" -> other++  // ground out / fly out / line out counts in total
+        }
+
+        if (pitch.type in resultTypes) {
+            val total = balls + strikes + fouls + other
+            if (total > 0) {
+                batters.add(
+                    BatterStats(
+                        batterNr = batterNr,
+                        balls = balls,
+                        strikes = strikes,
+                        fouls = fouls,
+                        total = total,
+                        strikePercent = (strikes + fouls).toFloat() / total
                     )
-                }
-                batterNr++
-                balls = 0; strikes = 0; fouls = 0; other = 0
+                )
             }
+            batterNr++
+            balls = 0; strikes = 0; fouls = 0; other = 0
         }
     }
     return batters
@@ -84,39 +88,50 @@ fun groupPitchesByBatter(pitches: List<Pitch>): List<BatterGroup> {
     var current = mutableListOf<Pitch>()
     var batterNr = 1
 
+    // Result markers that end an at-bat
+    val resultTypes = setOf("BF", "W", "HBP", "H", "1B", "2B", "3B", "HR", "SO", "GO", "FO", "LO")
+
     pitches.forEach { pitch ->
-        when (pitch.type) {
-            "B", "S", "F", "W", "HBP", "H", "1B", "2B", "3B", "HR", "SO", "GO", "FO" -> current.add(pitch)
-            "BF" -> {
-                if (current.isNotEmpty()) {
-                    val groupInning = current.firstOrNull()?.inning ?: 1
-                    groups.add(
-                        BatterGroup(
-                            batterNr = batterNr,
-                            battingSlot = ((batterNr - 1) % 9) + 1,
-                            jerseyNumber = "",
-                            pitches = current.toList(),
-                            inning = groupInning
-                        )
+        if (pitch.type != "RO") {
+            current.add(pitch)
+        }
+        
+        if (pitch.type in resultTypes) {
+            // Filter out 'BF' (and potentially other marker-only pitches) from being counted 
+            // as real pitches within the group's pitch list.
+            val actualPitches = current.filter { it.type != "BF" }
+
+            if (actualPitches.isNotEmpty()) {
+                val groupInning = actualPitches.firstOrNull()?.inning ?: current.firstOrNull()?.inning ?: 1
+                groups.add(
+                    BatterGroup(
+                        batterNr = batterNr,
+                        battingSlot = ((batterNr - 1) % 9) + 1,
+                        jerseyNumber = "",
+                        pitches = actualPitches,
+                        inning = groupInning
                     )
-                    current = mutableListOf()
-                }
-                batterNr++
+                )
+                current = mutableListOf()
             }
+            batterNr++
         }
     }
     // Letzter offener At-Bat
     if (current.isNotEmpty()) {
-        val groupInning = current.firstOrNull()?.inning ?: 1
-        groups.add(
-            BatterGroup(
-                batterNr = batterNr,
-                battingSlot = ((batterNr - 1) % 9) + 1,
-                jerseyNumber = "",
-                pitches = current.toList(),
-                inning = groupInning
+        val actualPitches = current.filter { it.type != "BF" }
+        if (actualPitches.isNotEmpty()) {
+            val groupInning = actualPitches.firstOrNull()?.inning ?: current.firstOrNull()?.inning ?: 1
+            groups.add(
+                BatterGroup(
+                    batterNr = batterNr,
+                    battingSlot = ((batterNr - 1) % 9) + 1,
+                    jerseyNumber = "",
+                    pitches = actualPitches,
+                    inning = groupInning
+                )
             )
-        )
+        }
     }
     return groups
 }
