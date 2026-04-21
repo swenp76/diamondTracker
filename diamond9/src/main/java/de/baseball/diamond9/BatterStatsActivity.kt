@@ -299,7 +299,7 @@ private fun GamePitcherTab(gameId: Long, db: DatabaseHelper) {
     var sortAsc by remember { mutableStateOf(false) }
 
     fun spct(r: PitcherStats) =
-        if (r.totalPitches > 0) r.strikes.toFloat() / r.totalPitches else -1f
+        if (r.totalPitches > 0) (r.strikes).toFloat() / r.totalPitches else -1f
     fun name(r: PitcherStats) =
         players[r.pitcher.playerId]?.name ?: r.pitcher.name
 

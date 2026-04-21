@@ -369,7 +369,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
         var totalPitchesCount = 0
         
         var currentStrikesAtBat = 0
-        val resultMarkers = setOf("W", "HBP", "H", "1B", "2B", "3B", "HR", "SO", "GO", "FO", "LO")
+        val resultMarkers = setOf("W", "HBP", "H", "1B", "2B", "3B", "HR", "SO", "KL", "GO", "FO", "LO", "FC", "E", "DP", "SAC")
 
         for (i in pitches.indices) {
             val p = pitches[i]
@@ -387,11 +387,10 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
                 }
             }
 
-            // Pitch counting: "B", "S", "F", "HBP", "H", "1B", "2B", "3B", "HR", "GO", "FO", "LO" are pitches.
-            // "SO" and "W" are markers but could be the only pitch recorded in legacy data.
-            if (type in setOf("B", "S", "F", "HBP", "H", "1B", "2B", "3B", "HR", "GO", "FO", "LO")) {
+            // Pitch counting
+            if (type in setOf("B", "S", "F", "HBP", "H", "1B", "2B", "3B", "HR", "GO", "FO", "LO", "FC", "E", "DP", "SAC")) {
                 totalPitchesCount++
-            } else if (type == "SO") {
+            } else if (type == "SO" || type == "KL") {
                 val prevIsS = i > 0 && pitches[i - 1].type == "S"
                 if (!prevIsS) totalPitchesCount++
             } else if (type == "W") {
@@ -406,7 +405,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
                     strikes++
                     currentStrikesAtBat++
                 }
-                "SO" -> {
+                "SO", "KL" -> {
                     strikeouts++
                     val prevIsS = i > 0 && pitches[i - 1].type == "S"
                     if (!prevIsS) {
@@ -415,14 +414,17 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
                     }
                 }
                 "F" -> {
-                    if (currentStrikesAtBat < 2) {
-                        strikes++
-                        currentStrikesAtBat++
-                    }
+                    strikes++
+                    currentStrikesAtBat++
                 }
                 "W" -> walks++
                 "HBP" -> hbp++
-                "H", "1B", "2B", "3B", "HR" -> hits++
+                "H", "1B", "2B", "3B", "HR", "GO", "FO", "LO", "FC", "E", "DP", "SAC" -> {
+                    strikes++ // Ball-in-play counts as a strike for S%
+                    if (type in setOf("H", "1B", "2B", "3B", "HR")) {
+                        hits++
+                    }
+                }
             }
             
             if (type == "RO") {
@@ -430,7 +432,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
             }
         }
 
-        val pitcherOuts = pitches.count { it.type in setOf("SO", "GO", "FO", "LO", "RO") }
+        val pitcherOuts = pitches.count { it.type in setOf("SO", "KL", "GO", "FO", "LO", "RO", "FC", "DP", "SAC") }
 
         return PitcherStats(
             pitcher = pitcher,

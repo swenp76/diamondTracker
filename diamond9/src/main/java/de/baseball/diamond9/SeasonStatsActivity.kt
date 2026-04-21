@@ -296,7 +296,7 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper) {
     val rows = remember(rawRows, sortCol, sortAsc) {
         fun name(r: SeasonPitcherRow) = players[r.playerId]?.name ?: ""
         fun spct(r: SeasonPitcherRow) =
-            if (r.totalPitches > 0) (r.strikes + r.fouls).toFloat() / r.totalPitches else -1f
+            if (r.totalPitches > 0) r.strikes.toFloat() / r.totalPitches else -1f
         val sorted = when (sortCol) {
             0  -> rawRows.sortedBy { name(it) }
             1  -> rawRows.sortedBy { it.bf }
@@ -375,7 +375,7 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper) {
                 val name = players[row.playerId]?.let { "#${it.number} ${it.name}" }
                     ?: stringResource(R.string.season_stats_unknown_player)
                 val strikePctStr = if (row.totalPitches > 0)
-                    "%.0f%%".format((row.strikes + row.fouls).toFloat() / row.totalPitches * 100)
+                    "%.0f%%".format(row.strikes.toFloat() / row.totalPitches * 100)
                 else "---"
 
                 Row(
