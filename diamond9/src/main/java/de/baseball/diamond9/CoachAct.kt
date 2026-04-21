@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -36,8 +38,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import org.json.JSONObject
+import android.os.Build.VERSION.SDK_INT
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +60,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import coil.request.ImageRequest
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class CoachAct : ComponentActivity() {
@@ -62,36 +73,57 @@ class CoachAct : ComponentActivity() {
     private lateinit var db: DatabaseHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
         db = DatabaseHelper(this)
         setContent {
-            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-            val scope = rememberCoroutineScope()
+            val context = LocalContext.current
+            val imageLoader = remember {
+                ImageLoader.Builder(context)
+                    .components {
+                        if (SDK_INT >= 28) {
+                            add(ImageDecoderDecoder.Factory())
+                        } else {
+                            add(GifDecoder.Factory())
+                        }
+                    }
+                    .build()
+            }
 
-            AppDrawer(
-                drawerState = drawerState,
-                scope = scope,
-                currentActivity = CoachAct::class.java,
-                context = this
-            ) {
-                CoachSelectScreen(
-                    loadTeams = { db.getAllTeams() },
-                    onTeamClick = { team ->
-                        startActivity(
-                            Intent(this, GameListActivity::class.java).apply {
-                                putExtra("teamId", team.id)
-                                putExtra("teamName", team.name)
-                            }
-                        )
-                    },
-                    onMenuClick = {
-                        scope.launch { drawerState.open() }
-                    },
-                    onLoadDemoTeam = { showLoadDemoTeamDialog() }
-                )
+            var showSplash by remember { mutableStateOf(true) }
+
+            if (showSplash) {
+                SplashScreen(imageLoader = imageLoader, onTimeout = { showSplash = false })
+            } else {
+                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+                val scope = rememberCoroutineScope()
+
+                AppDrawer(
+                    drawerState = drawerState,
+                    scope = scope,
+                    currentActivity = CoachAct::class.java,
+                    context = this
+                ) {
+                    CoachSelectScreen(
+                        imageLoader = imageLoader,
+                        loadTeams = { db.getAllTeams() },
+                        onTeamClick = { team ->
+                            startActivity(
+                                Intent(this, GameListActivity::class.java).apply {
+                                    putExtra("teamId", team.id)
+                                    putExtra("teamName", team.name)
+                                }
+                            )
+                        },
+                        onMenuClick = {
+                            scope.launch { drawerState.open() }
+                        },
+                        onLoadDemoTeam = { showLoadDemoTeamDialog() }
+                    )
+                }
             }
         }
     }
@@ -144,7 +176,36 @@ class CoachAct : ComponentActivity() {
 }
 
 @Composable
+private fun SplashScreen(imageLoader: ImageLoader, onTimeout: () -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        delay(2500) // 2.5 seconds splash
+        onTimeout()
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = colorResource(R.color.color_background)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(R.raw.splash_animated)
+                    .build(),
+                contentDescription = null,
+                imageLoader = imageLoader,
+                modifier = Modifier.size(280.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun CoachSelectScreen(
+    imageLoader: ImageLoader,
     loadTeams: () -> List<Team>,
     onTeamClick: (Team) -> Unit,
     onMenuClick: () -> Unit,
@@ -173,13 +234,13 @@ private fun CoachSelectScreen(
             ) {
                 Text(
                     text = stringResource(R.string.app_name),
-                    fontSize = 42.sp,
+                    fontSize = 48.sp,
                     fontWeight = FontWeight.Bold,
                     color = colorResource(R.color.color_primary),
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 48.dp, bottom = 8.dp)
+                        .padding(top = 40.dp, bottom = 8.dp)
                 )
                 Text(
                     text = stringResource(R.string.coach_select_title),
