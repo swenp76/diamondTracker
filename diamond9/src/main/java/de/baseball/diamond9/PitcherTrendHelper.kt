@@ -97,14 +97,18 @@ fun groupPitchesByBatter(pitches: List<Pitch>): List<BatterGroup> {
         }
         
         if (pitch.type in resultTypes) {
-            if (current.isNotEmpty()) {
-                val groupInning = current.firstOrNull { it.type != "BF" }?.inning ?: current.firstOrNull()?.inning ?: 1
+            // Filter out 'BF' (and potentially other marker-only pitches) from being counted 
+            // as real pitches within the group's pitch list.
+            val actualPitches = current.filter { it.type != "BF" }
+
+            if (actualPitches.isNotEmpty()) {
+                val groupInning = actualPitches.firstOrNull()?.inning ?: current.firstOrNull()?.inning ?: 1
                 groups.add(
                     BatterGroup(
                         batterNr = batterNr,
                         battingSlot = ((batterNr - 1) % 9) + 1,
                         jerseyNumber = "",
-                        pitches = current.toList(),
+                        pitches = actualPitches,
                         inning = groupInning
                     )
                 )
@@ -115,16 +119,19 @@ fun groupPitchesByBatter(pitches: List<Pitch>): List<BatterGroup> {
     }
     // Letzter offener At-Bat
     if (current.isNotEmpty()) {
-        val groupInning = current.firstOrNull { it.type != "BF" }?.inning ?: current.firstOrNull()?.inning ?: 1
-        groups.add(
-            BatterGroup(
-                batterNr = batterNr,
-                battingSlot = ((batterNr - 1) % 9) + 1,
-                jerseyNumber = "",
-                pitches = current.toList(),
-                inning = groupInning
+        val actualPitches = current.filter { it.type != "BF" }
+        if (actualPitches.isNotEmpty()) {
+            val groupInning = actualPitches.firstOrNull()?.inning ?: current.firstOrNull()?.inning ?: 1
+            groups.add(
+                BatterGroup(
+                    batterNr = batterNr,
+                    battingSlot = ((batterNr - 1) % 9) + 1,
+                    jerseyNumber = "",
+                    pitches = actualPitches,
+                    inning = groupInning
+                )
             )
-        )
+        }
     }
     return groups
 }

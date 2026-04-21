@@ -10,7 +10,7 @@ Sie hilft beim Verwalten von Teams, Erstellen von Aufstellungen und Tracken von 
 - **Datenbank:** Room (SQLite) über DAOs + DatabaseHelper-Wrapper
 - **UI:** Jetpack Compose (Material 3)
 - **Package:** de.baseball.diamond9
-- **DB-Datei:** `pitcher.db` (Version 13)
+- **DB-Datei:** `pitcher.db` (Version 17)
 - **Lokalisierung:** Deutsch (Fallback, `values/`), Englisch (`values-en/`)
 
 ## Projektstruktur
@@ -123,7 +123,7 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ Einzelspiel-Export/Import: vollständiges JSON (Lineup, At-Bats, Pitches, Scoreboard) aus Spielliste
 - ✅ Status-Bar-Lesbarkeit: dunkle Icons in CoachAct (isAppearanceLightStatusBars)
 - ✅ At-Bat Results: 2-stufiger Result-Picker (H/K/BB in 1 Tap; OUT▸ → GO/FO/LO; ··· → KL/SAC/FC/E/DP/HBP)
-- ✅ Unit-Tests: PitcherTrendHelperTest (30 Tests), GameBatterStatsDaoTest (11 Tests), BackupManagerMigrationsTest (15 Tests)
+- ✅ Unit-Tests: PitcherTrendHelperTest (32 Tests), GameBatterStatsDaoTest (11 Tests), BackupManagerMigrationsTest (19 Tests)
 
 ---
 
@@ -131,16 +131,7 @@ Alle Farben über `colors.xml` referenzieren:
 
 ### 🔴 Hoch
 
-### 🟡 Mittel
-
-#### #3 – Cleanup: NavDrawer Einstellungen
-**Datei:** `SettingsActivity.kt`
-
-`SettingsCard` für "Teams" und "Opponents" aus `SettingsScreen` entfernen —
-diese Einträge sind im NavDrawer bereits vorhanden. `SettingsScreen` bleibt
-als leere Hülle für künftige globale Einstellungen (Backup etc.) erhalten.
-
----
+- ✅ **#3** Cleanup: NavDrawer Einstellungen (Teams/Opponents entfernt)
 
 #### #8 – Feature: Saison-Verwaltung
 Neue DB-Tabelle `seasons` (→ DB-Migration):
@@ -232,7 +223,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 
 ---
 
-## Datenbankschema (Version 13)
+## Datenbankschema (Version 17)
 
 | Tabelle | Wichtige Felder |
 |---------|----------------|
@@ -278,7 +269,9 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | 12 → 13 | `league_settings`-Tabelle (Team Hub / Liga-Settings) | ✅ |
 | 13 → 14 | `game_number` in `games` | ✅ |
 | 14 → 15 | `pitchers.name` null backfill | ✅ |
-| 15 → 16 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
-| 16 → 17 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
+| 15 → 16 | `pitches.type` null backfill | ✅ |
+| 16 → 17 | `pitches.at_bat_id` null backfill (0L) | ✅ |
+| 17 → 18 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
+| 18 → 19 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
 
 **Hinweis:** Jede Migration hier eintragen und gleichzeitig `BackupManager` aktualisieren.
