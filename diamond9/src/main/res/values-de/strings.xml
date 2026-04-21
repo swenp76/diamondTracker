@@ -74,7 +74,9 @@
     <string name="pitch_label_slot_with_jersey">── %1$s (Slot %2$d) ─────────────</string>
 
     <!-- ── PitchTrackActivity ─────────────────────────────────────────────── -->
-    <string name="label_batter">Batter:</string>
+    <string name="label_batter">Schlagmann:</string>
+    <string name="label_on_deck">On Deck:</string>
+    <string name="label_in_the_hole">In Hole:</string>
     <string name="label_batter_slot">Slot %d</string>
     <string name="label_batter_slot_with_jersey">%1$s  (Slot %2$d)</string>
     <string name="hint_lineup">Aufstellung ▶</string>
@@ -296,6 +298,10 @@
 
     <!-- ── Season Stats ─────────────────────────────────────────────────── -->
     <string name="season_stats_btn">Saison-Statistiken</string>
+    <string name="season_stats_from">Von</string>
+    <string name="season_stats_to">Bis</string>
+    <string name="season_stats_clear_filter">Filter löschen</string>
+
 
     <!-- ── Game Timer ───────────────────────────────────────────────────── -->
     <string name="timer_btn_start">Start</string>

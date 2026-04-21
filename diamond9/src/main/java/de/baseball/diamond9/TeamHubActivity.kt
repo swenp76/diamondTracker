@@ -49,7 +49,10 @@ class TeamHubActivity : ComponentActivity() {
                     })
                 },
                 onStats = {
-                    Toast.makeText(this, getString(R.string.teamhub_stats_coming_soon), Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this, SeasonStatsActivity::class.java).apply {
+                        putExtra("teamId", teamId)
+                        putExtra("teamName", teamName)
+                    })
                 },
                 onEditRoster = {
                     startActivity(Intent(this, TeamDetailActivity::class.java).apply {

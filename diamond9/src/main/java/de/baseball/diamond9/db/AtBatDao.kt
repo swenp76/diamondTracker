@@ -77,7 +77,9 @@ abstract class AtBatDao {
         FROM at_bats ab
         JOIN games g ON g.id = ab.game_id
         WHERE g.team_id = :teamId AND ab.result IS NOT NULL AND ab.player_id > 0
+          AND (:startDate IS NULL OR :startDate = '' OR (substr(g.date,7,4)||substr(g.date,4,2)||substr(g.date,1,2)) >= :startDate)
+          AND (:endDate IS NULL OR :endDate = '' OR (substr(g.date,7,4)||substr(g.date,4,2)||substr(g.date,1,2)) <= :endDate)
         GROUP BY ab.player_id
     """)
-    abstract fun getSeasonBatterStats(teamId: Long): List<SeasonBatterRow>
+    abstract fun getSeasonBatterStats(teamId: Long, startDate: String? = null, endDate: String? = null): List<SeasonBatterRow>
 }

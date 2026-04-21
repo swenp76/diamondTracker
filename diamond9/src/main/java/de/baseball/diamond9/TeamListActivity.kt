@@ -3,6 +3,7 @@ package de.baseball.diamond9
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputFilter
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -111,6 +112,7 @@ class TeamListActivity : ComponentActivity() {
         val et = EditText(this).apply {
             hint = getString(R.string.hint_team_name)
             setPadding(48, 24, 48, 24)
+            filters = arrayOf(InputFilter.LengthFilter(50))
         }
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.dialog_add_team_title))

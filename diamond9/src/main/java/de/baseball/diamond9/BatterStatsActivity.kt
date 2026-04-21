@@ -67,11 +67,19 @@ class BatterStatsActivity : ComponentActivity() {
                 db           = db,
                 onBackClick  = { finish() },
                 onExport     = { tab, format, action ->
-                    val teamId = db.getGame(gameId)?.teamId ?: -1L
+                    val game = db.getGame(gameId)
+                    val teamId = game?.teamId ?: -1L
                     val players = if (teamId > 0) db.getPlayersForTeam(teamId).associateBy { it.id } else emptyMap()
+
+                    val gameInfo = buildString {
+                        append(gameDate)
+                        game?.gameTime?.takeIf { it.isNotBlank() }?.let { append(" $it") }
+                        game?.gameNumber?.takeIf { it.isNotBlank() }?.let { append(" (#$it)") }
+                    }
+
                     val file = when (tab) {
-                        0 -> StatsExporter.buildGameBatterTable(this, gameOpponent, gameDate, db.getGameBatterStats(gameId), players, format)
-                        else -> StatsExporter.buildGamePitcherTable(this, gameOpponent, gameDate, db.getGamePitcherStats(gameId), players, format)
+                        0 -> StatsExporter.buildGameBatterTable(this, gameOpponent, gameInfo, db.getGameBatterStats(gameId), players, format, getString(R.string.season_stats_tab_batter))
+                        else -> StatsExporter.buildGamePitcherTable(this, gameOpponent, gameInfo, db.getGamePitcherStats(gameId), players, format, getString(R.string.season_stats_tab_pitcher))
                     }
                     when (action) {
                         ExportAction.SHARE -> StatsExporter.shareFile(this, file, format)

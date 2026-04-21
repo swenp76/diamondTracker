@@ -540,6 +540,7 @@ private fun HalfInningBar(
 
     fun applyState(newState: HalfInningState) {
         db.updateHalfInning(gameId, newState.inning, newState.isTopHalf)
+        db.updateGameState(gameId, newState.inning, 0)
         state = newState
     }
 

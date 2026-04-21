@@ -10,6 +10,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -127,12 +129,14 @@ private fun OwnLineupScreen(
     var substitutions by remember { mutableStateOf(emptyList<Substitution>()) }
     var lineup by remember { mutableStateOf(emptyMap<Int, Player>()) }
     var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
+    var totalBF by remember { mutableStateOf(0) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 halfInningState = db.getHalfInningState(gameId)
+                totalBF = db.getTotalBFForGame(gameId)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -261,9 +265,15 @@ private fun OwnLineupScreen(
 
                 items(slotStates) { state ->
                     val hasSubs = substitutions.any { it.slot == state.slot }
+                    val leadoff = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
+                    val lineupSize = slotStates.count { it.currentPlayer != null || it.slot <= 9 }
+                    val currentBatterSlot = ((leadoff - 1 + totalBF) % lineupSize) + 1
+                    val isCurrentBatter = state.slot == currentBatterSlot
+
                     StarterRow(
                         state = state,
                         hasSubs = hasSubs,
+                        isCurrentBatter = isCurrentBatter,
                         onRowClick = { if (!hasSubs) activeDialogSlot = state.slot },
                         onLongClick = {
                             if (isOffenseMode && state.currentPlayer != null) {
@@ -504,6 +514,7 @@ private fun SlotNumber(slot: Int, color: Color) {
 private fun StarterRow(
     state: SlotState,
     hasSubs: Boolean,
+    isCurrentBatter: Boolean = false,
     onRowClick: () -> Unit,
     onLongClick: () -> Unit,
     onSwapClick: () -> Unit,
@@ -516,12 +527,14 @@ private fun StarterRow(
                 onClick = onRowClick,
                 onLongClick = onLongClick
             ),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = if (isCurrentBatter) BorderStroke(2.dp, colorResource(R.color.color_primary)) else null,
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .padding(vertical = 4.dp, horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             SlotNumber(state.slot, colorResource(R.color.color_primary))

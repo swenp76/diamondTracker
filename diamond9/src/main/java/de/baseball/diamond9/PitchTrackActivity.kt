@@ -562,7 +562,8 @@ class PitchTrackActivity : ComponentActivity() {
                         if (gameId != -1L) {
                             val i = Intent(context, OpponentLineupActivity::class.java)
                             i.putExtra("gameId", gameId)
-                            i.putExtra("opponentName", stats.pitcher.name)
+                            val opponentTeamName = db.getGame(gameId)?.opponent ?: stats.pitcher.name
+                            i.putExtra("opponentName", opponentTeamName)
                             opponentLineupLauncher.launch(i)
                         }
                     }

@@ -296,7 +296,7 @@ private fun CoachSelectScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Menu,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.nav_home),
                     tint = colorResource(R.color.color_primary)
                 )
             }

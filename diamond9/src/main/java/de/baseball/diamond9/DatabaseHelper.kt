@@ -217,6 +217,7 @@ data class SeasonBatterRow(
 
 data class SeasonPitcherRow(
     @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "name") val name: String?,
     @ColumnInfo(name = "total_pitches") val totalPitches: Int,
     @ColumnInfo(name = "bf") val bf: Int,
     @ColumnInfo(name = "balls") val balls: Int,
@@ -668,11 +669,11 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     fun getGamePitcherStats(gameId: Long): List<PitcherStats> =
         getPitchersForGame(gameId).mapNotNull { getStatsForPitcher(it.id) }
 
-    fun getSeasonBatterStats(teamId: Long): List<SeasonBatterRow> =
-        atBatDao.getSeasonBatterStats(teamId)
+    fun getSeasonBatterStats(teamId: Long, startDate: String? = null, endDate: String? = null): List<SeasonBatterRow> =
+        atBatDao.getSeasonBatterStats(teamId, startDate, endDate)
 
-    fun getSeasonPitcherStats(teamId: Long): List<SeasonPitcherRow> =
-        pitcherDao.getSeasonPitcherStats(teamId)
+    fun getSeasonPitcherStats(teamId: Long, startDate: String? = null, endDate: String? = null): List<SeasonPitcherRow> =
+        pitcherDao.getSeasonPitcherStats(teamId, startDate, endDate)
 
     // ── Scoreboard ─────────────────────────────────────────────────────────────
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -60,16 +61,23 @@ class SeasonStatsActivity : ComponentActivity() {
         val db = DatabaseHelper(this)
 
         setContent {
+            var startDate by remember { mutableStateOf("") }
+            var endDate by remember { mutableStateOf("") }
+
             SeasonStatsScreen(
                 teamId = teamId,
                 teamName = teamName,
                 db = db,
                 onBackClick = { finish() },
+                startDate = startDate,
+                endDate = endDate,
+                onDateChange = { s, e -> startDate = s; endDate = e },
                 onExport = { tab, format, action ->
                     val players = db.getPlayersForTeam(teamId).associateBy { it.id }
+                    val dateRange = if (startDate.isNotBlank() || endDate.isNotBlank()) " ($startDate - $endDate)" else ""
                     val file = when (tab) {
-                        0 -> StatsExporter.buildBatterTable(this, teamName, "", db.getSeasonBatterStats(teamId), players, format)
-                        else -> StatsExporter.buildSeasonPitcherTable(this, teamName, "", db.getSeasonPitcherStats(teamId), players, format)
+                        0 -> StatsExporter.buildBatterTable(this, teamName, dateRange, db.getSeasonBatterStats(teamId, startDate, endDate), players, format, getString(R.string.season_stats_tab_batter))
+                        else -> StatsExporter.buildSeasonPitcherTable(this, teamName, dateRange, db.getSeasonPitcherStats(teamId, startDate, endDate), players, format, getString(R.string.season_stats_tab_pitcher))
                     }
                     when (action) {
                         ExportAction.SHARE -> StatsExporter.shareFile(this, file, format)
@@ -91,6 +99,9 @@ private fun SeasonStatsScreen(
     teamId: Long,
     teamName: String,
     db: DatabaseHelper,
+    startDate: String,
+    endDate: String,
+    onDateChange: (String, String) -> Unit,
     onBackClick: () -> Unit,
     onExport: (tab: Int, format: ExportFormat, action: ExportAction) -> Unit
 ) {
@@ -132,6 +143,12 @@ private fun SeasonStatsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            DateFilterHeader(
+                startDate = startDate,
+                endDate = endDate,
+                onDateChange = onDateChange
+            )
+
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = Color.White,
@@ -147,8 +164,8 @@ private fun SeasonStatsScreen(
             }
 
             when (selectedTab) {
-                0 -> BatterStatsTab(teamId = teamId, db = db)
-                1 -> PitcherStatsTab(teamId = teamId, db = db)
+                0 -> BatterStatsTab(teamId = teamId, db = db, startDate = startDate, endDate = endDate)
+                1 -> PitcherStatsTab(teamId = teamId, db = db, startDate = startDate, endDate = endDate)
             }
         }
     }
@@ -164,9 +181,122 @@ private fun SeasonStatsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
-    val rawRows = remember(teamId) { db.getSeasonBatterStats(teamId) }
+private fun DateFilterHeader(
+    startDate: String,
+    endDate: String,
+    onDateChange: (String, String) -> Unit
+) {
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showEndPicker by remember { mutableStateOf(false) }
+
+    Surface(
+        color = Color.White,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Start Date
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.season_stats_from), style = MaterialTheme.typography.labelMedium, color = colorResource(R.color.color_text_secondary))
+                OutlinedCard(
+                    onClick = { showStartPicker = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        startDate.ifEmpty { stringResource(R.string.hint_date_format) },
+                        modifier = Modifier.padding(8.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            // End Date
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.season_stats_to), style = MaterialTheme.typography.labelMedium, color = colorResource(R.color.color_text_secondary))
+                OutlinedCard(
+                    onClick = { showEndPicker = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        endDate.ifEmpty { stringResource(R.string.hint_date_format) },
+                        modifier = Modifier.padding(8.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            // Clear Button
+            if (startDate.isNotBlank() || endDate.isNotBlank()) {
+                IconButton(
+                    onClick = { onDateChange("", "") },
+                    modifier = Modifier.padding(top = 16.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.season_stats_clear_filter),
+                        tint = colorResource(R.color.color_strike)
+                    )
+                }
+            }
+        }
+    }
+
+    if (showStartPicker) {
+        DatePickerDialog(
+            onDismiss = { showStartPicker = false },
+            onDateSelected = { onDateChange(it, endDate); showStartPicker = false }
+        )
+    }
+    if (showEndPicker) {
+        DatePickerDialog(
+            onDismiss = { showEndPicker = false },
+            onDateSelected = { onDateChange(startDate, it); showEndPicker = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DatePickerDialog(
+    onDismiss: () -> Unit,
+    onDateSelected: (String) -> Unit
+) {
+    val datePickerState = rememberDatePickerState()
+    androidx.compose.material3.DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                datePickerState.selectedDateMillis?.let {
+                    val cal = java.util.Calendar.getInstance().apply { timeInMillis = it }
+                    val dateStr = "%02d.%02d.%04d".format(
+                        cal.get(java.util.Calendar.DAY_OF_MONTH),
+                        cal.get(java.util.Calendar.MONTH) + 1,
+                        cal.get(java.util.Calendar.YEAR)
+                    )
+                    onDateSelected(dateStr)
+                }
+            }) { Text(stringResource(R.string.btn_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }
+        }
+    ) {
+        androidx.compose.material3.DatePicker(state = datePickerState)
+    }
+}
+
+@Composable
+private fun BatterStatsTab(teamId: Long, db: DatabaseHelper, startDate: String, endDate: String) {
+    val rawRows = remember(teamId, startDate, endDate) { db.getSeasonBatterStats(teamId, startDate, endDate) }
     val players = remember(teamId) { db.getPlayersForTeam(teamId).associateBy { it.id } }
 
     // Default: sort by AVG descending (col index 7)
@@ -337,8 +467,8 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper) {
 }
 
 @Composable
-private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper) {
-    val rawRows = remember(teamId) { db.getSeasonPitcherStats(teamId) }
+private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper, startDate: String, endDate: String) {
+    val rawRows = remember(teamId, startDate, endDate) { db.getSeasonPitcherStats(teamId, startDate, endDate) }
     val players = remember(teamId) { db.getPlayersForTeam(teamId).associateBy { it.id } }
 
     // Default: sort by S% descending (col index 3)
@@ -348,7 +478,7 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper) {
     val rows = remember(rawRows, sortCol, sortAsc) {
         fun name(r: SeasonPitcherRow) = players[r.playerId]?.name ?: ""
         fun spct(r: SeasonPitcherRow) =
-            if (r.totalPitches > 0) r.strikes.toFloat() / r.totalPitches else -1f
+            if (r.totalPitches > 0) (r.strikes + r.fouls).toFloat() / r.totalPitches else -1f
         val sorted = when (sortCol) {
             0  -> rawRows.sortedBy { name(it) }
             1  -> rawRows.sortedBy { it.bf }
@@ -427,7 +557,7 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper) {
                 val name = players[row.playerId]?.let { "#${it.number} ${it.name}" }
                     ?: stringResource(R.string.season_stats_unknown_player)
                 val strikePctStr = if (row.totalPitches > 0)
-                    "%.0f%%".format(row.strikes.toFloat() / row.totalPitches * 100)
+                    "%.0f%%".format((row.strikes + row.fouls).toFloat() / row.totalPitches * 100)
                 else "---"
 
                 Row(
