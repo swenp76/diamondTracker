@@ -110,7 +110,7 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ Mehrsprachigkeit (Deutsch/Englisch)
 - ✅ Offense / Batting-Tracking (BattingTrackActivity) mit At-Bat-Ergebnissen
 - ✅ **#4** Out-Button: nur Outs+1, kein Batter-Wechsel (für Stolen Base Outs etc.)
-- ✅ **#7** Spielübergreifende Statistiken (SeasonStatsActivity): Batter-Tab (PA/AB/H/AVG/OBP/BB/K) + Pitcher-Tab (BF/P/S%/BB/K)
+- ✅ **#7** Spielübergreifende Statistiken (SeasonStatsActivity): Batter-Tab (PA/AB/H/AVG/OBP/BB/K) + Pitcher-Tab (BF/P/S%/BB/K) – inkl. Datumsfilter (Von/Bis)
 - ✅ **#9** Scoreboard im GameHub (scoreboard_runs-Tabelle, 9 Innings, Away/Home, klickbare Zellen)
 - ✅ **#10** Spieluhr im GameHub (start_time in games, aufwärts zählend, überlebt App-Neustart)
 - ✅ **#2** Gegner teamabhängig (opponent_teams.team_id, DB v8, NavDrawer zeigt Opponents nur bei aktivem Team)
@@ -124,6 +124,8 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ Status-Bar-Lesbarkeit: dunkle Icons in CoachAct (isAppearanceLightStatusBars)
 - ✅ At-Bat Results: 2-stufiger Result-Picker (H/K/BB in 1 Tap; OUT▸ → GO/FO/LO; ··· → KL/SAC/FC/E/DP/HBP)
 - ✅ Unit-Tests: PitcherTrendHelperTest (32 Tests), GameBatterStatsDaoTest (11 Tests), BackupManagerMigrationsTest (19 Tests)
+- ✅ Export-Verbesserung: PDF/JPG mit Headlines ("Batting stats", "Pitching stats") und Spiel-Metadaten (Zeit, Nr.)
+- ✅ Security: Backup-Sicherheits-Checks (Path Traversal Schutz, String-Längen-Validierung 50/3/20/10)
 
 ---
 
