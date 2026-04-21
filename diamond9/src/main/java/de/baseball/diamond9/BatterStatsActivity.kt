@@ -48,15 +48,15 @@ class BatterStatsActivity : ComponentActivity() {
                 gameDate     = gameDate,
                 db           = db,
                 onBackClick  = { finish() },
-                onShareClick = { tab ->
+                onShareClick = { tab, format ->
                     val teamId = db.getGame(gameId)?.teamId ?: -1L
                     val players = if (teamId > 0) db.getPlayersForTeam(teamId).associateBy { it.id } else emptyMap()
                     when (tab) {
-                        0 -> StatsPdfExporter.shareGameBatterTable(
-                            this, gameOpponent, gameDate, db.getGameBatterStats(gameId), players
+                        0 -> StatsExporter.shareGameBatterTable(
+                            this, gameOpponent, gameDate, db.getGameBatterStats(gameId), players, format
                         )
-                        1 -> StatsPdfExporter.shareGamePitcherTable(
-                            this, gameOpponent, gameDate, db.getGamePitcherStats(gameId), players
+                        1 -> StatsExporter.shareGamePitcherTable(
+                            this, gameOpponent, gameDate, db.getGamePitcherStats(gameId), players, format
                         )
                     }
                 }
@@ -73,9 +73,10 @@ private fun BatterStatsScreen(
     gameDate: String,
     db: DatabaseHelper,
     onBackClick: () -> Unit,
-    onShareClick: (tab: Int) -> Unit
+    onShareClick: (tab: Int, format: ExportFormat) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
+    var showFormatDialog by remember { mutableStateOf(false) }
     val tabs = listOf(
         stringResource(R.string.season_stats_tab_batter),
         stringResource(R.string.season_stats_tab_pitcher)
@@ -99,7 +100,7 @@ private fun BatterStatsScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onShareClick(selectedTab) }) {
+                    IconButton(onClick = { showFormatDialog = true }) {
                         Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_share))
                     }
                 },
@@ -131,6 +132,16 @@ private fun BatterStatsScreen(
                 1 -> GamePitcherTab(gameId = gameId, db = db)
             }
         }
+    }
+
+    if (showFormatDialog) {
+        ExportFormatDialog(
+            onDismiss = { showFormatDialog = false },
+            onSelect = { format ->
+                showFormatDialog = false
+                onShareClick(selectedTab, format)
+            }
+        )
     }
 }
 

@@ -44,7 +44,7 @@ class StatsActivity : ComponentActivity() {
                 StatsScreen(
                     stats = it,
                     onBackClick = { finish() },
-                    onShareClick = { StatsPdfExporter.sharePitcherDetail(this, it) }
+                    onShareClick = { format -> StatsExporter.sharePitcherDetail(this, it, format) }
                 )
             } ?: run {
                 finish()
@@ -58,8 +58,10 @@ class StatsActivity : ComponentActivity() {
 fun StatsScreen(
     stats: PitcherStats,
     onBackClick: () -> Unit,
-    onShareClick: () -> Unit = {}
+    onShareClick: (ExportFormat) -> Unit = {}
 ) {
+    var showFormatDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         containerColor = colorResource(R.color.color_background),
         topBar = {
@@ -71,7 +73,7 @@ fun StatsScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onShareClick) {
+                    IconButton(onClick = { showFormatDialog = true }) {
                         Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_share))
                     }
                 }
@@ -123,6 +125,16 @@ fun StatsScreen(
 
             PitchGrid(stats.pitches)
         }
+    }
+
+    if (showFormatDialog) {
+        ExportFormatDialog(
+            onDismiss = { showFormatDialog = false },
+            onSelect = { format ->
+                showFormatDialog = false
+                onShareClick(format)
+            }
+        )
     }
 }
 

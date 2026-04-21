@@ -46,14 +46,14 @@ class SeasonStatsActivity : ComponentActivity() {
                 teamName = teamName,
                 db = db,
                 onBackClick = { finish() },
-                onShareClick = { tab ->
+                onShareClick = { tab, format ->
                     val players = db.getPlayersForTeam(teamId).associateBy { it.id }
                     when (tab) {
-                        0 -> StatsPdfExporter.shareBatterTable(
-                            this, teamName, "", db.getSeasonBatterStats(teamId), players
+                        0 -> StatsExporter.shareBatterTable(
+                            this, teamName, "", db.getSeasonBatterStats(teamId), players, format
                         )
-                        1 -> StatsPdfExporter.shareSeasonPitcherTable(
-                            this, teamName, "", db.getSeasonPitcherStats(teamId), players
+                        1 -> StatsExporter.shareSeasonPitcherTable(
+                            this, teamName, "", db.getSeasonPitcherStats(teamId), players, format
                         )
                     }
                 }
@@ -69,9 +69,10 @@ private fun SeasonStatsScreen(
     teamName: String,
     db: DatabaseHelper,
     onBackClick: () -> Unit,
-    onShareClick: (tab: Int) -> Unit
+    onShareClick: (tab: Int, format: ExportFormat) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
+    var showFormatDialog by remember { mutableStateOf(false) }
     val tabs = listOf(
         stringResource(R.string.season_stats_tab_batter),
         stringResource(R.string.season_stats_tab_pitcher)
@@ -95,7 +96,7 @@ private fun SeasonStatsScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onShareClick(selectedTab) }) {
+                    IconButton(onClick = { showFormatDialog = true }) {
                         Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_share))
                     }
                 },
@@ -127,6 +128,16 @@ private fun SeasonStatsScreen(
                 1 -> PitcherStatsTab(teamId = teamId, db = db)
             }
         }
+    }
+
+    if (showFormatDialog) {
+        ExportFormatDialog(
+            onDismiss = { showFormatDialog = false },
+            onSelect = { format ->
+                showFormatDialog = false
+                onShareClick(selectedTab, format)
+            }
+        )
     }
 }
 

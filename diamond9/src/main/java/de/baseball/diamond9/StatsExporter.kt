@@ -2,6 +2,7 @@ package de.baseball.diamond9
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -11,7 +12,9 @@ import android.graphics.pdf.PdfDocument
 import androidx.core.content.FileProvider
 import java.io.File
 
-object StatsPdfExporter {
+enum class ExportFormat { PDF, JPG, CSV }
+
+object StatsExporter {
 
     // A4 landscape
     private const val PAGE_W = 842
@@ -24,12 +27,15 @@ object StatsPdfExporter {
     private val COLOR_PRIMARY = Color.parseColor("#1a5fa8")
     private val COLOR_ROW_ALT = Color.parseColor("#EEF4FF")
 
+    // ── Public API ────────────────────────────────────────────────────────────────
+
     fun shareBatterTable(
         context: Context,
         title: String,
         subtitle: String,
         rows: List<SeasonBatterRow>,
-        players: Map<Long, Player>
+        players: Map<Long, Player>,
+        format: ExportFormat
     ) {
         val headers = listOf("Name", "PA", "AB", "H", "2B", "3B", "HR", "AVG", "OBP", "SLG", "OPS", "BB", "K")
         val colWidths = listOf(110f, 36f, 36f, 36f, 36f, 36f, 36f, 44f, 44f, 44f, 44f, 36f, 36f)
@@ -45,7 +51,7 @@ object StatsPdfExporter {
                 row.walks.toString(), row.strikeouts.toString()
             )
         }
-        shareTable(context, "batter_stats.pdf", title, subtitle, headers, colWidths, tableRows)
+        shareTable(context, "batter_stats", title, subtitle, headers, colWidths, tableRows, format)
     }
 
     fun shareSeasonPitcherTable(
@@ -53,7 +59,8 @@ object StatsPdfExporter {
         title: String,
         subtitle: String,
         rows: List<SeasonPitcherRow>,
-        players: Map<Long, Player>
+        players: Map<Long, Player>,
+        format: ExportFormat
     ) {
         val headers = listOf("Name", "BF", "P", "S%", "BB", "K", "H", "HR", "GO", "FO")
         val colWidths = listOf(110f, 36f, 36f, 44f, 36f, 36f, 36f, 36f, 36f, 36f)
@@ -66,7 +73,7 @@ object StatsPdfExporter {
                 row.homers.toString(), row.gos.toString(), row.fos.toString()
             )
         }
-        shareTable(context, "pitcher_season.pdf", title, subtitle, headers, colWidths, tableRows)
+        shareTable(context, "pitcher_season", title, subtitle, headers, colWidths, tableRows, format)
     }
 
     fun shareGameBatterTable(
@@ -74,7 +81,8 @@ object StatsPdfExporter {
         title: String,
         subtitle: String,
         rows: List<GameBatterStatsRow>,
-        players: Map<Long, Player>
+        players: Map<Long, Player>,
+        format: ExportFormat
     ) {
         val headers = listOf("Name", "PA", "AB", "H", "2B", "3B", "HR", "AVG", "OBP", "SLG", "OPS", "BB", "K")
         val colWidths = listOf(110f, 36f, 36f, 36f, 36f, 36f, 36f, 44f, 44f, 44f, 44f, 36f, 36f)
@@ -90,7 +98,7 @@ object StatsPdfExporter {
                 row.walks.toString(), row.strikeouts.toString()
             )
         }
-        shareTable(context, "game_batter_stats.pdf", title, subtitle, headers, colWidths, tableRows)
+        shareTable(context, "game_batter_stats", title, subtitle, headers, colWidths, tableRows, format)
     }
 
     fun shareGamePitcherTable(
@@ -98,7 +106,8 @@ object StatsPdfExporter {
         title: String,
         subtitle: String,
         rows: List<PitcherStats>,
-        players: Map<Long, Player>
+        players: Map<Long, Player>,
+        format: ExportFormat
     ) {
         val headers = listOf("Name", "BF", "P", "S%", "BB", "K", "H")
         val colWidths = listOf(110f, 36f, 36f, 44f, 36f, 36f, 36f)
@@ -110,24 +119,80 @@ object StatsPdfExporter {
                 row.walks.toString(), row.strikeouts.toString(), row.hits.toString()
             )
         }
-        shareTable(context, "game_pitcher_stats.pdf", title, subtitle, headers, colWidths, tableRows)
+        shareTable(context, "game_pitcher_stats", title, subtitle, headers, colWidths, tableRows, format)
     }
 
-    fun sharePitcherDetail(context: Context, stats: PitcherStats) {
-        val doc = PdfDocument()
-        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
-        val page = doc.startPage(pageInfo)
-        drawPitcherDetail(page.canvas, stats)
-        doc.finishPage(page)
-        shareDocument(context, doc, "pitcher_stats.pdf")
-        doc.close()
+    fun sharePitcherDetail(context: Context, stats: PitcherStats, format: ExportFormat) {
+        when (format) {
+            ExportFormat.PDF -> {
+                val doc = PdfDocument()
+                val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
+                val page = doc.startPage(pageInfo)
+                drawPitcherDetail(page.canvas, stats, 595f)
+                doc.finishPage(page)
+                val file = File(context.cacheDir, "pitcher_stats.pdf")
+                file.outputStream().use { doc.writeTo(it) }
+                doc.close()
+                shareFile(context, file, "application/pdf")
+            }
+            ExportFormat.JPG -> {
+                val w = 595
+                val h = 320
+                val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bmp)
+                canvas.drawColor(Color.WHITE)
+                drawPitcherDetail(canvas, stats, w.toFloat())
+                val file = File(context.cacheDir, "pitcher_stats.jpg")
+                file.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+                bmp.recycle()
+                shareFile(context, file, "image/jpeg")
+            }
+            ExportFormat.CSV -> {
+                val strikePercent = if (stats.totalPitches > 0) "${stats.strikes * 100 / stats.totalPitches}%" else "0%"
+                val csv = buildString {
+                    appendLine("Label,Value")
+                    appendLine("BF,${stats.bf}")
+                    appendLine("Hits,${stats.hits}")
+                    appendLine("Balls,${stats.balls}")
+                    appendLine("Strikes,${stats.strikes}")
+                    appendLine("Walks,${stats.walks}")
+                    appendLine("HBP,${stats.hbp}")
+                    appendLine("Ks,${stats.strikeouts}")
+                    appendLine("Pitches,${stats.totalPitches}")
+                    appendLine("S%,$strikePercent")
+                    appendLine("IP,${stats.ip}")
+                }
+                val file = File(context.cacheDir, "pitcher_stats.csv")
+                file.writeText(csv, Charsets.UTF_8)
+                shareFile(context, file, "text/csv")
+            }
+        }
     }
 
-    // ── Private drawing ───────────────────────────────────────────────────────────
+    // ── Format dispatch ───────────────────────────────────────────────────────────
 
     private fun shareTable(
         context: Context,
-        fileName: String,
+        baseName: String,
+        title: String,
+        subtitle: String,
+        headers: List<String>,
+        colWidths: List<Float>,
+        rows: List<List<String>>,
+        format: ExportFormat
+    ) {
+        when (format) {
+            ExportFormat.PDF -> shareTablePdf(context, baseName, title, subtitle, headers, colWidths, rows)
+            ExportFormat.JPG -> shareTableJpg(context, baseName, title, subtitle, headers, colWidths, rows)
+            ExportFormat.CSV -> shareTableCsv(context, baseName, headers, rows)
+        }
+    }
+
+    // ── PDF ───────────────────────────────────────────────────────────────────────
+
+    private fun shareTablePdf(
+        context: Context,
+        baseName: String,
         title: String,
         subtitle: String,
         headers: List<String>,
@@ -143,9 +208,57 @@ object StatsPdfExporter {
             drawTablePage(page.canvas, title, subtitle, headers, colWidths, pageRows, idx + 1, pages.size)
             doc.finishPage(page)
         }
-        shareDocument(context, doc, fileName)
+        val file = File(context.cacheDir, "$baseName.pdf")
+        file.outputStream().use { doc.writeTo(it) }
         doc.close()
+        shareFile(context, file, "application/pdf")
     }
+
+    // ── JPG ───────────────────────────────────────────────────────────────────────
+
+    private fun shareTableJpg(
+        context: Context,
+        baseName: String,
+        title: String,
+        subtitle: String,
+        headers: List<String>,
+        colWidths: List<Float>,
+        rows: List<List<String>>
+    ) {
+        val imgH = (MARGIN * 2 + TITLE_AREA + HEADER_H + rows.size * ROW_H + MARGIN).toInt().coerceAtLeast(200)
+        val bmp = Bitmap.createBitmap(PAGE_W, imgH, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        canvas.drawColor(Color.WHITE)
+        drawTablePage(canvas, title, subtitle, headers, colWidths, rows, 1, 1)
+        val file = File(context.cacheDir, "$baseName.jpg")
+        file.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        bmp.recycle()
+        shareFile(context, file, "image/jpeg")
+    }
+
+    // ── CSV ───────────────────────────────────────────────────────────────────────
+
+    private fun shareTableCsv(
+        context: Context,
+        baseName: String,
+        headers: List<String>,
+        rows: List<List<String>>
+    ) {
+        val csv = buildString {
+            appendLine(headers.joinToString(",") { csvEscape(it) })
+            rows.forEach { row -> appendLine(row.joinToString(",") { csvEscape(it) }) }
+        }
+        val file = File(context.cacheDir, "$baseName.csv")
+        file.writeText(csv, Charsets.UTF_8)
+        shareFile(context, file, "text/csv")
+    }
+
+    private fun csvEscape(value: String): String =
+        if (value.contains(',') || value.contains('"') || value.contains('\n'))
+            "\"${value.replace("\"", "\"\"")}\""
+        else value
+
+    // ── Canvas drawing ────────────────────────────────────────────────────────────
 
     private fun drawTablePage(
         canvas: Canvas,
@@ -184,7 +297,6 @@ object StatsPdfExporter {
         }
         y += 10f
 
-        // Header row
         bgPaint.color = COLOR_PRIMARY
         canvas.drawRect(MARGIN, y, PAGE_W.toFloat() - MARGIN, y + HEADER_H, bgPaint)
         var x = MARGIN + 4f
@@ -199,7 +311,6 @@ object StatsPdfExporter {
         }
         y += HEADER_H
 
-        // Data rows
         rows.forEachIndexed { idx, row ->
             bgPaint.color = if (idx % 2 == 0) Color.WHITE else COLOR_ROW_ALT
             canvas.drawRect(MARGIN, y, PAGE_W.toFloat() - MARGIN, y + ROW_H, bgPaint)
@@ -218,8 +329,7 @@ object StatsPdfExporter {
         }
     }
 
-    private fun drawPitcherDetail(canvas: Canvas, stats: PitcherStats) {
-        val W = 595f
+    private fun drawPitcherDetail(canvas: Canvas, stats: PitcherStats, width: Float) {
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = COLOR_PRIMARY; textSize = 18f; typeface = Typeface.DEFAULT_BOLD
         }
@@ -251,7 +361,7 @@ object StatsPdfExporter {
 
         val cols = 4
         val gap = 6f
-        val cardW = (W - 2 * MARGIN - (cols - 1) * gap) / cols
+        val cardW = (width - 2 * MARGIN - (cols - 1) * gap) / cols
         val cardH = 52f
 
         statCards.chunked(cols).forEach { chunk ->
@@ -266,7 +376,7 @@ object StatsPdfExporter {
         }
     }
 
-    // ── Stat formatting helpers ───────────────────────────────────────────────────
+    // ── Stat formatting ───────────────────────────────────────────────────────────
 
     private fun formatAvg(hits: Int, ab: Int): String {
         if (ab == 0) return "--"
@@ -299,12 +409,10 @@ object StatsPdfExporter {
 
     // ── File sharing ──────────────────────────────────────────────────────────────
 
-    private fun shareDocument(context: Context, doc: PdfDocument, fileName: String) {
-        val file = File(context.cacheDir, fileName)
-        file.outputStream().use { doc.writeTo(it) }
+    private fun shareFile(context: Context, file: File, mimeType: String) {
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/pdf"
+            type = mimeType
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }

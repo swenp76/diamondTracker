@@ -20,7 +20,12 @@
 
     <!-- ── Content Descriptions ─────────────────────────────────────────── -->
     <string name="content_desc_back">Back</string>
-    <string name="action_share">Share as PDF</string>
+    <string name="action_share">Share</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="export_format_dialog_title">Export as…</string>
+    <string name="export_format_pdf">PDF</string>
+    <string name="export_format_jpg">JPG</string>
+    <string name="export_format_csv">CSV</string>
     <string name="content_desc_share_lineup">Share Lineup</string>
     <string name="menu_export_game">Export Game</string>
     <string name="menu_import_game">Import Game</string>
