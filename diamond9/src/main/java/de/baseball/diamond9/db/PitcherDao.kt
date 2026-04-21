@@ -81,10 +81,10 @@ abstract class PitcherDao {
     @Query("""
         SELECT p.player_id AS player_id,
             pl.name AS name,
-            COUNT(CASE WHEN pi.type IN ('B', 'S', 'F', 'HBP', 'H', '1B', '2B', '3B', 'HR', 'GO', 'FO', 'LO', 'FC', 'E', 'DP', 'SAC', 'SO', 'KL', 'W') THEN 1 END) AS total_pitches,
+            COUNT(CASE WHEN pi.type IN ('B', 'S', 'F', 'HBP', 'H', '1B', '2B', '3B', 'HR', 'GO', 'FO', 'LO', 'FC', 'E', 'DP', 'SAC') THEN 1 END) AS total_pitches,
             COUNT(CASE WHEN pi.type = 'BF'                           THEN 1 END)           AS bf,
             COUNT(CASE WHEN pi.type = 'B'                            THEN 1 END)           AS balls,
-            COUNT(CASE WHEN pi.type IN ('S', 'H', '1B', '2B', '3B', 'HR', 'GO', 'FO', 'LO', 'FC', 'E', 'DP', 'SAC', 'F', 'SO', 'KL') THEN 1 END) AS strikes,
+            COUNT(CASE WHEN pi.type IN ('S', 'H', '1B', '2B', '3B', 'HR', 'GO', 'FO', 'LO', 'FC', 'E', 'DP', 'SAC') THEN 1 END) AS strikes,
             COUNT(CASE WHEN pi.type = 'F'                            THEN 1 END)           AS fouls,
             COUNT(CASE WHEN pi.type = 'W'                            THEN 1 END)           AS walks,
             COUNT(CASE WHEN pi.type IN ('H', '1B', '2B', '3B', 'HR') THEN 1 END)           AS hits,

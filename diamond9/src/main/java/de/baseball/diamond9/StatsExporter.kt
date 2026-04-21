@@ -81,7 +81,7 @@ object StatsExporter {
         val colWidths = listOf(110f, 36f, 36f, 44f, 36f, 36f, 36f, 36f, 36f, 36f)
         val tableRows = rows.map { row ->
             val name = players[row.playerId]?.let { "#${it.number} ${it.name}" } ?: "-"
-            val spct = if (row.totalPitches > 0) "%.0f%%".format(row.strikes.toFloat() / row.totalPitches * 100) else "---"
+            val spct = if (row.totalPitches > 0) "%.0f%%".format((row.strikes + row.fouls).toFloat() / row.totalPitches * 100) else "---"
             listOf(
                 name, row.bf.toString(), row.totalPitches.toString(), spct,
                 row.walks.toString(), row.ks.toString(), row.hits.toString(),
