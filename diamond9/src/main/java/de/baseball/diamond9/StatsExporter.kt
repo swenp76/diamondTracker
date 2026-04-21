@@ -48,7 +48,8 @@ object StatsExporter {
         subtitle: String,
         rows: List<SeasonBatterRow>,
         players: Map<Long, Player>,
-        format: ExportFormat
+        format: ExportFormat,
+        headline: String = ""
     ): File {
         val headers = listOf("Name", "PA", "AB", "H", "2B", "3B", "HR", "AVG", "OBP", "SLG", "OPS", "BB", "K")
         val colWidths = listOf(110f, 36f, 36f, 36f, 36f, 36f, 36f, 44f, 44f, 44f, 44f, 36f, 36f)
@@ -64,7 +65,7 @@ object StatsExporter {
                 row.walks.toString(), row.strikeouts.toString()
             )
         }
-        return buildTableFile(context, "batter_stats", title, subtitle, headers, colWidths, tableRows, format)
+        return buildTableFile(context, "batter_stats", title, subtitle, headers, colWidths, tableRows, format, headline)
     }
 
     fun buildSeasonPitcherTable(
@@ -73,7 +74,8 @@ object StatsExporter {
         subtitle: String,
         rows: List<SeasonPitcherRow>,
         players: Map<Long, Player>,
-        format: ExportFormat
+        format: ExportFormat,
+        headline: String = ""
     ): File {
         val headers = listOf("Name", "BF", "P", "S%", "BB", "K", "H", "HR", "GO", "FO")
         val colWidths = listOf(110f, 36f, 36f, 44f, 36f, 36f, 36f, 36f, 36f, 36f)
@@ -86,7 +88,7 @@ object StatsExporter {
                 row.homers.toString(), row.gos.toString(), row.fos.toString()
             )
         }
-        return buildTableFile(context, "pitcher_season", title, subtitle, headers, colWidths, tableRows, format)
+        return buildTableFile(context, "pitcher_season", title, subtitle, headers, colWidths, tableRows, format, headline)
     }
 
     fun buildGameBatterTable(
@@ -95,7 +97,8 @@ object StatsExporter {
         subtitle: String,
         rows: List<GameBatterStatsRow>,
         players: Map<Long, Player>,
-        format: ExportFormat
+        format: ExportFormat,
+        headline: String = ""
     ): File {
         val headers = listOf("Name", "PA", "AB", "H", "2B", "3B", "HR", "AVG", "OBP", "SLG", "OPS", "BB", "K")
         val colWidths = listOf(110f, 36f, 36f, 36f, 36f, 36f, 36f, 44f, 44f, 44f, 44f, 36f, 36f)
@@ -111,7 +114,7 @@ object StatsExporter {
                 row.walks.toString(), row.strikeouts.toString()
             )
         }
-        return buildTableFile(context, "game_batter_stats", title, subtitle, headers, colWidths, tableRows, format)
+        return buildTableFile(context, "game_batter_stats", title, subtitle, headers, colWidths, tableRows, format, headline)
     }
 
     fun buildGamePitcherTable(
@@ -120,7 +123,8 @@ object StatsExporter {
         subtitle: String,
         rows: List<PitcherStats>,
         players: Map<Long, Player>,
-        format: ExportFormat
+        format: ExportFormat,
+        headline: String = ""
     ): File {
         val headers = listOf("Name", "BF", "P", "S%", "BB", "K", "H")
         val colWidths = listOf(110f, 36f, 36f, 44f, 36f, 36f, 36f)
@@ -132,16 +136,16 @@ object StatsExporter {
                 row.walks.toString(), row.strikeouts.toString(), row.hits.toString()
             )
         }
-        return buildTableFile(context, "game_pitcher_stats", title, subtitle, headers, colWidths, tableRows, format)
+        return buildTableFile(context, "game_pitcher_stats", title, subtitle, headers, colWidths, tableRows, format, headline)
     }
 
-    fun buildPitcherDetail(context: Context, stats: PitcherStats, format: ExportFormat): File =
+    fun buildPitcherDetail(context: Context, stats: PitcherStats, format: ExportFormat, headline: String = ""): File =
         when (format) {
             ExportFormat.PDF -> {
                 val doc = PdfDocument()
                 val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
                 val page = doc.startPage(pageInfo)
-                drawPitcherDetail(page.canvas, stats, 595f)
+                drawPitcherDetail(page.canvas, stats, 595f, headline)
                 doc.finishPage(page)
                 val file = File(context.cacheDir, "pitcher_stats.pdf")
                 file.outputStream().use { doc.writeTo(it) }
@@ -153,7 +157,7 @@ object StatsExporter {
                 val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bmp)
                 canvas.drawColor(Color.WHITE)
-                drawPitcherDetail(canvas, stats, w.toFloat())
+                drawPitcherDetail(canvas, stats, w.toFloat(), headline)
                 val file = File(context.cacheDir, "pitcher_stats.jpg")
                 file.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }
                 bmp.recycle()
@@ -202,10 +206,11 @@ object StatsExporter {
         headers: List<String>,
         colWidths: List<Float>,
         rows: List<List<String>>,
-        format: ExportFormat
+        format: ExportFormat,
+        headline: String = ""
     ): File = when (format) {
-        ExportFormat.PDF -> buildTablePdf(context, baseName, title, subtitle, headers, colWidths, rows)
-        ExportFormat.JPG -> buildTableJpg(context, baseName, title, subtitle, headers, colWidths, rows)
+        ExportFormat.PDF -> buildTablePdf(context, baseName, title, subtitle, headers, colWidths, rows, headline)
+        ExportFormat.JPG -> buildTableJpg(context, baseName, title, subtitle, headers, colWidths, rows, headline)
         ExportFormat.CSV -> buildTableCsv(context, baseName, headers, rows)
     }
 
@@ -218,7 +223,8 @@ object StatsExporter {
         subtitle: String,
         headers: List<String>,
         colWidths: List<Float>,
-        rows: List<List<String>>
+        rows: List<List<String>>,
+        headline: String
     ): File {
         val rowsPerPage = ((PAGE_H - MARGIN * 2 - TITLE_AREA - HEADER_H) / ROW_H).toInt()
         val pages = if (rows.isEmpty()) listOf(emptyList()) else rows.chunked(rowsPerPage)
@@ -226,7 +232,7 @@ object StatsExporter {
         pages.forEachIndexed { idx, pageRows ->
             val info = PdfDocument.PageInfo.Builder(PAGE_W, PAGE_H, idx + 1).create()
             val page = doc.startPage(info)
-            drawTablePage(page.canvas, title, subtitle, headers, colWidths, pageRows, idx + 1, pages.size)
+            drawTablePage(page.canvas, title, subtitle, headers, colWidths, pageRows, idx + 1, pages.size, headline)
             doc.finishPage(page)
         }
         val file = File(context.cacheDir, "$baseName.pdf")
@@ -244,13 +250,14 @@ object StatsExporter {
         subtitle: String,
         headers: List<String>,
         colWidths: List<Float>,
-        rows: List<List<String>>
+        rows: List<List<String>>,
+        headline: String
     ): File {
         val imgH = (MARGIN * 2 + TITLE_AREA + HEADER_H + rows.size * ROW_H + MARGIN).toInt().coerceAtLeast(200)
         val bmp = Bitmap.createBitmap(PAGE_W, imgH, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         canvas.drawColor(Color.WHITE)
-        drawTablePage(canvas, title, subtitle, headers, colWidths, rows, 1, 1)
+        drawTablePage(canvas, title, subtitle, headers, colWidths, rows, 1, 1, headline)
         val file = File(context.cacheDir, "$baseName.jpg")
         file.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }
         bmp.recycle()
@@ -289,13 +296,17 @@ object StatsExporter {
         colWidths: List<Float>,
         rows: List<List<String>>,
         pageNum: Int,
-        totalPages: Int
+        totalPages: Int,
+        headline: String = ""
     ) {
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = COLOR_PRIMARY; textSize = 15f; typeface = Typeface.DEFAULT_BOLD
         }
         val subtitlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.GRAY; textSize = 10f
+        }
+        val headlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = COLOR_PRIMARY; textSize = 13f; typeface = Typeface.DEFAULT_BOLD
         }
         val headerTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE; textSize = 10f; typeface = Typeface.DEFAULT_BOLD
@@ -316,7 +327,13 @@ object StatsExporter {
             val pageStr = "$pageNum / $totalPages"
             canvas.drawText(pageStr, PAGE_W - MARGIN - subtitlePaint.measureText(pageStr), MARGIN + 14f, subtitlePaint)
         }
-        y += 10f
+        y += 18f
+
+        if (headline.isNotBlank()) {
+            canvas.drawText(headline, MARGIN, y, headlinePaint)
+            y += 14f
+        }
+        y += 6f
 
         bgPaint.color = COLOR_PRIMARY
         canvas.drawRect(MARGIN, y, PAGE_W.toFloat() - MARGIN, y + HEADER_H, bgPaint)
@@ -350,9 +367,12 @@ object StatsExporter {
         }
     }
 
-    private fun drawPitcherDetail(canvas: Canvas, stats: PitcherStats, width: Float) {
+    private fun drawPitcherDetail(canvas: Canvas, stats: PitcherStats, width: Float, headline: String = "") {
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = COLOR_PRIMARY; textSize = 18f; typeface = Typeface.DEFAULT_BOLD
+        }
+        val headlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = COLOR_PRIMARY; textSize = 14f; typeface = Typeface.DEFAULT_BOLD
         }
         val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.GRAY; textSize = 10f; textAlign = Paint.Align.CENTER
@@ -364,7 +384,13 @@ object StatsExporter {
 
         var y = MARGIN + 18f
         canvas.drawText(stats.pitcher.name, MARGIN, y, titlePaint)
-        y += 28f
+        y += 24f
+
+        if (headline.isNotBlank()) {
+            canvas.drawText(headline, MARGIN, y, headlinePaint)
+            y += 20f
+        }
+        y += 8f
 
         val strikePercent = if (stats.totalPitches > 0) "${stats.strikes * 100 / stats.totalPitches}%" else "0%"
         val statCards = listOf(

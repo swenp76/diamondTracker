@@ -76,8 +76,8 @@ class SeasonStatsActivity : ComponentActivity() {
                     val players = db.getPlayersForTeam(teamId).associateBy { it.id }
                     val dateRange = if (startDate.isNotBlank() || endDate.isNotBlank()) " ($startDate - $endDate)" else ""
                     val file = when (tab) {
-                        0 -> StatsExporter.buildBatterTable(this, teamName, dateRange, db.getSeasonBatterStats(teamId, startDate, endDate), players, format)
-                        else -> StatsExporter.buildSeasonPitcherTable(this, teamName, dateRange, db.getSeasonPitcherStats(teamId, startDate, endDate), players, format)
+                        0 -> StatsExporter.buildBatterTable(this, teamName, dateRange, db.getSeasonBatterStats(teamId, startDate, endDate), players, format, getString(R.string.season_stats_tab_batter))
+                        else -> StatsExporter.buildSeasonPitcherTable(this, teamName, dateRange, db.getSeasonPitcherStats(teamId, startDate, endDate), players, format, getString(R.string.season_stats_tab_pitcher))
                     }
                     when (action) {
                         ExportAction.SHARE -> StatsExporter.shareFile(this, file, format)

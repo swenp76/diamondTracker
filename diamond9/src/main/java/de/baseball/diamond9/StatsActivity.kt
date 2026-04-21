@@ -61,7 +61,14 @@ class StatsActivity : ComponentActivity() {
                     stats = it,
                     onBackClick = { finish() },
                     onExport = { format, action ->
-                        val file = StatsExporter.buildPitcherDetail(this, it, format)
+                        val game = db.getGame(it.pitcher.gameId)
+                        val gameInfo = buildString {
+                            append(game?.date ?: "")
+                            game?.gameTime?.takeIf { it.isNotBlank() }?.let { append(" $it") }
+                            game?.gameNumber?.takeIf { it.isNotBlank() }?.let { append(" (#$it)") }
+                        }
+                        val title = if (game != null) "${game.opponent} ($gameInfo)" else ""
+                        val file = StatsExporter.buildPitcherDetail(this, it, format, title)
                         when (action) {
                             ExportAction.SHARE -> StatsExporter.shareFile(this, file, format)
                             ExportAction.SAVE  -> {
