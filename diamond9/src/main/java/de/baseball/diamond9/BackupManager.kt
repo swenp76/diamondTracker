@@ -35,7 +35,7 @@ class BackupManager constructor(
     constructor(context: Context) : this(context, DatabaseHelper(context))
 
     companion object {
-        const val DB_VERSION = 15
+        const val DB_VERSION = 17
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
@@ -210,10 +210,7 @@ class BackupManager constructor(
                     allPitches.put(JSONObject().apply {
                         put("id", pitch.id)
                         put("pitcher_id", pitch.pitcherId)
-                        if (pitch.atBatId == null || pitch.atBatId == 0L)
-                            put("at_bat_id", JSONObject.NULL)
-                        else
-                            put("at_bat_id", pitch.atBatId)
+                put("at_bat_id", if (pitch.atBatId == 0L) JSONObject.NULL else pitch.atBatId)
                         put("type", pitch.type ?: "")
                         put("sequence_nr", pitch.sequenceNr)
                         put("inning", pitch.inning)
@@ -448,7 +445,8 @@ class BackupManager constructor(
             db.rawInsertWithConflictIgnore("pitches", ContentValues().apply {
                 put("id", obj.getLong("id"))
                 put("pitcher_id", obj.getLong("pitcher_id"))
-                if (obj.isNull("at_bat_id")) putNull("at_bat_id")
+                // at_bat_id is NOT NULL in the database; restore null as 0
+                if (obj.isNull("at_bat_id")) put("at_bat_id", 0L)
                 else put("at_bat_id", obj.getLong("at_bat_id"))
                 put("type", obj.getString("type"))
                 put("sequence_nr", obj.getInt("sequence_nr"))
@@ -661,6 +659,34 @@ class BackupManager constructor(
                 }
             }
             v = 15
+        }
+
+        // Migration 15 → 16: pitch type NOT NULL backfill.
+        if (v < 16 && toVersion >= 16) {
+            val pitches = current.optJSONArray("pitches")
+            if (pitches != null) {
+                for (i in 0 until pitches.length()) {
+                    val p = pitches.getJSONObject(i)
+                    if (!p.has("type") || p.isNull("type")) {
+                        p.put("type", "")
+                    }
+                }
+            }
+            v = 16
+        }
+
+        // Migration 16 → 17: at_bat_id NOT NULL backfill.
+        if (v < 17 && toVersion >= 17) {
+            val pitches = current.optJSONArray("pitches")
+            if (pitches != null) {
+                for (i in 0 until pitches.length()) {
+                    val p = pitches.getJSONObject(i)
+                    if (p.isNull("at_bat_id")) {
+                        p.put("at_bat_id", 0L)
+                    }
+                }
+            }
+            v = 17
         }
 
         return current

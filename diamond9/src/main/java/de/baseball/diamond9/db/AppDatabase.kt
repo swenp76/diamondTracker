@@ -203,7 +203,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 db.execSQL(
                     "INSERT INTO pitches_new (id, pitcher_id, at_bat_id, type, sequence_nr, inning) " +
-                    "SELECT id, pitcher_id, at_bat_id, type, sequence_nr, inning FROM pitches"
+                    "SELECT id, pitcher_id, at_bat_id, IFNULL(type, ''), sequence_nr, inning FROM pitches"
                 )
                 db.execSQL("DROP TABLE pitches")
                 db.execSQL("ALTER TABLE pitches_new RENAME TO pitches")
@@ -275,6 +275,24 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("INSERT INTO games_new (id, date, opponent, team_id, inning, outs, leadoff_slot, start_time, elapsed_time_ms, game_time, is_home, current_inning, is_top_half, game_number) SELECT id, date, opponent, team_id, inning, outs, leadoff_slot, start_time, elapsed_time_ms, game_time, is_home, current_inning, is_top_half, game_number FROM games")
                 db.execSQL("DROP TABLE games")
                 db.execSQL("ALTER TABLE games_new RENAME TO games")
+
+                // Fix 'at_bats'
+                db.execSQL("CREATE TABLE IF NOT EXISTS at_bats_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, game_id INTEGER NOT NULL, player_id INTEGER NOT NULL, slot INTEGER NOT NULL, inning INTEGER NOT NULL, result TEXT)")
+                db.execSQL("INSERT INTO at_bats_new (id, game_id, player_id, slot, inning, result) SELECT id, game_id, player_id, slot, inning, result FROM at_bats")
+                db.execSQL("DROP TABLE at_bats")
+                db.execSQL("ALTER TABLE at_bats_new RENAME TO at_bats")
+
+                // Fix 'pitchers'
+                db.execSQL("CREATE TABLE IF NOT EXISTS pitchers_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, game_id INTEGER NOT NULL, name TEXT NOT NULL DEFAULT '', player_id INTEGER NOT NULL DEFAULT 0)")
+                db.execSQL("INSERT INTO pitchers_new (id, game_id, name, player_id) SELECT id, game_id, IFNULL(name, ''), player_id FROM pitchers")
+                db.execSQL("DROP TABLE pitchers")
+                db.execSQL("ALTER TABLE pitchers_new RENAME TO pitchers")
+
+                // Fix 'pitches'
+                db.execSQL("CREATE TABLE IF NOT EXISTS pitches_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, pitcher_id INTEGER NOT NULL, at_bat_id INTEGER NOT NULL, type TEXT NOT NULL DEFAULT '', sequence_nr INTEGER NOT NULL, inning INTEGER NOT NULL DEFAULT 1)")
+                db.execSQL("INSERT INTO pitches_new (id, pitcher_id, at_bat_id, type, sequence_nr, inning) SELECT id, pitcher_id, at_bat_id, IFNULL(type, ''), sequence_nr, inning FROM pitches")
+                db.execSQL("DROP TABLE pitches")
+                db.execSQL("ALTER TABLE pitches_new RENAME TO pitches")
             }
         }
 
