@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -42,10 +43,10 @@ class StatsActivity : ComponentActivity() {
             stats?.let {
                 StatsScreen(
                     stats = it,
-                    onBackClick = { finish() }
+                    onBackClick = { finish() },
+                    onShareClick = { StatsPdfExporter.sharePitcherDetail(this, it) }
                 )
             } ?: run {
-                // Fallback UI or finish
                 finish()
             }
         }
@@ -56,7 +57,8 @@ class StatsActivity : ComponentActivity() {
 @Composable
 fun StatsScreen(
     stats: PitcherStats,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onShareClick: () -> Unit = {}
 ) {
     Scaffold(
         containerColor = colorResource(R.color.color_background),
@@ -66,6 +68,11 @@ fun StatsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onShareClick) {
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_share))
                     }
                 }
             )

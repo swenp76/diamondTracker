@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,7 +47,19 @@ class BatterStatsActivity : ComponentActivity() {
                 gameOpponent = gameOpponent,
                 gameDate     = gameDate,
                 db           = db,
-                onBackClick  = { finish() }
+                onBackClick  = { finish() },
+                onShareClick = { tab ->
+                    val teamId = db.getGame(gameId)?.teamId ?: -1L
+                    val players = if (teamId > 0) db.getPlayersForTeam(teamId).associateBy { it.id } else emptyMap()
+                    when (tab) {
+                        0 -> StatsPdfExporter.shareGameBatterTable(
+                            this, gameOpponent, gameDate, db.getGameBatterStats(gameId), players
+                        )
+                        1 -> StatsPdfExporter.shareGamePitcherTable(
+                            this, gameOpponent, gameDate, db.getGamePitcherStats(gameId), players
+                        )
+                    }
+                }
             )
         }
     }
@@ -59,7 +72,8 @@ private fun BatterStatsScreen(
     gameOpponent: String,
     gameDate: String,
     db: DatabaseHelper,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onShareClick: (tab: Int) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf(
@@ -82,6 +96,11 @@ private fun BatterStatsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { onShareClick(selectedTab) }) {
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_share))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)

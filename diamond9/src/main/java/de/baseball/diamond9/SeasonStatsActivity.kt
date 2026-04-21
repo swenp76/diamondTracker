@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,7 +45,18 @@ class SeasonStatsActivity : ComponentActivity() {
                 teamId = teamId,
                 teamName = teamName,
                 db = db,
-                onBackClick = { finish() }
+                onBackClick = { finish() },
+                onShareClick = { tab ->
+                    val players = db.getPlayersForTeam(teamId).associateBy { it.id }
+                    when (tab) {
+                        0 -> StatsPdfExporter.shareBatterTable(
+                            this, teamName, "", db.getSeasonBatterStats(teamId), players
+                        )
+                        1 -> StatsPdfExporter.shareSeasonPitcherTable(
+                            this, teamName, "", db.getSeasonPitcherStats(teamId), players
+                        )
+                    }
+                }
             )
         }
     }
@@ -56,7 +68,8 @@ private fun SeasonStatsScreen(
     teamId: Long,
     teamName: String,
     db: DatabaseHelper,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onShareClick: (tab: Int) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf(
@@ -79,6 +92,11 @@ private fun SeasonStatsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { onShareClick(selectedTab) }) {
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_share))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)

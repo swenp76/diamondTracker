@@ -20,6 +20,7 @@
 
     <!-- ── Barrierefreiheit / Content Descriptions ───────────────────────── -->
     <string name="content_desc_back">Zurück</string>
+    <string name="action_share">Als PDF teilen</string>
     <string name="content_desc_more">Mehr</string>
     <string name="content_desc_delete">Löschen</string>
     <string name="content_desc_add">Hinzufügen</string>
