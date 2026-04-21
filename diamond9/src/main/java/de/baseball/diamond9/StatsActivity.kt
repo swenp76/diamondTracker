@@ -1,9 +1,11 @@
 package de.baseball.diamond9
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,6 +30,21 @@ import androidx.compose.ui.unit.sp
 class StatsActivity : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
+    private var pendingSaveFile: java.io.File? = null
+
+    private val saveLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
+        uri ?: return@registerForActivityResult
+        try {
+            pendingSaveFile?.let { file ->
+                contentResolver.openOutputStream(uri)?.use { out ->
+                    file.inputStream().use { it.copyTo(out) }
+                }
+                Toast.makeText(this, R.string.toast_stats_saved, Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,7 +60,16 @@ class StatsActivity : ComponentActivity() {
                 StatsScreen(
                     stats = it,
                     onBackClick = { finish() },
-                    onShareClick = { format -> StatsExporter.sharePitcherDetail(this, it, format) }
+                    onExport = { format, action ->
+                        val file = StatsExporter.buildPitcherDetail(this, it, format)
+                        when (action) {
+                            ExportAction.SHARE -> StatsExporter.shareFile(this, file, format)
+                            ExportAction.SAVE  -> {
+                                pendingSaveFile = file
+                                saveLauncher.launch("pitcher_stats.${format.extension()}")
+                            }
+                        }
+                    }
                 )
             } ?: run {
                 finish()
@@ -57,7 +83,7 @@ class StatsActivity : ComponentActivity() {
 fun StatsScreen(
     stats: PitcherStats,
     onBackClick: () -> Unit,
-    onShareClick: (ExportFormat) -> Unit = { _ -> }
+    onExport: (ExportFormat, ExportAction) -> Unit = { _, _ -> }
 ) {
     var showFormatDialog by remember { mutableStateOf(false) }
 
@@ -129,9 +155,9 @@ fun StatsScreen(
     if (showFormatDialog) {
         ExportFormatDialog(
             onDismiss = { showFormatDialog = false },
-            onSelect = { format ->
+            onSelect = { format, action ->
                 showFormatDialog = false
-                onShareClick(format)
+                onExport(format, action)
             }
         )
     }

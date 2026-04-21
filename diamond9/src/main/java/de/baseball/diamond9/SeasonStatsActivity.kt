@@ -1,9 +1,11 @@
 package de.baseball.diamond9
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.clickable
@@ -30,6 +32,23 @@ import androidx.compose.ui.unit.sp
 
 class SeasonStatsActivity : ComponentActivity() {
 
+    private var pendingSaveFile: java.io.File? = null
+    private var pendingSaveFormat: ExportFormat = ExportFormat.PDF
+
+    private val saveLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
+        uri ?: return@registerForActivityResult
+        try {
+            pendingSaveFile?.let { file ->
+                contentResolver.openOutputStream(uri)?.use { out ->
+                    file.inputStream().use { it.copyTo(out) }
+                }
+                Toast.makeText(this, R.string.toast_stats_saved, Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -46,15 +65,19 @@ class SeasonStatsActivity : ComponentActivity() {
                 teamName = teamName,
                 db = db,
                 onBackClick = { finish() },
-                onShareClick = { tab, format ->
+                onExport = { tab, format, action ->
                     val players = db.getPlayersForTeam(teamId).associateBy { it.id }
-                    when (tab) {
-                        0 -> StatsExporter.shareBatterTable(
-                            this, teamName, "", db.getSeasonBatterStats(teamId), players, format
-                        )
-                        1 -> StatsExporter.shareSeasonPitcherTable(
-                            this, teamName, "", db.getSeasonPitcherStats(teamId), players, format
-                        )
+                    val file = when (tab) {
+                        0 -> StatsExporter.buildBatterTable(this, teamName, "", db.getSeasonBatterStats(teamId), players, format)
+                        else -> StatsExporter.buildSeasonPitcherTable(this, teamName, "", db.getSeasonPitcherStats(teamId), players, format)
+                    }
+                    when (action) {
+                        ExportAction.SHARE -> StatsExporter.shareFile(this, file, format)
+                        ExportAction.SAVE  -> {
+                            pendingSaveFile = file
+                            pendingSaveFormat = format
+                            saveLauncher.launch("${if (tab == 0) "batter" else "pitcher"}_stats.${format.extension()}")
+                        }
                     }
                 }
             )
@@ -69,7 +92,7 @@ private fun SeasonStatsScreen(
     teamName: String,
     db: DatabaseHelper,
     onBackClick: () -> Unit,
-    onShareClick: (tab: Int, format: ExportFormat) -> Unit
+    onExport: (tab: Int, format: ExportFormat, action: ExportAction) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showFormatDialog by remember { mutableStateOf(false) }
@@ -133,9 +156,9 @@ private fun SeasonStatsScreen(
     if (showFormatDialog) {
         ExportFormatDialog(
             onDismiss = { showFormatDialog = false },
-            onSelect = { format ->
+            onSelect = { format, action ->
                 showFormatDialog = false
-                onShareClick(selectedTab, format)
+                onExport(selectedTab, format, action)
             }
         )
     }

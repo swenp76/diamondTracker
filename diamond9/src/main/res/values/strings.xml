@@ -26,6 +26,9 @@
     <string name="export_format_pdf">PDF</string>
     <string name="export_format_jpg">JPG</string>
     <string name="export_format_csv">CSV</string>
+    <string name="export_action_share">Share</string>
+    <string name="export_action_save">Save to device</string>
+    <string name="toast_stats_saved">Stats saved</string>
     <string name="content_desc_share_lineup">Share Lineup</string>
     <string name="menu_export_game">Export Game</string>
     <string name="menu_import_game">Import Game</string>
