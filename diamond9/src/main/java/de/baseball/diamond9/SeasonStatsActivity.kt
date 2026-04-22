@@ -75,9 +75,11 @@ class SeasonStatsActivity : ComponentActivity() {
                 onExport = { tab, format, action ->
                     val players = db.getPlayersForTeam(teamId).associateBy { it.id }
                     val dateRange = if (startDate.isNotBlank() || endDate.isNotBlank()) " ($startDate - $endDate)" else ""
+                    val sIso = toIsoDate(startDate)
+                    val eIso = toIsoDate(endDate)
                     val file = when (tab) {
-                        0 -> StatsExporter.buildBatterTable(this, teamName, dateRange, db.getSeasonBatterStats(teamId, startDate, endDate), players, format, getString(R.string.season_stats_tab_batter))
-                        else -> StatsExporter.buildSeasonPitcherTable(this, teamName, dateRange, db.getSeasonPitcherStats(teamId, startDate, endDate), players, format, getString(R.string.season_stats_tab_pitcher))
+                        0 -> StatsExporter.buildBatterTable(this, teamName, dateRange, db.getSeasonBatterStats(teamId, sIso, eIso), players, format, getString(R.string.season_stats_tab_batter))
+                        else -> StatsExporter.buildSeasonPitcherTable(this, teamName, dateRange, db.getSeasonPitcherStats(teamId, sIso, eIso), players, format, getString(R.string.season_stats_tab_pitcher))
                     }
                     when (action) {
                         ExportAction.SHARE -> StatsExporter.shareFile(this, file, format)
@@ -90,6 +92,12 @@ class SeasonStatsActivity : ComponentActivity() {
                 }
             )
         }
+    }
+
+    private fun toIsoDate(dateStr: String): String {
+        if (dateStr.length != 10) return ""
+        // DD.MM.YYYY -> YYYYMMDD
+        return dateStr.substring(6, 10) + dateStr.substring(3, 5) + dateStr.substring(0, 2)
     }
 }
 
@@ -164,8 +172,8 @@ private fun SeasonStatsScreen(
             }
 
             when (selectedTab) {
-                0 -> BatterStatsTab(teamId = teamId, db = db, startDate = startDate, endDate = endDate)
-                1 -> PitcherStatsTab(teamId = teamId, db = db, startDate = startDate, endDate = endDate)
+                0 -> BatterStatsTab(teamId = teamId, db = db, startDate = toIsoDate(startDate), endDate = toIsoDate(endDate))
+                1 -> PitcherStatsTab(teamId = teamId, db = db, startDate = toIsoDate(startDate), endDate = toIsoDate(endDate))
             }
         }
     }
@@ -179,6 +187,12 @@ private fun SeasonStatsScreen(
             }
         )
     }
+}
+
+private fun toIsoDate(dateStr: String): String {
+    if (dateStr.length != 10) return ""
+    // DD.MM.YYYY -> YYYYMMDD
+    return dateStr.substring(6, 10) + dateStr.substring(3, 5) + dateStr.substring(0, 2)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
