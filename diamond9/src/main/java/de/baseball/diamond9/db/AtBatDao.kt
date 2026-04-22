@@ -47,19 +47,20 @@ abstract class AtBatDao {
     abstract fun getOutsForGame(gameId: Long): Int
 
     @Query("""
-        SELECT player_id,
+        SELECT ab.player_id,
             COUNT(*)                                                                                AS pa,
-            SUM(CASE WHEN result NOT IN ('BB','HBP','SAC') THEN 1 ELSE 0 END)                      AS ab,
-            SUM(CASE WHEN result IN ('H','1B','2B','3B','HR') THEN 1 ELSE 0 END)                   AS hits,
-            SUM(CASE WHEN result = '2B'             THEN 1 ELSE 0 END)                             AS doubles,
-            SUM(CASE WHEN result = '3B'             THEN 1 ELSE 0 END)                             AS triples,
-            SUM(CASE WHEN result = 'HR'             THEN 1 ELSE 0 END)                             AS homers,
-            SUM(CASE WHEN result = 'BB'             THEN 1 ELSE 0 END)                             AS walks,
-            SUM(CASE WHEN result IN ('K','KL')      THEN 1 ELSE 0 END)                             AS strikeouts,
-            SUM(CASE WHEN result = 'HBP'            THEN 1 ELSE 0 END)                             AS hbp
-        FROM at_bats
-        WHERE game_id = :gameId AND result IS NOT NULL AND player_id > 0
-        GROUP BY player_id
+            SUM(CASE WHEN ab.result NOT IN ('BB','HBP','SAC') THEN 1 ELSE 0 END)                   AS ab,
+            SUM(CASE WHEN ab.result IN ('H','1B','2B','3B','HR') THEN 1 ELSE 0 END)                AS hits,
+            SUM(CASE WHEN ab.result = '2B'             THEN 1 ELSE 0 END)                          AS doubles,
+            SUM(CASE WHEN ab.result = '3B'             THEN 1 ELSE 0 END)                          AS triples,
+            SUM(CASE WHEN ab.result = 'HR'             THEN 1 ELSE 0 END)                          AS homers,
+            SUM(CASE WHEN ab.result = 'BB'             THEN 1 ELSE 0 END)                          AS walks,
+            SUM(CASE WHEN ab.result IN ('K','KL')      THEN 1 ELSE 0 END)                          AS strikeouts,
+            SUM(CASE WHEN ab.result = 'HBP'            THEN 1 ELSE 0 END)                          AS hbp
+        FROM at_bats ab
+        JOIN players pl ON pl.id = ab.player_id
+        WHERE ab.game_id = :gameId AND ab.result IS NOT NULL AND ab.player_id > 0
+        GROUP BY ab.player_id
     """)
     abstract fun getGameBatterStats(gameId: Long): List<GameBatterStatsRow>
 

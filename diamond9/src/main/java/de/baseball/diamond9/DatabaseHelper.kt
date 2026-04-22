@@ -506,7 +506,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
 
     fun updatePlayer(player: Player) = playerDao.updatePlayer(player)
 
-    fun deletePlayer(playerId: Long) = playerDao.deletePlayer(playerId)
+    fun deletePlayer(playerId: Long) = playerDao.deletePlayerWithCascade(playerId)
 
     fun getPlayerById(playerId: Long): Player? = playerDao.getPlayerById(playerId)
 
