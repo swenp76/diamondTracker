@@ -76,7 +76,8 @@ abstract class AtBatDao {
             SUM(CASE WHEN ab.result = 'HBP'             THEN 1 ELSE 0 END)                             AS hbp
         FROM at_bats ab
         JOIN games g ON g.id = ab.game_id
-        WHERE g.team_id = :teamId AND ab.result IS NOT NULL AND ab.player_id > 0
+        JOIN players pl ON pl.id = ab.player_id
+        WHERE pl.team_id = :teamId AND ab.result IS NOT NULL
           AND (:startDate IS NULL OR :startDate = '' OR (substr(g.date,7,4)||substr(g.date,4,2)||substr(g.date,1,2)) >= :startDate)
           AND (:endDate IS NULL OR :endDate = '' OR (substr(g.date,7,4)||substr(g.date,4,2)||substr(g.date,1,2)) <= :endDate)
         GROUP BY ab.player_id
