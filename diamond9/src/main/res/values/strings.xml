@@ -455,4 +455,10 @@
     <string name="settings_restore_confirm_title">Restore Backup?</string>
     <string name="settings_restore_confirm_message">Existing data will not be deleted. Data from the backup will be added. Continue?</string>
 
+    <!-- ── Merge Games ──────────────────────────────────────────────────── -->
+    <string name="dialog_merge_games_title">Potential Duplicate Game</string>
+    <string name="dialog_merge_games_message">A game from %1$s against %2$s already exists. Do you want to merge these games? Incomplete data will be filled from the other game.</string>
+    <string name="btn_merge">Merge</string>
+    <string name="btn_ignore">Ignore</string>
+    <string name="msg_merge_completed">Games merged successfully.</string>
 </resources>

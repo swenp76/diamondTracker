@@ -25,7 +25,17 @@ data class Game(
     @ColumnInfo(name = "game_number", defaultValue = "") val gameNumber: String = ""
 )
 
-@Entity(tableName = "pitchers")
+@Entity(
+    tableName = "pitchers",
+    foreignKeys = [
+        ForeignKey(
+            entity = Game::class,
+            parentColumns = ["id"],
+            childColumns = ["game_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
 data class Pitcher(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "game_id") val gameId: Long,
@@ -33,7 +43,23 @@ data class Pitcher(
     @ColumnInfo(name = "player_id", defaultValue = "0") val playerId: Long = 0
 )
 
-@Entity(tableName = "pitches")
+@Entity(
+    tableName = "pitches",
+    foreignKeys = [
+        ForeignKey(
+            entity = Pitcher::class,
+            parentColumns = ["id"],
+            childColumns = ["pitcher_id"],
+            onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = AtBat::class,
+            parentColumns = ["id"],
+            childColumns = ["at_bat_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
 data class Pitch(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "pitcher_id") val pitcherId: Long = 0,
@@ -43,7 +69,17 @@ data class Pitch(
     @ColumnInfo(name = "inning", defaultValue = "1") val inning: Int = 1
 )
 
-@Entity(tableName = "at_bats")
+@Entity(
+    tableName = "at_bats",
+    foreignKeys = [
+        ForeignKey(
+            entity = Game::class,
+            parentColumns = ["id"],
+            childColumns = ["game_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
 data class AtBat(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "game_id") val gameId: Long,
@@ -191,6 +227,8 @@ object BaseballPositions {
 
 data class GameBatterStatsRow(
     @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "player_name") val playerName: String?,
+    @ColumnInfo(name = "player_number") val playerNumber: String?,
     @ColumnInfo(name = "pa")         val pa: Int,
     @ColumnInfo(name = "ab")         val ab: Int,
     @ColumnInfo(name = "hits")       val hits: Int,
@@ -204,6 +242,8 @@ data class GameBatterStatsRow(
 
 data class SeasonBatterRow(
     @ColumnInfo(name = "player_id") val playerId: Long,
+    @ColumnInfo(name = "player_name") val playerName: String?,
+    @ColumnInfo(name = "player_number") val playerNumber: String?,
     @ColumnInfo(name = "pa") val pa: Int,
     @ColumnInfo(name = "ab") val ab: Int,
     @ColumnInfo(name = "hits") val hits: Int,
@@ -357,7 +397,8 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     private fun formatIP(outs: Int) = "${outs / 3}.${outs % 3}"
 
     fun getStatsForPitcher(pitcherId: Long): PitcherStats? {
-        val pitcher = pitcherDao.getPitcherById(pitcherId) ?: return null
+        val pitcherBase = pitcherDao.getPitcherById(pitcherId) ?: return null
+        val pitcher = pitcherDao.getPitchersForGame(pitcherBase.gameId).find { it.id == pitcherId } ?: pitcherBase
         val pitches = getPitchesForPitcher(pitcherId)
 
         var bfCount = 0
@@ -703,4 +744,16 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
 
     fun saveLeagueSettings(settings: LeagueSettings) =
         leagueSettingsDao.upsert(settings)
+
+    fun reparentAtBat(atBatId: Long, newGameId: Long) {
+        val ab = atBatDao.getAtBatById(atBatId) ?: return
+        atBatDao.updateAtBat(ab.copy(gameId = newGameId))
+    }
+
+    fun reparentPitcher(pitcherId: Long, newGameId: Long) {
+        val p = pitcherDao.getPitcherById(pitcherId) ?: return
+        pitcherDao.updatePitcher(p.copy(gameId = newGameId))
+    }
+
+    fun deleteGame(gameId: Long) = gameDao.deleteGameWithCascade(gameId)
 }

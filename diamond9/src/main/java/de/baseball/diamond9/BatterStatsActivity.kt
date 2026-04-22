@@ -199,7 +199,11 @@ private fun GameBatterTab(gameId: Long, db: DatabaseHelper) {
         val o = obp(r); val s = slg(r)
         return if (o < 0 && s < 0) -1f else maxOf(0f, o) + maxOf(0f, s)
     }
-    fun name(r: GameBatterStatsRow) = players[r.playerId]?.name ?: ""
+    fun name(r: GameBatterStatsRow): String {
+        val name = r.playerName ?: ""
+        val num = r.playerNumber?.let { "#$it " } ?: ""
+        return "$num$name".trim()
+    }
 
     val rows = remember(rawRows, sortCol, sortAsc) {
         val sorted = when (sortCol) {
@@ -282,8 +286,7 @@ private fun GameBatterTab(gameId: Long, db: DatabaseHelper) {
 
         LazyColumn {
             itemsIndexed(rows) { index, row ->
-                val name = players[row.playerId]?.let { "#${it.number} ${it.name}" }
-                    ?: stringResource(R.string.season_stats_unknown_player)
+                val name = name(row).ifBlank { stringResource(R.string.season_stats_unknown_player) }
                 val avgVal = avg(row)
                 val avgStr = when {
                     row.ab == 0 -> "--"

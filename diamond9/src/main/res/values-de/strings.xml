@@ -379,4 +379,11 @@
     <string name="settings_restore_failed">Wiederherstellung fehlgeschlagen: %s</string>
     <string name="settings_restore_confirm_title">Backup wiederherstellen?</string>
     <string name="settings_restore_confirm_message">Vorhandene Daten werden nicht gelöscht. Die Daten aus dem Backup werden ergänzt. Fortfahren?</string>
+
+    <!-- ── Merge Games ──────────────────────────────────────────────────── -->
+    <string name="dialog_merge_games_title">Mögliches doppeltes Spiel</string>
+    <string name="dialog_merge_games_message">Ein Spiel vom %1$s gegen %2$s existiert bereits. Möchtest du diese Spiele zusammenführen? Unvollständige Daten werden aus dem jeweils anderen Spiel ergänzt.</string>
+    <string name="btn_merge">Zusammenführen</string>
+    <string name="btn_ignore">Ignorieren</string>
+    <string name="msg_merge_completed">Spiele erfolgreich zusammengeführt.</string>
 </resources>

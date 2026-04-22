@@ -48,6 +48,8 @@ abstract class AtBatDao {
 
     @Query("""
         SELECT ab.player_id,
+            pl.name                                                                                 AS player_name,
+            pl.number                                                                               AS player_number,
             COUNT(*)                                                                                AS pa,
             SUM(CASE WHEN ab.result NOT IN ('BB','HBP','SAC') THEN 1 ELSE 0 END)                   AS ab,
             SUM(CASE WHEN ab.result IN ('H','1B','2B','3B','HR') THEN 1 ELSE 0 END)                AS hits,
@@ -59,13 +61,15 @@ abstract class AtBatDao {
             SUM(CASE WHEN ab.result = 'HBP'            THEN 1 ELSE 0 END)                          AS hbp
         FROM at_bats ab
         LEFT JOIN players pl ON pl.id = ab.player_id
-        WHERE ab.game_id = :gameId AND ab.result IS NOT NULL AND ab.player_id > 0
+        WHERE ab.game_id = :gameId AND ab.result IS NOT NULL
         GROUP BY ab.player_id
     """)
     abstract fun getGameBatterStats(gameId: Long): List<GameBatterStatsRow>
 
     @Query("""
         SELECT ab.player_id AS player_id,
+            pl.name                                                                                    AS player_name,
+            pl.number                                                                                  AS player_number,
             COUNT(*)                                                                                    AS pa,
             SUM(CASE WHEN ab.result NOT IN ('BB','HBP','SAC') THEN 1 ELSE 0 END)                       AS ab,
             SUM(CASE WHEN ab.result IN ('H','1B','2B','3B','HR') THEN 1 ELSE 0 END)                    AS hits,

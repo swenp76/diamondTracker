@@ -60,7 +60,8 @@ import java.util.Locale
 class GameListActivity : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
-    private lateinit var backupManager: BackupManager
+    private val backupManager: BackupManager by lazy { BackupManager(this) }
+    private val gameMatcher: GameMatcher by lazy { GameMatcher(this, db) }
 
     private var gameToExport: Game? = null
     private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -113,7 +114,6 @@ class GameListActivity : ComponentActivity() {
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
         db = DatabaseHelper(this)
-        backupManager = BackupManager(this)
 
         val teamId = intent.getLongExtra("teamId", 0L)
         val teamName = intent.getStringExtra("teamName") ?: ""
@@ -191,9 +191,29 @@ private fun GameListScreen(
     var gameToDelete by remember { mutableStateOf<Game?>(null) }
     var gameToCopy by remember { mutableStateOf<Game?>(null) }
     var pendingImport by remember { mutableStateOf<JSONObject?>(null) }
+    var mergeCandidate by remember { mutableStateOf<Pair<Game, Game>?>(null) }
+    var showUndoMerge by remember { mutableStateOf(false) }
 
     fun refresh() {
-        games = db.getGamesForTeam(teamId)
+        val rawGames = db.getGamesForTeam(teamId)
+        games = rawGames
+        
+        // Check for duplicates
+        if (rawGames.size >= 2 && mergeCandidate == null) {
+            val matcher = GameMatcher(context, db)
+            for (i in 0 until rawGames.size) {
+                for (j in i + 1 until rawGames.size) {
+                    if (matcher.isPotentialDuplicate(rawGames[i], rawGames[j])) {
+                        mergeCandidate = rawGames[i] to rawGames[j]
+                        break
+                    }
+                }
+                if (mergeCandidate != null) break
+            }
+        }
+        
+        val prefs = context.getSharedPreferences("merges", android.content.Context.MODE_PRIVATE)
+        showUndoMerge = prefs.contains("last_merge_undo")
     }
 
     LaunchedEffect(Unit) {
@@ -294,6 +314,41 @@ private fun GameListScreen(
                 TextButton(onClick = { pendingImport = null }) { Text(stringResource(R.string.btn_cancel)) }
             }
         )
+    }
+
+    mergeCandidate?.let { (g1, g2) ->
+        AlertDialog(
+            onDismissRequest = { mergeCandidate = null },
+            title = { Text(stringResource(R.string.dialog_merge_games_title)) },
+            text = { Text(stringResource(R.string.dialog_merge_games_message, g1.date, g1.opponent)) },
+            confirmButton = {
+                Button(onClick = {
+                    val matcher = GameMatcher(context, db)
+                    matcher.mergeGames(g1.id, g2.id)
+                    mergeCandidate = null
+                    refresh()
+                }) { Text(stringResource(R.string.btn_merge)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { mergeCandidate = null }) { Text(stringResource(R.string.btn_ignore)) }
+            }
+        )
+    }
+
+    if (showUndoMerge) {
+        SnackbarHost(hostState = remember { SnackbarHostState() }) {
+            Snackbar(
+                action = {
+                    TextButton(onClick = {
+                        val matcher = GameMatcher(context, db)
+                        if (matcher.undoLastMerge()) {
+                            refresh()
+                        }
+                    }) { Text(stringResource(R.string.btn_undo), color = Color.Yellow) }
+                },
+                modifier = Modifier.padding(16.dp)
+            ) { Text(stringResource(R.string.msg_merge_completed)) }
+        }
     }
 
     if (showAddDialog) {

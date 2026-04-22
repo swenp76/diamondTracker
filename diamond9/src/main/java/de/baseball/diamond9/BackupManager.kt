@@ -25,6 +25,9 @@ import java.io.File
  *  13 → league_settings table introduced
  *  14 → game_number column added to games
  *  15 → pitchers.name backfilled (null → '')
+ *  16 → pitches.type backfilled (null → '')
+ *  17 → pitches.at_bat_id backfilled (null → 0)
+ *  18 → added foreign key constraints with CASCADE
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
@@ -35,7 +38,7 @@ class BackupManager constructor(
     constructor(context: Context) : this(context, DatabaseHelper(context))
 
     companion object {
-        const val DB_VERSION = 17
+        const val DB_VERSION = 18
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
@@ -354,9 +357,9 @@ class BackupManager constructor(
         restoreTeamPositions(migrated)
         restorePlayers(migrated)
         restoreGames(migrated)
+        restoreAtBats(migrated)
         restorePitchers(migrated)
         restorePitches(migrated)
-        restoreAtBats(migrated)
         restoreOwnLineup(migrated)
         restoreSubstitutions(migrated)
         restoreOpponentLineup(migrated)
@@ -691,6 +694,11 @@ class BackupManager constructor(
             v = 17
         }
 
+        // Migration 17 → 18: Foreign Key CASCADE – no JSON structure change needed.
+        if (v < 18 && toVersion >= 18) {
+            v = 18
+        }
+
         return current
     }
 
@@ -875,14 +883,19 @@ class BackupManager constructor(
         db.setElapsedTime(gameId, gData.optLong("elapsed_time_ms", 0L))
 
         // Players cache for this team
-        val teamPlayers = db.getPlayersForTeam(teamId)
+        val teamPlayers = db.getPlayersForTeam(teamId).toMutableList()
         fun findOrCreatePlayer(pObj: JSONObject?): Long {
             if (pObj == null) return 0L
             val name = pObj.getString("name").take(50)
             val number = pObj.getString("number").take(3)
-            val existing = teamPlayers.find { it.name == name && it.number == number }
-            if (existing != null) return existing.id
-            return db.insertPlayer(teamId, name, number, 1) // Default pos 1 (P)
+            
+            val potentialMatch = PlayerMatcher.findPotentialMatch(name, number, teamPlayers)
+            if (potentialMatch != null) return potentialMatch.id
+            
+            val newId = db.insertPlayer(teamId, name, number, 1) // Default pos 1 (P)
+            // Add to cache to avoid duplicates within the same import
+            teamPlayers.add(Player(newId, teamId, name, number, 1, 0, false, 0))
+            return newId
         }
 
         // Scoreboard

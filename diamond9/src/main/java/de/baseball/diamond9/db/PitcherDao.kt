@@ -23,6 +23,9 @@ abstract class PitcherDao {
     @Query("SELECT id, game_id, name, player_id FROM pitchers WHERE id = :pitcherId")
     abstract fun getPitcherById(pitcherId: Long): Pitcher?
 
+    @Update
+    abstract fun updatePitcher(pitcher: Pitcher)
+
     @Transaction
     open fun deletePitcher(pitcherId: Long) {
         deletePitchesForPitcher(pitcherId)
