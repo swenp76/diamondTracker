@@ -354,11 +354,11 @@ class BackupManager constructor(
         val migrated = applyBackupMigrations(json, fromVersion = backupVersion, toVersion = DB_VERSION)
 
         restoreTeams(migrated)
-        restoreTeamPositions(migrated)
         restorePlayers(migrated)
         restoreGames(migrated)
-        restoreAtBats(migrated)
+        restoreTeamPositions(migrated)
         restorePitchers(migrated)
+        restoreAtBats(migrated)
         restorePitches(migrated)
         restoreOwnLineup(migrated)
         restoreSubstitutions(migrated)
@@ -450,9 +450,12 @@ class BackupManager constructor(
             db.rawInsertWithConflictIgnore("pitches", ContentValues().apply {
                 put("id", obj.getLong("id"))
                 put("pitcher_id", obj.getLong("pitcher_id"))
-                // at_bat_id is NOT NULL in the database; restore null as 0
-                if (obj.isNull("at_bat_id")) put("at_bat_id", 0L)
-                else put("at_bat_id", obj.getLong("at_bat_id"))
+                val abId = obj.optLong("at_bat_id", -1L)
+                if (obj.isNull("at_bat_id") || abId == -1L || abId == 0L) {
+                    putNull("at_bat_id")
+                } else {
+                    put("at_bat_id", abId)
+                }
                 put("type", obj.getString("type"))
                 put("sequence_nr", obj.getInt("sequence_nr"))
                 put("inning", obj.getInt("inning"))

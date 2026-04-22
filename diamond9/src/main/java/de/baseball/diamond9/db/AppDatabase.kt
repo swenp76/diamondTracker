@@ -289,7 +289,7 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE pitchers_new RENAME TO pitchers")
 
                 // Fix 'pitches'
-                db.execSQL("CREATE TABLE IF NOT EXISTS pitches_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, pitcher_id INTEGER NOT NULL, at_bat_id INTEGER NOT NULL, type TEXT NOT NULL DEFAULT '', sequence_nr INTEGER NOT NULL, inning INTEGER NOT NULL DEFAULT 1)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS pitches_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, pitcher_id INTEGER NOT NULL, at_bat_id INTEGER, type TEXT NOT NULL DEFAULT '', sequence_nr INTEGER NOT NULL, inning INTEGER NOT NULL DEFAULT 1)")
                 db.execSQL("INSERT INTO pitches_new (id, pitcher_id, at_bat_id, type, sequence_nr, inning) SELECT id, pitcher_id, at_bat_id, IFNULL(type, ''), sequence_nr, inning FROM pitches")
                 db.execSQL("DROP TABLE pitches")
                 db.execSQL("ALTER TABLE pitches_new RENAME TO pitches")
@@ -301,7 +301,8 @@ abstract class AppDatabase : RoomDatabase() {
                 // 0. Orphan Cleanup: Delete orphaned records to ensure FK constraints aren't violated
                 db.execSQL("DELETE FROM at_bats WHERE game_id NOT IN (SELECT id FROM games)")
                 db.execSQL("DELETE FROM pitchers WHERE game_id NOT IN (SELECT id FROM games)")
-                db.execSQL("DELETE FROM pitches WHERE pitcher_id NOT IN (SELECT id FROM pitchers) OR at_bat_id NOT IN (SELECT id FROM at_bats) AND at_bat_id > 0")
+                db.execSQL("DELETE FROM pitches WHERE pitcher_id NOT IN (SELECT id FROM pitchers)")
+                db.execSQL("DELETE FROM pitches WHERE at_bat_id IS NOT NULL AND at_bat_id NOT IN (SELECT id FROM at_bats)")
 
                 // 1. at_bats with Foreign Key
                 db.execSQL("""
@@ -338,7 +339,7 @@ abstract class AppDatabase : RoomDatabase() {
                     CREATE TABLE IF NOT EXISTS pitches_new (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
                         pitcher_id INTEGER NOT NULL, 
-                        at_bat_id INTEGER NOT NULL, 
+                        at_bat_id INTEGER,
                         type TEXT NOT NULL DEFAULT '', 
                         sequence_nr INTEGER NOT NULL, 
                         inning INTEGER NOT NULL DEFAULT 1,

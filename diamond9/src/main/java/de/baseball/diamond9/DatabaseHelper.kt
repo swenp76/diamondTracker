@@ -63,7 +63,7 @@ data class Pitcher(
 data class Pitch(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "pitcher_id") val pitcherId: Long = 0,
-    @ColumnInfo(name = "at_bat_id") val atBatId: Long = 0,
+    @ColumnInfo(name = "at_bat_id") val atBatId: Long? = null,
     @ColumnInfo(defaultValue = "") val type: String = "",
     @ColumnInfo(name = "sequence_nr") val sequenceNr: Int,
     @ColumnInfo(name = "inning", defaultValue = "1") val inning: Int = 1
@@ -386,7 +386,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
 
     fun insertPitch(pitcherId: Long, type: String, inning: Int = 1): Long {
         val next = pitcherDao.getNextSequenceNr(pitcherId)
-        return pitcherDao.insertPitch(Pitch(pitcherId = pitcherId, type = type, sequenceNr = next, inning = inning))
+        return pitcherDao.insertPitch(Pitch(pitcherId = pitcherId, atBatId = null, type = type, sequenceNr = next, inning = inning))
     }
 
     fun undoLastPitch(pitcherId: Long) = pitcherDao.undoLastPitch(pitcherId)
@@ -754,6 +754,4 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
         val p = pitcherDao.getPitcherById(pitcherId) ?: return
         pitcherDao.updatePitcher(p.copy(gameId = newGameId))
     }
-
-    fun deleteGame(gameId: Long) = gameDao.deleteGameWithCascade(gameId)
 }

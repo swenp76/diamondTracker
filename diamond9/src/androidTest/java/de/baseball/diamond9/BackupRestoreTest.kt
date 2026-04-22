@@ -32,7 +32,8 @@ class BackupRestoreTest {
         appDb = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        manager = BackupManager(context)
+        // We use the DatabaseHelper with our in-memory DB
+        manager = BackupManager(context, DatabaseHelper(appDb))
     }
 
     @After
@@ -46,7 +47,9 @@ class BackupRestoreTest {
         dbVersion: Int = BackupManager.DB_VERSION,
         extraGames: JSONArray = JSONArray(),
         extraAtBats: JSONArray = JSONArray(),
-        extraPitches: JSONArray = JSONArray()
+        extraPitches: JSONArray = JSONArray(),
+        extraPitchers: JSONArray = JSONArray(),
+        extraPlayers: JSONArray = JSONArray()
     ): JSONObject = JSONObject().apply {
         put("dbVersion", dbVersion)
         put("exportDate", System.currentTimeMillis())
@@ -55,9 +58,9 @@ class BackupRestoreTest {
             put("name", "Test Team")
         }))
         put("team_positions", JSONArray())
-        put("players", JSONArray())
+        put("players", extraPlayers)
         put("games", extraGames)
-        put("pitchers", JSONArray())
+        put("pitchers", extraPitchers)
         put("pitches", extraPitches)
         put("at_bats", extraAtBats)
         put("own_lineup", JSONArray())
@@ -140,6 +143,10 @@ class BackupRestoreTest {
     @Test
     fun restoreFromJson_pitchWithNullAtBatId_doesNotThrow() {
         // Defense pitches have no at_bat_id – second API 26 crash scenario
+        val game = gameJson(id = 1)
+        val pitcher = JSONObject().apply {
+            put("id", 400); put("game_id", 1); put("name", "P"); put("player_id", 0)
+        }
         val pitch = JSONObject().apply {
             put("id", 300)
             put("pitcher_id", 400)
@@ -148,13 +155,28 @@ class BackupRestoreTest {
             put("sequence_nr", 1)
             put("inning", 1)
         }
-        val backup = minimalBackup(extraPitches = JSONArray().put(pitch))
+        val backup = minimalBackup(
+            extraGames = JSONArray().put(game),
+            extraPitchers = JSONArray().put(pitcher),
+            extraPitches = JSONArray().put(pitch)
+        )
 
         assertDoesNotThrow { manager.restoreFromJson(backup) }
     }
 
     @Test
     fun restoreFromJson_pitchWithAtBatId_doesNotThrow() {
+        val game = gameJson(id = 1)
+        val player = JSONObject().apply {
+            put("id", 100); put("team_id", 99); put("name", "Player"); put("number", "1")
+            put("primary_position", 1); put("secondary_position", 0); put("is_pitcher", 0); put("birth_year", 0)
+        }
+        val pitcher = JSONObject().apply {
+            put("id", 401); put("game_id", 1); put("name", "P"); put("player_id", 0)
+        }
+        val atBat = JSONObject().apply {
+            put("id", 500); put("game_id", 1); put("player_id", 100); put("slot", 1); put("inning", 1); put("result", "K")
+        }
         val pitch = JSONObject().apply {
             put("id", 301)
             put("pitcher_id", 401)
@@ -163,7 +185,13 @@ class BackupRestoreTest {
             put("sequence_nr", 1)
             put("inning", 1)
         }
-        val backup = minimalBackup(extraPitches = JSONArray().put(pitch))
+        val backup = minimalBackup(
+            extraGames = JSONArray().put(game),
+            extraPlayers = JSONArray().put(player),
+            extraPitchers = JSONArray().put(pitcher),
+            extraAtBats = JSONArray().put(atBat),
+            extraPitches = JSONArray().put(pitch)
+        )
 
         assertDoesNotThrow { manager.restoreFromJson(backup) }
     }
@@ -227,13 +255,26 @@ class BackupRestoreTest {
             put("type", "HBP"); put("sequence_nr", 1); put("inning", 3)
         }
         val game = gameJson(id = 5, teamId = 1, gameNumber = "1234")
+        val pitcher = JSONObject().apply {
+            put("id", 3); put("game_id", 5); put("name", "Test"); put("player_id", 0)
+        }
+
+        // Teams must exist for the game
+        val team = JSONObject().apply {
+            put("id", 1L)
+            put("name", "Main Team")
+        }
 
         val backup = minimalBackup(
             dbVersion = 14,
             extraGames = JSONArray().put(game),
             extraAtBats = JSONArray().put(atBatNullResult),
-            extraPitches = JSONArray().put(pitchNullAtBatId)
-        )
+            extraPitches = JSONArray().put(pitchNullAtBatId),
+            extraPitchers = JSONArray().put(pitcher)
+        ).apply {
+            // override teams to include team 1
+            put("teams", JSONArray().put(team))
+        }
 
         assertDoesNotThrow { manager.restoreFromJson(backup) }
     }
