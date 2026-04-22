@@ -159,6 +159,12 @@ Scoreboard (#9 ✅) liest Inning-Anzahl aus Team-Einstellungen.
 
 ---
 
+#### #21 – Datenintegrität: Spieler-Doubletten beim Import verhindern
+Beim Importieren von Spielen oder Wiederherstellen von Backups prüfen, ob ein Spieler mit demselben Namen/Nummer bereits im Team existiert. Aktuell könnten Duplikate mit unterschiedlichen IDs entstehen, wenn dasselbe Team auf verschiedenen Geräten angelegt wurde.
+Logik: Vor dem Insert prüfen (`SELECT id FROM players WHERE team_id = :t AND name = :n AND number = :nr`) und ggf. vorhandene ID verwenden statt neu anzulegen.
+
+---
+
 ### 🟢 Niedrig
 
 #### #12 – Feature: Sportart Baseball / Softball

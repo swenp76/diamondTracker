@@ -41,6 +41,7 @@ abstract class GameDao {
         val pitcherIds = getPitcherIdsForGame(gameId)
         if (pitcherIds.isNotEmpty()) deletePitches(pitcherIds)
         deletePitchersForGame(gameId)
+        deleteAtBatsForGame(gameId)
         deleteOpponentLineup(gameId)
         deleteOpponentBench(gameId)
         deleteOwnLineup(gameId)
@@ -58,6 +59,9 @@ abstract class GameDao {
 
     @Query("DELETE FROM pitchers WHERE game_id = :gameId")
     abstract fun deletePitchersForGame(gameId: Long)
+
+    @Query("DELETE FROM at_bats WHERE game_id = :gameId")
+    abstract fun deleteAtBatsForGame(gameId: Long)
 
     @Query("DELETE FROM opponent_lineup WHERE game_id = :gameId")
     abstract fun deleteOpponentLineup(gameId: Long)
