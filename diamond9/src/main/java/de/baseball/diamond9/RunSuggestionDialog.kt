@@ -13,11 +13,12 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun RunSuggestionDialog(
     reachedBaseCount: Int,
+    runnerOuts: Int,
     onConfirm: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     var lob by remember { mutableIntStateOf(0) }
-    val suggestedRuns = (reachedBaseCount - lob).coerceAtLeast(0)
+    val suggestedRuns = (reachedBaseCount - runnerOuts - lob).coerceAtLeast(0)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -48,8 +49,15 @@ fun RunSuggestionDialog(
 
                 HorizontalDivider()
 
+                val summary = if (runnerOuts > 0) {
+                    // %1$d reached − %2$d runner out − %3$d LOB = %4$d Runs
+                    stringResource(R.string.dialog_run_suggestion_summary_with_outs, reachedBaseCount, runnerOuts, lob, suggestedRuns)
+                } else {
+                    stringResource(R.string.dialog_run_suggestion_summary, reachedBaseCount, lob, suggestedRuns)
+                }
+
                 Text(
-                    text = stringResource(R.string.dialog_run_suggestion_summary, reachedBaseCount, lob, suggestedRuns),
+                    text = summary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.align(Alignment.CenterHorizontally)

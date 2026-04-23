@@ -88,6 +88,14 @@ abstract class PitcherDao {
     abstract fun getRunnersReachedBase(gameId: Long, inning: Int): Int
 
     @Query("""
+        SELECT COUNT(*) FROM pitches pi
+        JOIN pitchers p ON p.id = pi.pitcher_id
+        WHERE p.game_id = :gameId AND pi.inning = :inning
+          AND pi.type = 'RO'
+    """)
+    abstract fun getRunnerOuts(gameId: Long, inning: Int): Int
+
+    @Query("""
         SELECT p.player_id AS player_id,
             pl.name AS name,
             COUNT(CASE WHEN pi.type IN ('B', 'S', 'F', 'HBP', 'H', '1B', '2B', '3B', 'HR', 'GO', 'FO', 'LO', 'FC', 'E', 'DP', 'SAC') THEN 1 END) AS total_pitches,

@@ -176,7 +176,7 @@ class BattingTrackActivity : ComponentActivity() {
 
             db.updateAtBatResult(abId, result)
 
-            val newOuts = savedOuts + 1
+            val newOuts = savedOuts + if (result == "DP") 2 else 1
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
                 prevInningForHalfInning = savedInning
@@ -210,7 +210,7 @@ class BattingTrackActivity : ComponentActivity() {
             // batter stays but count resets — start fresh at-bat for same slot
             val newAtBatId = startNewAtBat(currentSlot)
 
-            val newOuts = savedOuts + 1
+            val newOuts = savedOuts + if (result == "DP") 2 else 1
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
                 prevInningForHalfInning = savedInning
@@ -238,8 +238,10 @@ class BattingTrackActivity : ComponentActivity() {
 
         if (showRunSuggestion) {
             val reachedBase = db.getRunnersWhoReachedBase(gameId, prevInningForHalfInning, isDefense = false)
+            val runnerOuts = db.getRunnerOuts(gameId, prevInningForHalfInning, isDefense = false)
             RunSuggestionDialog(
                 reachedBaseCount = reachedBase,
+                runnerOuts = runnerOuts,
                 onConfirm = { runs ->
                     val isOwnHome = if (halfInningState.isTopHalf) 0 else 1
                     db.upsertScoreboardRun(gameId, prevInningForHalfInning, isOwnHome, runs)

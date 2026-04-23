@@ -326,8 +326,10 @@ class PitchTrackActivity : ComponentActivity() {
 
         if (showRunSuggestion) {
             val reachedBase = db.getRunnersWhoReachedBase(gameId, prevInningForHalfInning, isDefense = true)
+            val runnerOuts = db.getRunnerOuts(gameId, prevInningForHalfInning, isDefense = true)
             RunSuggestionDialog(
                 reachedBaseCount = reachedBase,
+                runnerOuts = runnerOuts,
                 onConfirm = { runs ->
                     val isOpponentHome = if (halfInningState.isTopHalf) 1 else 0
                     db.upsertScoreboardRun(gameId, prevInningForHalfInning, isOpponentHome, runs)

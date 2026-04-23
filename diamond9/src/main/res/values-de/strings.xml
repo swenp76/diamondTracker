@@ -394,5 +394,6 @@
     <string name="dialog_run_suggestion_title">Halb-Inning beendet</string>
     <string name="dialog_run_suggestion_lob_question">Wie viele Läufer blieben auf Base (LOB)?</string>
     <string name="dialog_run_suggestion_summary">%1$d sind auf Base gekommen − %2$d LOB = %3$d Runs</string>
+    <string name="dialog_run_suggestion_summary_with_outs">%1$d erreicht − %2$d Läufer-Outs − %3$d LOB = %4$d Runs</string>
     <string name="btn_save_to_scoreboard">Im Scoreboard speichern</string>
 </resources>
