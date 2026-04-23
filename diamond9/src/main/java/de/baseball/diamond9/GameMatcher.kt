@@ -11,15 +11,32 @@ class GameMatcher(private val context: Context, private val db: DatabaseHelper) 
 
     /**
      * Checks if two games are potential duplicates.
-     * Heuristic: Same date, same opponent, and start time within 30 minutes.
+     * Heuristic: Same date, same opponent, same game number, and similar time.
      */
     fun isPotentialDuplicate(g1: Game, g2: Game): Boolean {
         if (g1.id == g2.id) return false
         if (g1.date != g2.date) return false
         if (g1.opponent != g2.opponent) return false
+
+        // 1. Check game number: if both have one and they differ, they are not duplicates
+        if (g1.gameNumber.isNotEmpty() && g2.gameNumber.isNotEmpty() && g1.gameNumber != g2.gameNumber) {
+            return false
+        }
+
+        // 2. Check game time (HH:MM): if both have one and they differ, they are not duplicates
+        if (g1.gameTime.isNotEmpty() && g2.gameTime.isNotEmpty() && g1.gameTime != g2.gameTime) {
+            return false
+        }
+
+        // 3. Check start time (timestamp): if both are > 0 and differ by more than 30 mins, not duplicates
+        if (g1.startTime > 0 && g2.startTime > 0) {
+            val timeDiff = Math.abs(g1.startTime - g2.startTime)
+            if (timeDiff > TimeUnit.MINUTES.toMillis(30)) {
+                return false
+            }
+        }
         
-        val timeDiff = Math.abs(g1.startTime - g2.startTime)
-        return timeDiff <= TimeUnit.MINUTES.toMillis(30)
+        return true
     }
 
     /**
