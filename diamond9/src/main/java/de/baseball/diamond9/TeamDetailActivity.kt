@@ -49,13 +49,15 @@ class TeamDetailActivity : ComponentActivity() {
         uri ?: return@registerForActivityResult
         try {
             contentResolver.openOutputStream(uri)?.use { out ->
-                out.write(BackupManager(this).exportTeam(teamId).toByteArray(Charsets.UTF_8))
+                out.write(BackupManager(this).exportTeam(teamId, exportIncludeGames).toByteArray(Charsets.UTF_8))
             }
             Toast.makeText(this, getString(R.string.toast_team_exported), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, getString(R.string.toast_export_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
+
+    private var exportIncludeGames = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,15 +72,18 @@ class TeamDetailActivity : ComponentActivity() {
                 teamId = teamId,
                 db = db,
                 onBack = { finish() },
-                onExport = {
+                onExport = { includeGames ->
+                    exportIncludeGames = includeGames
                     val teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: "team"
+                    val suffix = if (includeGames) "_full" else ""
                     val safeName = teamName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
-                    exportLauncher.launch("$safeName.json")
+                    exportLauncher.launch("$safeName$suffix.json")
                 },
-                onShare = {
+                onShare = { includeGames ->
                     val teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: "team"
+                    val suffix = if (includeGames) "_full" else ""
                     val safeName = teamName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
-                    BackupManager.shareJson(this, "$safeName.json", BackupManager(this).exportTeam(teamId))
+                    BackupManager.shareJson(this, "$safeName$suffix.json", BackupManager(this).exportTeam(teamId, includeGames))
                 }
             )
         }
@@ -92,8 +97,8 @@ fun TeamDetailScreen(
     teamId: Long,
     db: DatabaseHelper,
     onBack: () -> Unit,
-    onExport: () -> Unit,
-    onShare: () -> Unit
+    onExport: (Boolean) -> Unit,
+    onShare: (Boolean) -> Unit
 ) {
     var teamName by remember { mutableStateOf("") }
     var players by remember { mutableStateOf(emptyList<Player>()) }
@@ -142,14 +147,21 @@ fun TeamDetailScreen(
                                 text = { Text(stringResource(R.string.menu_export_team)) },
                                 onClick = {
                                     menuExpanded = false
-                                    onExport()
+                                    onExport(false)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_export_team_full)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onExport(true)
                                 }
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_share_team)) },
                                 onClick = {
                                     menuExpanded = false
-                                    onShare()
+                                    onShare(false)
                                 }
                             )
                         }

@@ -168,7 +168,8 @@
     <!-- ── Teams ──────────────────────────────────────────────────────────── -->
     <string name="teams_title">Teams</string>
     <string name="menu_import_team">Import Team</string>
-    <string name="menu_export_team">Export Team</string>
+    <string name="menu_export_team">Export Team (Roster)</string>
+    <string name="menu_export_team_full">Export Team (Incl. all Games)</string>
     <string name="menu_share_team">Share Team</string>
     <string name="dialog_delete_team_title">Delete Team</string>
     <string name="dialog_delete_team_message">Really delete \"%s\" and all players?</string>
