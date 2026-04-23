@@ -65,10 +65,11 @@ class TeamHubActivity : ComponentActivity() {
                         putExtra("teamName", teamName)
                     })
                 },
-                onShareTeam = {
+                onShareTeam = { includeGames ->
+                    val suffix = if (includeGames) "_full" else ""
                     val safeName = teamName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
-                    val json = BackupManager(this).exportTeam(teamId)
-                    BackupManager.shareJson(this, "$safeName.json", json)
+                    val json = BackupManager(this).exportTeam(teamId, includeGames)
+                    BackupManager.shareJson(this, "$safeName$suffix.json", json)
                 }
             )
         }
@@ -84,9 +85,30 @@ fun TeamHubScreen(
     onStats: () -> Unit,
     onEditRoster: () -> Unit,
     onSettings: () -> Unit,
-    onShareTeam: () -> Unit
+    onShareTeam: (Boolean) -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
+    var showShareDialog by remember { mutableStateOf(false) }
+
+    if (showShareDialog) {
+        AlertDialog(
+            onDismissRequest = { showShareDialog = false },
+            title = { Text(stringResource(R.string.menu_share_team)) },
+            text = { Text(stringResource(R.string.dialog_share_team_include_games)) },
+            confirmButton = {
+                Button(onClick = {
+                    showShareDialog = false
+                    onShareTeam(true)
+                }) { Text(stringResource(R.string.btn_yes)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showShareDialog = false
+                    onShareTeam(false)
+                }) { Text(stringResource(R.string.btn_no)) }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -111,7 +133,10 @@ fun TeamHubScreen(
                         ) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_share_team)) },
-                                onClick = { menuExpanded = false; onShareTeam() }
+                                onClick = {
+                                    menuExpanded = false
+                                    showShareDialog = true
+                                }
                             )
                         }
                     }

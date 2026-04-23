@@ -168,9 +168,11 @@
     <!-- ── Teams ──────────────────────────────────────────────────────────── -->
     <string name="teams_title">Teams</string>
     <string name="menu_import_team">Import Team</string>
-    <string name="menu_export_team">Export Team (Roster)</string>
-    <string name="menu_export_team_full">Export Team (Incl. all Games)</string>
+    <string name="menu_export_team">Export Team</string>
     <string name="menu_share_team">Share Team</string>
+    <string name="dialog_share_team_include_games">Include all played games in the export?</string>
+    <string name="btn_yes">Yes</string>
+    <string name="btn_no">No</string>
     <string name="dialog_delete_team_title">Delete Team</string>
     <string name="dialog_delete_team_message">Really delete \"%s\" and all players?</string>
     <string name="dialog_add_team_title">New Team</string>

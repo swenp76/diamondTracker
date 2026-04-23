@@ -107,6 +107,29 @@ fun TeamDetailScreen(
     var showAddPlayerDialog by remember { mutableStateOf(false) }
     var playerToDelete by remember { mutableStateOf<Player?>(null) }
     var menuExpanded by remember { mutableStateOf(false) }
+    var showExportGamesDialog by remember { mutableStateOf<Boolean?>(null) } // null = hide, true = export, false = share
+
+    if (showExportGamesDialog != null) {
+        AlertDialog(
+            onDismissRequest = { showExportGamesDialog = null },
+            title = { Text(stringResource(if (showExportGamesDialog == true) R.string.menu_export_team else R.string.menu_share_team)) },
+            text = { Text(stringResource(R.string.dialog_share_team_include_games)) },
+            confirmButton = {
+                Button(onClick = {
+                    val isExport = showExportGamesDialog == true
+                    showExportGamesDialog = null
+                    if (isExport) onExport(true) else onShare(true)
+                }) { Text(stringResource(R.string.btn_yes)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    val isExport = showExportGamesDialog == true
+                    showExportGamesDialog = null
+                    if (isExport) onExport(false) else onShare(false)
+                }) { Text(stringResource(R.string.btn_no)) }
+            }
+        )
+    }
 
     fun refresh() {
         teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: ""
@@ -147,21 +170,14 @@ fun TeamDetailScreen(
                                 text = { Text(stringResource(R.string.menu_export_team)) },
                                 onClick = {
                                     menuExpanded = false
-                                    onExport(false)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_export_team_full)) },
-                                onClick = {
-                                    menuExpanded = false
-                                    onExport(true)
+                                    showExportGamesDialog = true
                                 }
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_share_team)) },
                                 onClick = {
                                     menuExpanded = false
-                                    onShare(false)
+                                    showExportGamesDialog = false
                                 }
                             )
                         }

@@ -128,9 +128,11 @@
     <!-- ── Teams ──────────────────────────────────────────────────────────── -->
     <string name="teams_title">Teams</string>
     <string name="menu_import_team">Team importieren</string>
-    <string name="menu_export_team">Team exportieren (Kader)</string>
-    <string name="menu_export_team_full">Team exportieren (Inkl. aller Spiele)</string>
+    <string name="menu_export_team">Team exportieren</string>
     <string name="menu_share_team">Team teilen</string>
+    <string name="dialog_share_team_include_games">Sollen alle gespielten Spiele mit exportiert werden?</string>
+    <string name="btn_yes">Ja</string>
+    <string name="btn_no">Nein</string>
     <string name="dialog_delete_team_title">Team löschen</string>
     <string name="dialog_delete_team_message">\"%s\" und alle Spieler wirklich löschen?</string>
     <string name="dialog_add_team_title">Neues Team</string>
