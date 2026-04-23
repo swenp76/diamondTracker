@@ -39,9 +39,9 @@ class BackupManagerMigrationsTest {
     // ── DB_VERSION sanity ─────────────────────────────────────────────────────
 
     @Test
-    fun dbVersion_is17() {
+    fun dbVersion_is18() {
         // Bumping AppDatabase.version without updating DB_VERSION breaks backup compatibility.
-        assertEquals(17, BackupManager.DB_VERSION)
+        assertEquals(18, BackupManager.DB_VERSION)
     }
 
     // ── Migration 5 → 6 : scoreboard_runs array added ─────────────────────────

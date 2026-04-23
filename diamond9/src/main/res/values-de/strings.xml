@@ -130,6 +130,9 @@
     <string name="menu_import_team">Team importieren</string>
     <string name="menu_export_team">Team exportieren</string>
     <string name="menu_share_team">Team teilen</string>
+    <string name="dialog_share_team_include_games">Sollen alle gespielten Spiele mit exportiert werden?</string>
+    <string name="btn_yes">Ja</string>
+    <string name="btn_no">Nein</string>
     <string name="dialog_delete_team_title">Team löschen</string>
     <string name="dialog_delete_team_message">\"%s\" und alle Spieler wirklich löschen?</string>
     <string name="dialog_add_team_title">Neues Team</string>
@@ -378,5 +381,12 @@
     <string name="settings_restore_success">Daten wiederhergestellt ✓</string>
     <string name="settings_restore_failed">Wiederherstellung fehlgeschlagen: %s</string>
     <string name="settings_restore_confirm_title">Backup wiederherstellen?</string>
-    <string name="settings_restore_confirm_message">Vorhandene Daten werden nicht gelöscht. Die Daten aus dem Backup werden ergänzt. Fortfahren?</string>
+    <string name="settings_restore_confirm_message">ALLE vorhandenen Daten werden gelöscht und durch das Backup ersetzt. Dies kann nicht rückgängig gemacht werden. Fortfahren?</string>
+
+    <!-- ── Merge Games ──────────────────────────────────────────────────── -->
+    <string name="dialog_merge_games_title">Mögliches doppeltes Spiel</string>
+    <string name="dialog_merge_games_message">Ein Spiel vom %1$s gegen %2$s existiert bereits. Möchtest du diese Spiele zusammenführen? Unvollständige Daten werden aus dem jeweils anderen Spiel ergänzt.</string>
+    <string name="btn_merge">Zusammenführen</string>
+    <string name="btn_ignore">Ignorieren</string>
+    <string name="msg_merge_completed">Spiele erfolgreich zusammengeführt.</string>
 </resources>

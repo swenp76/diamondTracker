@@ -23,6 +23,9 @@ abstract class PitcherDao {
     @Query("SELECT id, game_id, name, player_id FROM pitchers WHERE id = :pitcherId")
     abstract fun getPitcherById(pitcherId: Long): Pitcher?
 
+    @Update
+    abstract fun updatePitcher(pitcher: Pitcher)
+
     @Transaction
     open fun deletePitcher(pitcherId: Long) {
         deletePitchesForPitcher(pitcherId)
@@ -96,7 +99,7 @@ abstract class PitcherDao {
         JOIN pitchers p ON p.id = pi.pitcher_id
         JOIN games g ON g.id = p.game_id
         LEFT JOIN players pl ON pl.id = p.player_id
-        WHERE g.team_id = :teamId AND p.player_id > 0
+        WHERE g.team_id = :teamId AND p.player_id != 0
           AND (:startDate IS NULL OR :startDate = '' OR (substr(g.date,7,4)||substr(g.date,4,2)||substr(g.date,1,2)) >= :startDate)
           AND (:endDate IS NULL OR :endDate = '' OR (substr(g.date,7,4)||substr(g.date,4,2)||substr(g.date,1,2)) <= :endDate)
         GROUP BY p.player_id

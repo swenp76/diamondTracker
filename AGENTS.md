@@ -6,11 +6,11 @@ Sie hilft beim Verwalten von Teams, Erstellen von Aufstellungen und Tracken von 
 
 ## Technologie
 - **Sprache:** Kotlin
-- **Ziel:** Android (minSdk 26, targetSdk 35)
+- **Ziel:** Android (minSdk 26, targetSdk 36)
 - **Datenbank:** Room (SQLite) über DAOs + DatabaseHelper-Wrapper
 - **UI:** Jetpack Compose (Material 3)
 - **Package:** de.baseball.diamond9
-- **DB-Datei:** `pitcher.db` (Version 17)
+- **DB-Datei:** `pitcher.db` (Version 18)
 - **Lokalisierung:** Deutsch (Fallback, `values/`), Englisch (`values-en/`)
 
 ## Projektstruktur
@@ -36,12 +36,14 @@ diamond9/src/main/java/de/baseball/diamond9/
 ├── GameHubActivity.kt        ← Spiel-Hub (Offense/Defense/Lineup + Scoreboard + Spieluhr + Half-Inning Bar)
 ├── HalfInningManager.kt      ← Half-Inning State + Logic (pure, no Android deps)
 ├── GameListActivity.kt       ← Spielliste mit Import/Export pro Spiel
+├── GameMatcher.kt            ← Game deduplication and merging logic
 ├── ManageOpponentsActivity.kt
 ├── OpponentLineupActivity.kt
 ├── OwnLineupActivity.kt
 ├── PitchTrackActivity.kt     ← Defense / Pitching
 ├── PitcherListActivity.kt
 ├── PitcherTrendHelper.kt     ← Statistik-Hilfsfunktionen (buildBatterStats, getTrendLevel, …)
+├── PlayerMatcher.kt          ← Player deduplication logic (Levenshtein distance)
 ├── SeasonStatsActivity.kt    ← Saison-Statistiken (Batter + Pitcher)
 ├── SettingsActivity.kt
 ├── StatsActivity.kt          ← Pitcher-Statistiken (pro Spiel, inkl. IP)
@@ -126,6 +128,10 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ Unit-Tests: PitcherTrendHelperTest (32 Tests), GameBatterStatsDaoTest (11 Tests), BackupManagerMigrationsTest (19 Tests)
 - ✅ Export-Verbesserung: PDF/JPG mit Headlines ("Batting stats", "Pitching stats") und Spiel-Metadaten (Zeit, Nr.)
 - ✅ Security: Backup-Sicherheits-Checks (Path Traversal Schutz, String-Längen-Validierung 50/3/20/10)
+- ✅ **#21** Datenintegrität: `PlayerMatcher` verhindert Dubletten beim Import (Levenshtein-Distanz für Namen + Trikotnummern-Abgleich).
+- ✅ **#22** Game Merging: `GameMatcher` erkennt Dubletten (gleiches Datum/Gegner) und erlaubt Zusammenführen inkl. Undo.
+- ✅ **#23** Foreign Key CASCADE: Migration 18 aktiviert CASCADE-Löschung für At-Bats/Pitches/Pitcher bei Spiel-Löschung.
+- ✅ **#24** Pitcher Name Resolution: Fix für "Unknown"-Namen in Statistiken durch SQL JOIN auf Roster-Tabelle.
 
 ---
 
@@ -156,6 +162,12 @@ Neuer Screen `SeasonListActivity`. Statistik-Queries um `season_id`-Filter erwei
 Neues Feld `innings` (Integer, Default 9) in `teams`-Tabelle (DB-Migration).
 Toggle/Spinner in `TeamDetailScreen` (7 / 9 / custom).
 Scoreboard (#9 ✅) liest Inning-Anzahl aus Team-Einstellungen.
+
+---
+
+#### #21 – Datenintegrität: Spieler-Doubletten beim Import verhindern
+Beim Importieren von Spielen oder Wiederherstellen von Backups prüfen, ob ein Spieler mit demselben Namen/Nummer bereits im Team existiert. Aktuell könnten Duplikate mit unterschiedlichen IDs entstehen, wenn dasselbe Team auf verschiedenen Geräten angelegt wurde.
+Logik: Vor dem Insert prüfen (`SELECT id FROM players WHERE team_id = :t AND name = :n AND number = :nr`) und ggf. vorhandene ID verwenden statt neu anzulegen.
 
 ---
 
@@ -273,7 +285,8 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | 14 → 15 | `pitchers.name` null backfill | ✅ |
 | 15 → 16 | `pitches.type` null backfill | ✅ |
 | 16 → 17 | `pitches.at_bat_id` null backfill (0L) | ✅ |
-| 17 → 18 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
-| 18 → 19 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
+| 17 → 18 | `FOREIGN KEY` + `ON DELETE CASCADE` (games/at_bats/pitchers/pitches) | ✅ |
+| 18 → 19 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
+| 19 → 20 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
 
 **Hinweis:** Jede Migration hier eintragen und gleichzeitig `BackupManager` aktualisieren.

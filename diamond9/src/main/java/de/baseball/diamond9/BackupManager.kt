@@ -25,6 +25,9 @@ import java.io.File
  *  13 → league_settings table introduced
  *  14 → game_number column added to games
  *  15 → pitchers.name backfilled (null → '')
+ *  16 → pitches.type backfilled (null → '')
+ *  17 → pitches.at_bat_id backfilled (null → 0)
+ *  18 → added foreign key constraints with CASCADE
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
@@ -35,7 +38,7 @@ class BackupManager constructor(
     constructor(context: Context) : this(context, DatabaseHelper(context))
 
     companion object {
-        const val DB_VERSION = 17
+        const val DB_VERSION = 18
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
@@ -350,22 +353,26 @@ class BackupManager constructor(
         }
         val migrated = applyBackupMigrations(json, fromVersion = backupVersion, toVersion = DB_VERSION)
 
-        restoreTeams(migrated)
-        restoreTeamPositions(migrated)
-        restorePlayers(migrated)
-        restoreGames(migrated)
-        restorePitchers(migrated)
-        restorePitches(migrated)
-        restoreAtBats(migrated)
-        restoreOwnLineup(migrated)
-        restoreSubstitutions(migrated)
-        restoreOpponentLineup(migrated)
-        restoreOpponentBench(migrated)
-        restoreOpponentSubstitutions(migrated)
-        restoreScoreboardRuns(migrated)
-        restorePitcherAppearances(migrated)
-        restoreOpponentTeams(migrated)
-        restoreLeagueSettings(migrated)
+        db.purgeAllData()
+
+        db.runInTransaction {
+            restoreTeams(migrated)
+            restorePlayers(migrated)
+            restoreGames(migrated)
+            restoreTeamPositions(migrated)
+            restorePitchers(migrated)
+            restoreAtBats(migrated)
+            restorePitches(migrated)
+            restoreOwnLineup(migrated)
+            restoreSubstitutions(migrated)
+            restoreOpponentLineup(migrated)
+            restoreOpponentBench(migrated)
+            restoreOpponentSubstitutions(migrated)
+            restoreScoreboardRuns(migrated)
+            restorePitcherAppearances(migrated)
+            restoreOpponentTeams(migrated)
+            restoreLeagueSettings(migrated)
+        }
     }
 
     private fun restoreTeams(json: JSONObject) {
@@ -447,9 +454,12 @@ class BackupManager constructor(
             db.rawInsertWithConflictIgnore("pitches", ContentValues().apply {
                 put("id", obj.getLong("id"))
                 put("pitcher_id", obj.getLong("pitcher_id"))
-                // at_bat_id is NOT NULL in the database; restore null as 0
-                if (obj.isNull("at_bat_id")) put("at_bat_id", 0L)
-                else put("at_bat_id", obj.getLong("at_bat_id"))
+                val abId = obj.optLong("at_bat_id", -1L)
+                if (obj.isNull("at_bat_id") || abId == -1L || abId == 0L) {
+                    putNull("at_bat_id")
+                } else {
+                    put("at_bat_id", abId)
+                }
                 put("type", obj.getString("type"))
                 put("sequence_nr", obj.getInt("sequence_nr"))
                 put("inning", obj.getInt("inning"))
@@ -691,6 +701,11 @@ class BackupManager constructor(
             v = 17
         }
 
+        // Migration 17 → 18: Foreign Key CASCADE – no JSON structure change needed.
+        if (v < 18 && toVersion >= 18) {
+            v = 18
+        }
+
         return current
     }
 
@@ -740,6 +755,13 @@ class BackupManager constructor(
         val root = JSONObject()
         root.put("type", "single_game")
         root.put("dbVersion", DB_VERSION)
+
+        // League settings
+        val ls = db.getLeagueSettings(game.teamId)
+        root.put("league_settings", JSONObject().apply {
+            put("innings", ls.innings)
+            put("time_limit_minutes", ls.timeLimitMinutes ?: JSONObject.NULL)
+        })
 
         // Game metadata
         val gObj = JSONObject().apply {
@@ -875,14 +897,19 @@ class BackupManager constructor(
         db.setElapsedTime(gameId, gData.optLong("elapsed_time_ms", 0L))
 
         // Players cache for this team
-        val teamPlayers = db.getPlayersForTeam(teamId)
+        val teamPlayers = db.getPlayersForTeam(teamId).toMutableList()
         fun findOrCreatePlayer(pObj: JSONObject?): Long {
             if (pObj == null) return 0L
             val name = pObj.getString("name").take(50)
             val number = pObj.getString("number").take(3)
-            val existing = teamPlayers.find { it.name == name && it.number == number }
-            if (existing != null) return existing.id
-            return db.insertPlayer(teamId, name, number, 1) // Default pos 1 (P)
+            
+            val potentialMatch = PlayerMatcher.findPotentialMatch(name, number, teamPlayers)
+            if (potentialMatch != null) return potentialMatch.id
+            
+            val newId = db.insertPlayer(teamId, name, number, 1) // Default pos 1 (P)
+            // Add to cache to avoid duplicates within the same import
+            teamPlayers.add(Player(newId, teamId, name, number, 1, 0, false, 0))
+            return newId
         }
 
         // Scoreboard
@@ -1006,35 +1033,191 @@ class BackupManager constructor(
     // ── Team Export / Import ─────────────────────────────────────────────────────
 
     /** Builds a JSON string for the given team (roster + positions). */
-    fun exportTeam(teamId: Long): String {
+    fun exportTeam(teamId: Long, includeGames: Boolean = false): String {
         val team = db.getAllTeams().first { it.id == teamId }
-        val posArray = JSONArray()
-        db.getEnabledPositions(teamId).sorted().forEach { posArray.put(it) }
-        val playersArray = JSONArray()
-        db.getPlayersForTeam(teamId).forEach { p ->
-            playersArray.put(JSONObject().apply {
-                put("name", p.name)
-                put("number", p.number)
-                put("primary_position", p.primaryPosition)
-                put("secondary_position", p.secondaryPosition)
-                put("is_pitcher", p.isPitcher)
-                put("birth_year", p.birthYear)
-            })
-        }
-        return JSONObject().apply {
+        val root = JSONObject().apply {
             put("type", "team")
             put("version", 1)
+            put("dbVersion", DB_VERSION)
+            put("includeGames", includeGames)
             put("name", team.name)
+            
+            val posArray = JSONArray()
+            db.getEnabledPositions(teamId).sorted().forEach { posArray.put(it) }
             put("positions", posArray)
+
+            val ls = db.getLeagueSettings(teamId)
+            put("league_settings", JSONObject().apply {
+                put("innings", ls.innings)
+                put("time_limit_minutes", ls.timeLimitMinutes ?: JSONObject.NULL)
+            })
+
+            val playersArray = JSONArray()
+            val teamPlayers = db.getPlayersForTeam(teamId)
+            teamPlayers.forEach { p ->
+                playersArray.put(JSONObject().apply {
+                    put("id", p.id)
+                    put("name", p.name)
+                    put("number", p.number)
+                    put("primary_position", p.primaryPosition)
+                    put("secondary_position", p.secondaryPosition)
+                    put("is_pitcher", p.isPitcher)
+                    put("birth_year", p.birthYear)
+                })
+            }
             put("players", playersArray)
-        }.toString(2)
+
+            if (includeGames) {
+                val games = db.getGamesForTeam(teamId)
+                val gamesArray = JSONArray()
+                val scoreboardArray = JSONArray()
+                val pitchersArray = JSONArray()
+                val pitchesArray = JSONArray()
+                val atBatsArray = JSONArray()
+                val ownLineupArray = JSONArray()
+                val substitutionsArray = JSONArray()
+                val oppLineupArray = JSONArray()
+                val oppBenchArray = JSONArray()
+                val oppSubsArray = JSONArray()
+                val appearancesArray = JSONArray()
+
+                games.forEach { g ->
+                    gamesArray.put(JSONObject().apply {
+                        put("id", g.id)
+                        put("date", g.date)
+                        put("opponent", g.opponent)
+                        put("team_id", g.teamId)
+                        put("inning", g.inning)
+                        put("outs", g.outs)
+                        put("leadoff_slot", g.leadoffSlot)
+                        put("start_time", g.startTime)
+                        put("elapsed_time_ms", g.elapsedTimeMs)
+                        put("game_time", g.gameTime)
+                        put("is_home", g.isHome)
+                        put("current_inning", g.currentInning)
+                        put("is_top_half", g.isTopHalf)
+                        put("game_number", g.gameNumber)
+                    })
+
+                    db.getScoreboard(g.id).forEach { r ->
+                        scoreboardArray.put(JSONObject().apply {
+                            put("game_id", g.id)
+                            put("inning", r.inning)
+                            put("is_home", r.isHome)
+                            put("runs", r.runs)
+                        })
+                    }
+
+                    db.getPitchersForGame(g.id).forEach { p ->
+                        pitchersArray.put(JSONObject().apply {
+                            put("id", p.id)
+                            put("game_id", p.gameId)
+                            put("name", p.name)
+                            put("player_id", p.playerId)
+                        })
+                        db.getPitchesForPitcher(p.id).forEach { pitch ->
+                            pitchesArray.put(JSONObject().apply {
+                                put("id", pitch.id)
+                                put("pitcher_id", pitch.pitcherId)
+                                put("at_bat_id", pitch.atBatId ?: JSONObject.NULL)
+                                put("type", pitch.type)
+                                put("sequence_nr", pitch.sequenceNr)
+                                put("inning", pitch.inning)
+                            })
+                        }
+                    }
+
+                    db.getAtBatsForGame(g.id).forEach { ab ->
+                        atBatsArray.put(JSONObject().apply {
+                            put("id", ab.id)
+                            put("game_id", ab.gameId)
+                            put("player_id", ab.playerId)
+                            put("slot", ab.slot)
+                            put("inning", ab.inning)
+                            put("result", ab.result ?: JSONObject.NULL)
+                        })
+                    }
+
+                    db.getOwnLineup(g.id).forEach { (slot, player) ->
+                        ownLineupArray.put(JSONObject().apply {
+                            put("game_id", g.id)
+                            put("slot", slot)
+                            put("player_id", player.id)
+                        })
+                    }
+
+                    db.getSubstitutionsForGame(g.id).forEach { s ->
+                        substitutionsArray.put(JSONObject().apply {
+                            put("game_id", g.id)
+                            put("slot", s.slot)
+                            put("player_out_id", s.playerOutId)
+                            put("player_in_id", s.playerInId)
+                        })
+                    }
+
+                    db.getLineup(g.id).forEach { l ->
+                        oppLineupArray.put(JSONObject().apply {
+                            put("game_id", g.id)
+                            put("batting_order", l.battingOrder)
+                            put("jersey_number", l.jerseyNumber)
+                        })
+                    }
+
+                    db.getBenchPlayers(g.id).forEach { b ->
+                        oppBenchArray.put(JSONObject().apply {
+                            put("game_id", g.id)
+                            put("jersey_number", b.jerseyNumber)
+                        })
+                    }
+
+                    db.getOpponentSubstitutionsForGame(g.id).forEach { os ->
+                        oppSubsArray.put(JSONObject().apply {
+                            put("game_id", g.id)
+                            put("slot", os.slot)
+                            put("jersey_out", os.jerseyOut)
+                            put("jersey_in", os.jerseyIn)
+                        })
+                    }
+                }
+
+                teamPlayers.forEach { player ->
+                    db.getPitcherAppearances(player.id).forEach { app ->
+                        appearancesArray.put(JSONObject().apply {
+                            put("player_id", app.playerId)
+                            put("game_id", app.gameId)
+                            put("date", app.date)
+                            put("batters_faced", app.battersFaced)
+                        })
+                    }
+                }
+
+                put("games", gamesArray)
+                put("scoreboard_runs", scoreboardArray)
+                put("pitchers", pitchersArray)
+                put("pitches", pitchesArray)
+                put("at_bats", atBatsArray)
+                put("own_lineup", ownLineupArray)
+                put("substitutions", substitutionsArray)
+                put("opponent_lineup", oppLineupArray)
+                put("opponent_bench", oppBenchArray)
+                put("opponent_substitutions", oppSubsArray)
+                put("pitcher_appearances", appearancesArray)
+
+                val oppTeamsArray = JSONArray()
+                db.getOpponentTeamsForTeam(teamId).forEach { opp ->
+                    oppTeamsArray.put(JSONObject().apply {
+                        put("name", opp.name)
+                        put("team_id", teamId)
+                    })
+                }
+                put("opponent_teams", oppTeamsArray)
+            }
+        }
+        return root.toString(2)
     }
 
-    /**
-     * Imports a team from a JSON object produced by [exportTeam].
-     * Creates a new team with players and positions; never overwrites an existing team.
-     */
     fun importTeam(json: JSONObject) {
+        val includeGames = json.optBoolean("includeGames", false)
         val teamId = db.insertTeam(json.getString("name").take(50))
 
         db.getEnabledPositions(teamId).forEach { db.setPositionEnabled(teamId, it, false) }
@@ -1045,11 +1228,22 @@ class BackupManager constructor(
             }
         }
 
+        val lsObj = json.optJSONObject("league_settings")
+        if (lsObj != null) {
+            db.saveLeagueSettings(LeagueSettings(
+                teamId = teamId,
+                innings = lsObj.optInt("innings", 9),
+                timeLimitMinutes = if (lsObj.isNull("time_limit_minutes")) null else lsObj.optInt("time_limit_minutes")
+            ))
+        }
+
+        val playerMapping = mutableMapOf<Long, Long>()
         val playersArray = json.optJSONArray("players")
         if (playersArray != null) {
             for (p in 0 until playersArray.length()) {
                 val pl = playersArray.getJSONObject(p)
-                db.insertPlayer(
+                val oldId = pl.optLong("id", -1L)
+                val newId = db.insertPlayer(
                     teamId,
                     pl.getString("name").take(50),
                     pl.optString("number", "").take(3),
@@ -1058,6 +1252,149 @@ class BackupManager constructor(
                     pl.optBoolean("is_pitcher", false),
                     pl.optInt("birth_year", 0)
                 )
+                if (oldId != -1L) playerMapping[oldId] = newId
+            }
+        }
+
+        if (includeGames) {
+            val gameMapping = mutableMapOf<Long, Long>()
+            val gamesArr = json.optJSONArray("games")
+            if (gamesArr != null) {
+                for (i in 0 until gamesArr.length()) {
+                    val obj = gamesArr.getJSONObject(i)
+                    val oldId = obj.getLong("id")
+                    val newId = db.insertGame(
+                        date = obj.getString("date").take(10),
+                        opponent = obj.getString("opponent").take(50),
+                        teamId = teamId,
+                        gameTime = obj.optString("game_time", "").take(5),
+                        isHome = obj.optInt("is_home", 1),
+                        gameNumber = obj.optString("game_number", "").take(20)
+                    )
+                    db.updateGameState(newId, obj.optInt("inning", 1), obj.optInt("outs", 0))
+                    db.updateLeadoffSlot(newId, obj.optInt("leadoff_slot", 1))
+                    db.setStartTime(newId, obj.optLong("start_time", 0L))
+                    db.setElapsedTime(newId, obj.optLong("elapsed_time_ms", 0L))
+                    db.updateHalfInning(newId, obj.optInt("current_inning", 1), obj.optInt("is_top_half", 1) == 1)
+                    gameMapping[oldId] = newId
+                }
+            }
+
+            val scoreboardArr = json.optJSONArray("scoreboard_runs")
+            if (scoreboardArr != null) {
+                for (i in 0 until scoreboardArr.length()) {
+                    val obj = scoreboardArr.getJSONObject(i)
+                    val gid = gameMapping[obj.getLong("game_id")] ?: continue
+                    db.upsertScoreboardRun(gid, obj.getInt("inning"), obj.getInt("is_home"), obj.getInt("runs"))
+                }
+            }
+
+            val pitcherMapping = mutableMapOf<Long, Long>()
+            val pitchersArr = json.optJSONArray("pitchers")
+            if (pitchersArr != null) {
+                for (i in 0 until pitchersArr.length()) {
+                    val obj = pitchersArr.getJSONObject(i)
+                    val oldId = obj.getLong("id")
+                    val gid = gameMapping[obj.getLong("game_id")] ?: continue
+                    val pid = playerMapping[obj.getLong("player_id")] ?: 0L
+                    val newId = db.insertPitcher(gid, obj.getString("name").take(50), pid)
+                    pitcherMapping[oldId] = newId
+                }
+            }
+
+            val atBatMapping = mutableMapOf<Long, Long>()
+            val atBatsArr = json.optJSONArray("at_bats")
+            if (atBatsArr != null) {
+                for (i in 0 until atBatsArr.length()) {
+                    val obj = atBatsArr.getJSONObject(i)
+                    val oldId = obj.getLong("id")
+                    val gid = gameMapping[obj.getLong("game_id")] ?: continue
+                    val pid = playerMapping[obj.getLong("player_id")] ?: 0L
+                    val newId = db.insertAtBat(gid, pid, obj.getInt("slot"), obj.getInt("inning"))
+                    if (!obj.isNull("result")) db.updateAtBatResult(newId, obj.getString("result"))
+                    atBatMapping[oldId] = newId
+                }
+            }
+
+            val pitchesArr = json.optJSONArray("pitches")
+            if (pitchesArr != null) {
+                for (i in 0 until pitchesArr.length()) {
+                    val obj = pitchesArr.getJSONObject(i)
+                    val pitcherId = pitcherMapping[obj.getLong("pitcher_id")] ?: continue
+                    val abId = if (obj.isNull("at_bat_id")) null else atBatMapping[obj.getLong("at_bat_id")]
+                    
+                    if (abId != null) {
+                        db.insertPitchForAtBat(abId, obj.getString("type"), obj.getInt("inning"))
+                    } else {
+                        db.insertPitch(pitcherId, obj.getString("type"), obj.getInt("inning"))
+                    }
+                }
+            }
+
+            val ownLineupArr = json.optJSONArray("own_lineup")
+            if (ownLineupArr != null) {
+                for (i in 0 until ownLineupArr.length()) {
+                    val obj = ownLineupArr.getJSONObject(i)
+                    val gid = gameMapping[obj.getLong("game_id")] ?: continue
+                    val pid = playerMapping[obj.getLong("player_id")] ?: continue
+                    db.setOwnLineupPlayer(gid, obj.getInt("slot"), pid)
+                }
+            }
+
+            val subsArr = json.optJSONArray("substitutions")
+            if (subsArr != null) {
+                for (i in 0 until subsArr.length()) {
+                    val obj = subsArr.getJSONObject(i)
+                    val gid = gameMapping[obj.getLong("game_id")] ?: continue
+                    val pOut = playerMapping[obj.getLong("player_out_id")] ?: continue
+                    val pIn = playerMapping[obj.getLong("player_in_id")] ?: continue
+                    db.addSubstitution(gid, obj.getInt("slot"), pOut, pIn)
+                }
+            }
+
+            val oppLineupArr = json.optJSONArray("opponent_lineup")
+            if (oppLineupArr != null) {
+                for (i in 0 until oppLineupArr.length()) {
+                    val obj = oppLineupArr.getJSONObject(i)
+                    val gid = gameMapping[obj.getLong("game_id")] ?: continue
+                    db.upsertLineupEntry(gid, obj.getInt("batting_order"), obj.getString("jersey_number").take(3))
+                }
+            }
+
+            val oppBenchArr = json.optJSONArray("opponent_bench")
+            if (oppBenchArr != null) {
+                for (i in 0 until oppBenchArr.length()) {
+                    val obj = oppBenchArr.getJSONObject(i)
+                    val gid = gameMapping[obj.getLong("game_id")] ?: continue
+                    db.insertBenchPlayer(gid, obj.getString("jersey_number").take(3))
+                }
+            }
+
+            val oppSubsArr = json.optJSONArray("opponent_substitutions")
+            if (oppSubsArr != null) {
+                for (i in 0 until oppSubsArr.length()) {
+                    val obj = oppSubsArr.getJSONObject(i)
+                    val gid = gameMapping[obj.getLong("game_id")] ?: continue
+                    db.addOpponentSubstitution(gid, obj.getInt("slot"), obj.getString("jersey_out").take(3), obj.getString("jersey_in").take(3))
+                }
+            }
+
+            val appsArr = json.optJSONArray("pitcher_appearances")
+            if (appsArr != null) {
+                for (i in 0 until appsArr.length()) {
+                    val obj = appsArr.getJSONObject(i)
+                    val pid = playerMapping[obj.getLong("player_id")] ?: continue
+                    val gid = gameMapping[obj.getLong("game_id")] ?: continue
+                    db.savePitcherAppearance(pid, gid, obj.optString("date", ""), obj.getInt("batters_faced"))
+                }
+            }
+
+            val oppTeamsArr = json.optJSONArray("opponent_teams")
+            if (oppTeamsArr != null) {
+                for (i in 0 until oppTeamsArr.length()) {
+                    val obj = oppTeamsArr.getJSONObject(i)
+                    db.insertOpponentTeamForTeam(obj.getString("name").take(50), teamId)
+                }
             }
         }
     }

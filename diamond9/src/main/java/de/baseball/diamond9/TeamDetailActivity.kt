@@ -49,13 +49,15 @@ class TeamDetailActivity : ComponentActivity() {
         uri ?: return@registerForActivityResult
         try {
             contentResolver.openOutputStream(uri)?.use { out ->
-                out.write(BackupManager(this).exportTeam(teamId).toByteArray(Charsets.UTF_8))
+                out.write(BackupManager(this).exportTeam(teamId, exportIncludeGames).toByteArray(Charsets.UTF_8))
             }
             Toast.makeText(this, getString(R.string.toast_team_exported), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, getString(R.string.toast_export_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
+
+    private var exportIncludeGames = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,15 +72,18 @@ class TeamDetailActivity : ComponentActivity() {
                 teamId = teamId,
                 db = db,
                 onBack = { finish() },
-                onExport = {
+                onExport = { includeGames ->
+                    exportIncludeGames = includeGames
                     val teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: "team"
+                    val suffix = if (includeGames) "_full" else ""
                     val safeName = teamName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
-                    exportLauncher.launch("$safeName.json")
+                    exportLauncher.launch("$safeName$suffix.json")
                 },
-                onShare = {
+                onShare = { includeGames ->
                     val teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: "team"
+                    val suffix = if (includeGames) "_full" else ""
                     val safeName = teamName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
-                    BackupManager.shareJson(this, "$safeName.json", BackupManager(this).exportTeam(teamId))
+                    BackupManager.shareJson(this, "$safeName$suffix.json", BackupManager(this).exportTeam(teamId, includeGames))
                 }
             )
         }
@@ -92,8 +97,8 @@ fun TeamDetailScreen(
     teamId: Long,
     db: DatabaseHelper,
     onBack: () -> Unit,
-    onExport: () -> Unit,
-    onShare: () -> Unit
+    onExport: (Boolean) -> Unit,
+    onShare: (Boolean) -> Unit
 ) {
     var teamName by remember { mutableStateOf("") }
     var players by remember { mutableStateOf(emptyList<Player>()) }
@@ -102,6 +107,29 @@ fun TeamDetailScreen(
     var showAddPlayerDialog by remember { mutableStateOf(false) }
     var playerToDelete by remember { mutableStateOf<Player?>(null) }
     var menuExpanded by remember { mutableStateOf(false) }
+    var showExportGamesDialog by remember { mutableStateOf<Boolean?>(null) } // null = hide, true = export, false = share
+
+    if (showExportGamesDialog != null) {
+        AlertDialog(
+            onDismissRequest = { showExportGamesDialog = null },
+            title = { Text(stringResource(if (showExportGamesDialog == true) R.string.menu_export_team else R.string.menu_share_team)) },
+            text = { Text(stringResource(R.string.dialog_share_team_include_games)) },
+            confirmButton = {
+                Button(onClick = {
+                    val isExport = showExportGamesDialog == true
+                    showExportGamesDialog = null
+                    if (isExport) onExport(true) else onShare(true)
+                }) { Text(stringResource(R.string.btn_yes)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    val isExport = showExportGamesDialog == true
+                    showExportGamesDialog = null
+                    if (isExport) onExport(false) else onShare(false)
+                }) { Text(stringResource(R.string.btn_no)) }
+            }
+        )
+    }
 
     fun refresh() {
         teamName = db.getAllTeams().firstOrNull { it.id == teamId }?.name ?: ""
@@ -142,14 +170,14 @@ fun TeamDetailScreen(
                                 text = { Text(stringResource(R.string.menu_export_team)) },
                                 onClick = {
                                     menuExpanded = false
-                                    onExport()
+                                    showExportGamesDialog = true
                                 }
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_share_team)) },
                                 onClick = {
                                     menuExpanded = false
-                                    onShare()
+                                    showExportGamesDialog = false
                                 }
                             )
                         }

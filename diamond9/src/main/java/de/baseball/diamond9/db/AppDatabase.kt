@@ -27,7 +27,7 @@ import de.baseball.diamond9.*
         ScoreboardRun::class,
         LeagueSettings::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -289,8 +289,65 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE pitchers_new RENAME TO pitchers")
 
                 // Fix 'pitches'
-                db.execSQL("CREATE TABLE IF NOT EXISTS pitches_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, pitcher_id INTEGER NOT NULL, at_bat_id INTEGER NOT NULL, type TEXT NOT NULL DEFAULT '', sequence_nr INTEGER NOT NULL, inning INTEGER NOT NULL DEFAULT 1)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS pitches_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, pitcher_id INTEGER NOT NULL, at_bat_id INTEGER, type TEXT NOT NULL DEFAULT '', sequence_nr INTEGER NOT NULL, inning INTEGER NOT NULL DEFAULT 1)")
                 db.execSQL("INSERT INTO pitches_new (id, pitcher_id, at_bat_id, type, sequence_nr, inning) SELECT id, pitcher_id, at_bat_id, IFNULL(type, ''), sequence_nr, inning FROM pitches")
+                db.execSQL("DROP TABLE pitches")
+                db.execSQL("ALTER TABLE pitches_new RENAME TO pitches")
+            }
+        }
+
+        private val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 0. Orphan Cleanup: Delete orphaned records to ensure FK constraints aren't violated
+                db.execSQL("DELETE FROM at_bats WHERE game_id NOT IN (SELECT id FROM games)")
+                db.execSQL("DELETE FROM pitchers WHERE game_id NOT IN (SELECT id FROM games)")
+                db.execSQL("DELETE FROM pitches WHERE pitcher_id NOT IN (SELECT id FROM pitchers)")
+                db.execSQL("DELETE FROM pitches WHERE at_bat_id IS NOT NULL AND at_bat_id NOT IN (SELECT id FROM at_bats)")
+
+                // 1. at_bats with Foreign Key
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS at_bats_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        game_id INTEGER NOT NULL, 
+                        player_id INTEGER NOT NULL, 
+                        slot INTEGER NOT NULL, 
+                        inning INTEGER NOT NULL, 
+                        result TEXT,
+                        FOREIGN KEY(game_id) REFERENCES games(id) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("INSERT INTO at_bats_new SELECT * FROM at_bats")
+                db.execSQL("DROP TABLE at_bats")
+                db.execSQL("ALTER TABLE at_bats_new RENAME TO at_bats")
+
+                // 2. pitchers with Foreign Key
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS pitchers_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        game_id INTEGER NOT NULL, 
+                        name TEXT NOT NULL DEFAULT '', 
+                        player_id INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY(game_id) REFERENCES games(id) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("INSERT INTO pitchers_new SELECT * FROM pitchers")
+                db.execSQL("DROP TABLE pitchers")
+                db.execSQL("ALTER TABLE pitchers_new RENAME TO pitchers")
+
+                // 3. pitches with Foreign Keys (at_bat_id and pitcher_id)
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS pitches_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        pitcher_id INTEGER NOT NULL, 
+                        at_bat_id INTEGER,
+                        type TEXT NOT NULL DEFAULT '', 
+                        sequence_nr INTEGER NOT NULL, 
+                        inning INTEGER NOT NULL DEFAULT 1,
+                        FOREIGN KEY(pitcher_id) REFERENCES pitchers(id) ON DELETE CASCADE,
+                        FOREIGN KEY(at_bat_id) REFERENCES at_bats(id) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("INSERT INTO pitches_new SELECT * FROM pitches")
                 db.execSQL("DROP TABLE pitches")
                 db.execSQL("ALTER TABLE pitches_new RENAME TO pitches")
             }
@@ -304,7 +361,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "pitcher.db"
                 )
                     .allowMainThreadQueries()
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
                     .build().also { INSTANCE = it }
             }
         }

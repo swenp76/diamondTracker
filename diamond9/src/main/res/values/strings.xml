@@ -170,6 +170,9 @@
     <string name="menu_import_team">Import Team</string>
     <string name="menu_export_team">Export Team</string>
     <string name="menu_share_team">Share Team</string>
+    <string name="dialog_share_team_include_games">Include all played games in the export?</string>
+    <string name="btn_yes">Yes</string>
+    <string name="btn_no">No</string>
     <string name="dialog_delete_team_title">Delete Team</string>
     <string name="dialog_delete_team_message">Really delete \"%s\" and all players?</string>
     <string name="dialog_add_team_title">New Team</string>
@@ -453,6 +456,12 @@
     <string name="settings_restore_success">Data restored ✓</string>
     <string name="settings_restore_failed">Restore failed: %s</string>
     <string name="settings_restore_confirm_title">Restore Backup?</string>
-    <string name="settings_restore_confirm_message">Existing data will not be deleted. Data from the backup will be added. Continue?</string>
+    <string name="settings_restore_confirm_message">ALL existing data will be deleted and replaced with the backup. This cannot be undone. Continue?</string>
 
+    <!-- ── Merge Games ──────────────────────────────────────────────────── -->
+    <string name="dialog_merge_games_title">Potential Duplicate Game</string>
+    <string name="dialog_merge_games_message">A game from %1$s against %2$s already exists. Do you want to merge these games? Incomplete data will be filled from the other game.</string>
+    <string name="btn_merge">Merge</string>
+    <string name="btn_ignore">Ignore</string>
+    <string name="msg_merge_completed">Games merged successfully.</string>
 </resources>

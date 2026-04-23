@@ -311,14 +311,17 @@ private fun DatePickerDialog(
 @Composable
 private fun BatterStatsTab(teamId: Long, db: DatabaseHelper, startDate: String, endDate: String) {
     val rawRows = remember(teamId, startDate, endDate) { db.getSeasonBatterStats(teamId, startDate, endDate) }
-    val players = remember(teamId) { db.getPlayersForTeam(teamId).associateBy { it.id } }
 
     // Default: sort by AVG descending (col index 7)
     var sortCol by remember { mutableStateOf(7) }
     var sortAsc by remember { mutableStateOf(false) }
 
     val rows = remember(rawRows, sortCol, sortAsc) {
-        fun name(r: SeasonBatterRow) = players[r.playerId]?.name ?: ""
+        fun name(r: SeasonBatterRow): String {
+            val name = r.playerName ?: ""
+            val num = r.playerNumber?.let { "#$it " } ?: ""
+            return "$num$name".trim()
+        }
         fun avg(r: SeasonBatterRow) = if (r.ab > 0) r.hits.toFloat() / r.ab else -1f
         fun obp(r: SeasonBatterRow): Float {
             val d = r.ab + r.walks + r.hbp
@@ -414,8 +417,11 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper, startDate: String, 
 
         LazyColumn {
             itemsIndexed(rows) { index, row ->
-                val name = players[row.playerId]?.let { "#${it.number} ${it.name}" }
-                    ?: stringResource(R.string.season_stats_unknown_player)
+                val name = run {
+                    val n = row.playerName ?: ""
+                    val num = row.playerNumber?.let { "#$it " } ?: ""
+                    "$num$n".trim()
+                }.ifBlank { stringResource(R.string.season_stats_unknown_player) }
                 val avg = if (row.ab > 0) row.hits.toFloat() / row.ab else 0f
                 val avgStr = when {
                     row.ab == 0 -> "--"
