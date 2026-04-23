@@ -353,22 +353,26 @@ class BackupManager constructor(
         }
         val migrated = applyBackupMigrations(json, fromVersion = backupVersion, toVersion = DB_VERSION)
 
-        restoreTeams(migrated)
-        restorePlayers(migrated)
-        restoreGames(migrated)
-        restoreTeamPositions(migrated)
-        restorePitchers(migrated)
-        restoreAtBats(migrated)
-        restorePitches(migrated)
-        restoreOwnLineup(migrated)
-        restoreSubstitutions(migrated)
-        restoreOpponentLineup(migrated)
-        restoreOpponentBench(migrated)
-        restoreOpponentSubstitutions(migrated)
-        restoreScoreboardRuns(migrated)
-        restorePitcherAppearances(migrated)
-        restoreOpponentTeams(migrated)
-        restoreLeagueSettings(migrated)
+        db.purgeAllData()
+
+        db.runInTransaction {
+            restoreTeams(migrated)
+            restorePlayers(migrated)
+            restoreGames(migrated)
+            restoreTeamPositions(migrated)
+            restorePitchers(migrated)
+            restoreAtBats(migrated)
+            restorePitches(migrated)
+            restoreOwnLineup(migrated)
+            restoreSubstitutions(migrated)
+            restoreOpponentLineup(migrated)
+            restoreOpponentBench(migrated)
+            restoreOpponentSubstitutions(migrated)
+            restoreScoreboardRuns(migrated)
+            restorePitcherAppearances(migrated)
+            restoreOpponentTeams(migrated)
+            restoreLeagueSettings(migrated)
+        }
     }
 
     private fun restoreTeams(json: JSONObject) {

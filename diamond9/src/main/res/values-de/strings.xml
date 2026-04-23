@@ -378,7 +378,7 @@
     <string name="settings_restore_success">Daten wiederhergestellt ✓</string>
     <string name="settings_restore_failed">Wiederherstellung fehlgeschlagen: %s</string>
     <string name="settings_restore_confirm_title">Backup wiederherstellen?</string>
-    <string name="settings_restore_confirm_message">Vorhandene Daten werden nicht gelöscht. Die Daten aus dem Backup werden ergänzt. Fortfahren?</string>
+    <string name="settings_restore_confirm_message">ALLE vorhandenen Daten werden gelöscht und durch das Backup ersetzt. Dies kann nicht rückgängig gemacht werden. Fortfahren?</string>
 
     <!-- ── Merge Games ──────────────────────────────────────────────────── -->
     <string name="dialog_merge_games_title">Mögliches doppeltes Spiel</string>

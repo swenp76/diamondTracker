@@ -453,7 +453,7 @@
     <string name="settings_restore_success">Data restored ✓</string>
     <string name="settings_restore_failed">Restore failed: %s</string>
     <string name="settings_restore_confirm_title">Restore Backup?</string>
-    <string name="settings_restore_confirm_message">Existing data will not be deleted. Data from the backup will be added. Continue?</string>
+    <string name="settings_restore_confirm_message">ALL existing data will be deleted and replaced with the backup. This cannot be undone. Continue?</string>
 
     <!-- ── Merge Games ──────────────────────────────────────────────────── -->
     <string name="dialog_merge_games_title">Potential Duplicate Game</string>

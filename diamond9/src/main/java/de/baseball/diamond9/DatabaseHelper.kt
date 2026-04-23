@@ -301,6 +301,14 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     private val scoreboardDao = db.scoreboardDao()
     private val leagueSettingsDao = db.leagueSettingsDao()
 
+    fun purgeAllData() {
+        db.clearAllTables()
+    }
+
+    fun runInTransaction(block: () -> Unit) {
+        db.runInTransaction(block)
+    }
+
     fun rawInsertWithConflictIgnore(table: String, cv: ContentValues) {
         db.openHelper.writableDatabase.insert(
             table, android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE, cv
