@@ -65,6 +65,7 @@ class BattingTrackActivity : ComponentActivity() {
         var pitches by remember { mutableStateOf(emptyList<Pitch>()) }
         var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
         var showHalfInningSheet by remember { mutableStateOf(false) }
+        var showRunSuggestion by remember { mutableStateOf(false) }
 
         // Saved before the 3rd out is recorded; used by HalfInningChange undo
         var prevLeadoffForHalfInning by remember { mutableStateOf(1) }
@@ -184,7 +185,7 @@ class BattingTrackActivity : ComponentActivity() {
                 db.updateLeadoffSlot(gameId, nextLeadoff)
                 inning++
                 outs = 0
-                showHalfInningSheet = true
+                showRunSuggestion = true
             } else {
                 outs = newOuts
             }
@@ -217,7 +218,7 @@ class BattingTrackActivity : ComponentActivity() {
                 db.updateLeadoffSlot(gameId, savedSlot)
                 inning++
                 outs = 0
-                showHalfInningSheet = true
+                showRunSuggestion = true
             } else {
                 outs = newOuts
             }
@@ -234,6 +235,23 @@ class BattingTrackActivity : ComponentActivity() {
 
         var showKSheet by remember { mutableStateOf(false) }
         var showBBSheet by remember { mutableStateOf(false) }
+
+        if (showRunSuggestion) {
+            val reachedBase = db.getRunnersWhoReachedBase(gameId, prevInningForHalfInning, isDefense = false)
+            RunSuggestionDialog(
+                reachedBaseCount = reachedBase,
+                onConfirm = { runs ->
+                    val isOwnHome = if (halfInningState.isTopHalf) 0 else 1
+                    db.upsertScoreboardRun(gameId, prevInningForHalfInning, isOwnHome, runs)
+                    showRunSuggestion = false
+                    showHalfInningSheet = true
+                },
+                onDismiss = {
+                    showRunSuggestion = false
+                    showHalfInningSheet = true
+                }
+            )
+        }
 
         // Half-inning suggestion sheet
         if (showHalfInningSheet) {

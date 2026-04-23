@@ -86,6 +86,7 @@ class PitchTrackActivity : ComponentActivity() {
         var showHitSheet by remember { mutableStateOf(false) }
         var showOutSheet by remember { mutableStateOf(false) }
         var showHalfInningSheet by remember { mutableStateOf(false) }
+        var showRunSuggestion by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
         var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
@@ -120,7 +121,7 @@ class PitchTrackActivity : ComponentActivity() {
                 prevInningForHalfInning = savedInning
                 inning++
                 outs = 0
-                showHalfInningSheet = true
+                showRunSuggestion = true
             } else {
                 outs = newOuts
             }
@@ -145,7 +146,7 @@ class PitchTrackActivity : ComponentActivity() {
                 prevInningForHalfInning = savedInning
                 inning++
                 outs = 0
-                showHalfInningSheet = true
+                showRunSuggestion = true
             } else {
                 outs = newOuts
             }
@@ -321,6 +322,23 @@ class PitchTrackActivity : ComponentActivity() {
                     onShowTrend = { showTrendSheet = true }
                 )
             }
+        }
+
+        if (showRunSuggestion) {
+            val reachedBase = db.getRunnersWhoReachedBase(gameId, prevInningForHalfInning, isDefense = true)
+            RunSuggestionDialog(
+                reachedBaseCount = reachedBase,
+                onConfirm = { runs ->
+                    val isOpponentHome = if (halfInningState.isTopHalf) 1 else 0
+                    db.upsertScoreboardRun(gameId, prevInningForHalfInning, isOpponentHome, runs)
+                    showRunSuggestion = false
+                    showHalfInningSheet = true
+                },
+                onDismiss = {
+                    showRunSuggestion = false
+                    showHalfInningSheet = true
+                }
+            )
         }
 
         if (showHalfInningSheet) {

@@ -464,4 +464,10 @@
     <string name="btn_merge">Merge</string>
     <string name="btn_ignore">Ignore</string>
     <string name="msg_merge_completed">Games merged successfully.</string>
+
+    <!-- ── Run Suggestion ────────────────────────────────────────────────── -->
+    <string name="dialog_run_suggestion_title">End of Half-Inning</string>
+    <string name="dialog_run_suggestion_lob_question">How many runners were left on base (LOB)?</string>
+    <string name="dialog_run_suggestion_summary">%1$d reached base − %2$d LOB = %3$d Runs</string>
+    <string name="btn_save_to_scoreboard">Save to Scoreboard</string>
 </resources>

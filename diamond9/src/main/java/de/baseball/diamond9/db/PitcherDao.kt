@@ -1,7 +1,9 @@
 package de.baseball.diamond9.db
 
 import androidx.room.*
-import de.baseball.diamond9.*
+import de.baseball.diamond9.Pitcher
+import de.baseball.diamond9.Pitch
+import de.baseball.diamond9.SeasonPitcherRow
 
 @Dao
 abstract class PitcherDao {
@@ -20,8 +22,8 @@ abstract class PitcherDao {
     """)
     abstract fun getPitchersForGame(gameId: Long): List<Pitcher>
 
-    @Query("SELECT id, game_id, name, player_id FROM pitchers WHERE id = :pitcherId")
-    abstract fun getPitcherById(pitcherId: Long): Pitcher?
+    @Query("SELECT * FROM pitchers WHERE id = :id")
+    abstract fun getPitcherById(id: Long): Pitcher?
 
     @Update
     abstract fun updatePitcher(pitcher: Pitcher)
@@ -52,34 +54,38 @@ abstract class PitcherDao {
     @Query("SELECT id FROM pitches WHERE pitcher_id = :pitcherId ORDER BY sequence_nr DESC LIMIT 1")
     abstract fun getLastPitchId(pitcherId: Long): Long?
 
-    @Query("DELETE FROM pitches WHERE id = :pitchId")
-    abstract fun deletePitchById(pitchId: Long)
+    @Query("DELETE FROM pitches WHERE id = :id")
+    abstract fun deletePitchById(id: Long)
 
     @Query("SELECT COALESCE(MAX(sequence_nr), 0) + 1 FROM pitches WHERE pitcher_id = :pitcherId")
     abstract fun getNextSequenceNr(pitcherId: Long): Int
 
-    @Query("""
-        SELECT COUNT(*) FROM pitches pi
-        JOIN pitchers p ON p.id = pi.pitcher_id
-        WHERE p.game_id = :gameId AND pi.type = 'BF'
-    """)
+    @Query("SELECT COUNT(DISTINCT at_bat_id) FROM pitches WHERE pitcher_id IN (SELECT id FROM pitchers WHERE game_id = :gameId) AND type = 'BF'")
     abstract fun getTotalBFForGame(gameId: Long): Int
 
     @Query("""
-        SELECT COUNT(*) FROM pitches pi
-        JOIN pitchers p ON p.id = pi.pitcher_id
-        JOIN games g ON g.id = p.game_id
-        WHERE p.player_id = :playerId AND g.date = :date AND pi.type = 'BF'
+        SELECT COUNT(DISTINCT at_bat_id) FROM pitches 
+        WHERE pitcher_id IN (SELECT id FROM pitchers WHERE player_id = :playerId) 
+        AND type = 'BF'
+        AND pitcher_id IN (SELECT id FROM pitchers WHERE game_id IN (SELECT id FROM games WHERE date = :date))
     """)
     abstract fun getTotalBFForPlayerOnDate(playerId: Long, date: String): Int
 
     @Query("""
         SELECT pi.type FROM pitches pi
         JOIN pitchers p ON p.id = pi.pitcher_id
-        WHERE p.game_id = :gameId AND p.id != :currentPitcherId
+        WHERE p.game_id = :gameId AND p.id < :currentPitcherId
         ORDER BY p.id ASC, pi.sequence_nr ASC
     """)
     abstract fun getAllPitchTypesBeforePitcher(gameId: Long, currentPitcherId: Long): List<String>
+
+    @Query("""
+        SELECT COUNT(*) FROM pitches pi
+        JOIN pitchers p ON p.id = pi.pitcher_id
+        WHERE p.game_id = :gameId AND pi.inning = :inning
+          AND pi.type IN ('H', '1B', '2B', '3B', 'HR', 'W', 'HBP', 'ROE')
+    """)
+    abstract fun getRunnersReachedBase(gameId: Long, inning: Int): Int
 
     @Query("""
         SELECT p.player_id AS player_id,

@@ -753,6 +753,14 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     fun saveLeagueSettings(settings: LeagueSettings) =
         leagueSettingsDao.upsert(settings)
 
+    fun getRunnersWhoReachedBase(gameId: Long, inning: Int, isDefense: Boolean): Int {
+        return if (isDefense) {
+            pitcherDao.getRunnersReachedBase(gameId, inning)
+        } else {
+            atBatDao.getRunnersReachedBase(gameId, inning)
+        }
+    }
+
     fun reparentAtBat(atBatId: Long, newGameId: Long) {
         val ab = atBatDao.getAtBatById(atBatId) ?: return
         atBatDao.updateAtBat(ab.copy(gameId = newGameId))
