@@ -60,11 +60,11 @@ abstract class PitcherDao {
     @Query("SELECT COALESCE(MAX(sequence_nr), 0) + 1 FROM pitches WHERE pitcher_id = :pitcherId")
     abstract fun getNextSequenceNr(pitcherId: Long): Int
 
-    @Query("SELECT COUNT(DISTINCT at_bat_id) FROM pitches WHERE pitcher_id IN (SELECT id FROM pitchers WHERE game_id = :gameId) AND type = 'BF'")
+    @Query("SELECT COUNT(*) FROM pitches WHERE pitcher_id IN (SELECT id FROM pitchers WHERE game_id = :gameId) AND type = 'BF'")
     abstract fun getTotalBFForGame(gameId: Long): Int
 
     @Query("""
-        SELECT COUNT(DISTINCT at_bat_id) FROM pitches 
+        SELECT COUNT(*) FROM pitches
         WHERE pitcher_id IN (SELECT id FROM pitchers WHERE player_id = :playerId) 
         AND type = 'BF'
         AND pitcher_id IN (SELECT id FROM pitchers WHERE game_id IN (SELECT id FROM games WHERE date = :date))
