@@ -756,6 +756,13 @@ class BackupManager constructor(
         root.put("type", "single_game")
         root.put("dbVersion", DB_VERSION)
 
+        // League settings
+        val ls = db.getLeagueSettings(game.teamId)
+        root.put("league_settings", JSONObject().apply {
+            put("innings", ls.innings)
+            put("time_limit_minutes", ls.timeLimitMinutes ?: JSONObject.NULL)
+        })
+
         // Game metadata
         val gObj = JSONObject().apply {
             put("date", game.date ?: "")
@@ -1030,6 +1037,7 @@ class BackupManager constructor(
         val team = db.getAllTeams().first { it.id == teamId }
         val posArray = JSONArray()
         db.getEnabledPositions(teamId).sorted().forEach { posArray.put(it) }
+        val ls = db.getLeagueSettings(teamId)
         val playersArray = JSONArray()
         db.getPlayersForTeam(teamId).forEach { p ->
             playersArray.put(JSONObject().apply {
@@ -1046,6 +1054,10 @@ class BackupManager constructor(
             put("version", 1)
             put("name", team.name)
             put("positions", posArray)
+            put("league_settings", JSONObject().apply {
+                put("innings", ls.innings)
+                put("time_limit_minutes", ls.timeLimitMinutes ?: JSONObject.NULL)
+            })
             put("players", playersArray)
         }.toString(2)
     }
@@ -1063,6 +1075,15 @@ class BackupManager constructor(
             for (p in 0 until posArray.length()) {
                 db.setPositionEnabled(teamId, posArray.getInt(p), true)
             }
+        }
+
+        val lsObj = json.optJSONObject("league_settings")
+        if (lsObj != null) {
+            db.saveLeagueSettings(LeagueSettings(
+                teamId = teamId,
+                innings = lsObj.optInt("innings", 9),
+                timeLimitMinutes = if (lsObj.isNull("time_limit_minutes")) null else lsObj.optInt("time_limit_minutes")
+            ))
         }
 
         val playersArray = json.optJSONArray("players")
