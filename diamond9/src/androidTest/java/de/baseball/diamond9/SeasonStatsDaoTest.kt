@@ -191,12 +191,15 @@ class SeasonStatsDaoTest {
     }
 
     @Test
-    fun pitcherStats_excludesPlayerIdZero() {
+    fun pitcherStats_includesPlayerIdZero() {
         val gameId = gameDao.insertGame(Game(date = "01.04.2026", opponent = "Bears", teamId = teamId))
         val pitcherId = pitcherDao.insertPitcher(Pitcher(gameId = gameId, name = "Anonym", playerId = 0L))
         pitcherDao.insertPitch(Pitch(pitcherId = pitcherId, type = "B", sequenceNr = 1))
 
-        assertTrue(pitcherDao.getSeasonPitcherStats(teamId).isEmpty())
+        val stats = pitcherDao.getSeasonPitcherStats(teamId)
+        assertEquals(1, stats.size)
+        assertEquals(0L, stats[0].playerId)
+        assertEquals("Anonym", stats[0].playerName)
     }
 
     @Test

@@ -27,7 +27,7 @@ import de.baseball.diamond9.*
         ScoreboardRun::class,
         LeagueSettings::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -298,12 +298,6 @@ abstract class AppDatabase : RoomDatabase() {
 
         private val MIGRATION_17_18 = object : Migration(17, 18) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // 0. Orphan Cleanup: Delete orphaned records to ensure FK constraints aren't violated
-                db.execSQL("DELETE FROM at_bats WHERE game_id NOT IN (SELECT id FROM games)")
-                db.execSQL("DELETE FROM pitchers WHERE game_id NOT IN (SELECT id FROM games)")
-                db.execSQL("DELETE FROM pitches WHERE pitcher_id NOT IN (SELECT id FROM pitchers)")
-                db.execSQL("DELETE FROM pitches WHERE at_bat_id IS NOT NULL AND at_bat_id NOT IN (SELECT id FROM at_bats)")
-
                 // 1. at_bats with Foreign Key
                 db.execSQL("""
                     CREATE TABLE IF NOT EXISTS at_bats_new (
@@ -338,7 +332,7 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("""
                     CREATE TABLE IF NOT EXISTS pitches_new (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
-                        pitcher_id INTEGER NOT NULL, 
+                        pitcher_id INTEGER, 
                         at_bat_id INTEGER,
                         type TEXT NOT NULL DEFAULT '', 
                         sequence_nr INTEGER NOT NULL, 
@@ -347,7 +341,45 @@ abstract class AppDatabase : RoomDatabase() {
                         FOREIGN KEY(at_bat_id) REFERENCES at_bats(id) ON DELETE CASCADE
                     )
                 """.trimIndent())
-                db.execSQL("INSERT INTO pitches_new SELECT * FROM pitches")
+                // Data migration: convert 0 to NULL to satisfy FK constraints if parent doesn't exist
+                db.execSQL("""
+                    INSERT INTO pitches_new (id, pitcher_id, at_bat_id, type, sequence_nr, inning)
+                    SELECT id, 
+                           CASE WHEN pitcher_id = 0 OR pitcher_id NOT IN (SELECT id FROM pitchers) THEN NULL ELSE pitcher_id END,
+                           CASE WHEN at_bat_id = 0 OR at_bat_id NOT IN (SELECT id FROM at_bats) THEN NULL ELSE at_bat_id END,
+                           type, sequence_nr, inning 
+                    FROM pitches
+                """.trimIndent())
+                db.execSQL("DROP TABLE pitches")
+                db.execSQL("ALTER TABLE pitches_new RENAME TO pitches")
+            }
+        }
+
+        private val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Recreate pitches table to ensure pitcher_id and at_bat_id are nullable
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS pitches_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        pitcher_id INTEGER, 
+                        at_bat_id INTEGER,
+                        type TEXT NOT NULL DEFAULT '', 
+                        sequence_nr INTEGER NOT NULL, 
+                        inning INTEGER NOT NULL DEFAULT 1,
+                        FOREIGN KEY(pitcher_id) REFERENCES pitchers(id) ON DELETE CASCADE,
+                        FOREIGN KEY(at_bat_id) REFERENCES at_bats(id) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                
+                db.execSQL("""
+                    INSERT INTO pitches_new (id, pitcher_id, at_bat_id, type, sequence_nr, inning)
+                    SELECT id, 
+                           CASE WHEN pitcher_id = 0 THEN NULL ELSE pitcher_id END,
+                           CASE WHEN at_bat_id = 0 THEN NULL ELSE at_bat_id END,
+                           type, sequence_nr, inning 
+                    FROM pitches
+                """.trimIndent())
+                
                 db.execSQL("DROP TABLE pitches")
                 db.execSQL("ALTER TABLE pitches_new RENAME TO pitches")
             }
@@ -361,7 +393,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "pitcher.db"
                 )
                     .allowMainThreadQueries()
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
                     .build().also { INSTANCE = it }
             }
         }

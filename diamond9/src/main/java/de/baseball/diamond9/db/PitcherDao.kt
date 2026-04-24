@@ -96,9 +96,10 @@ abstract class PitcherDao {
     abstract fun getRunnerOuts(gameId: Long, inning: Int): Int
 
     @Query("""
-        SELECT p.player_id AS player_id,
-            pl.name AS player_name,
-            pl.number AS player_number,
+        SELECT 
+            p.player_id AS player_id,
+            CASE WHEN p.player_id > 0 THEN pl.name ELSE p.name END AS player_name,
+            CASE WHEN p.player_id > 0 THEN pl.number ELSE '' END AS player_number,
             COUNT(CASE WHEN pi.type IN ('B', 'S', 'F', 'HBP', 'H', '1B', '2B', '3B', 'HR', 'GO', 'FO', 'LO', 'FC', 'E', 'DP', 'SAC', 'SO', 'KL', 'W') THEN 1 END) AS total_pitches,
             COUNT(CASE WHEN pi.type = 'BF'                           THEN 1 END)           AS bf,
             COUNT(CASE WHEN pi.type = 'B'                            THEN 1 END)           AS balls,
@@ -114,10 +115,10 @@ abstract class PitcherDao {
         JOIN pitchers p ON p.id = pi.pitcher_id
         JOIN games g ON g.id = p.game_id
         LEFT JOIN players pl ON pl.id = p.player_id
-        WHERE g.team_id = :teamId AND p.player_id > 0
+        WHERE g.team_id = :teamId
           AND (:startDate IS NULL OR :startDate = '' OR (substr(g.date,7,4)||substr(g.date,4,2)||substr(g.date,1,2)) >= :startDate)
           AND (:endDate IS NULL OR :endDate = '' OR (substr(g.date,7,4)||substr(g.date,4,2)||substr(g.date,1,2)) <= :endDate)
-        GROUP BY p.player_id
+        GROUP BY p.player_id, CASE WHEN p.player_id = 0 THEN p.name ELSE '' END
     """)
     abstract fun getSeasonPitcherStats(teamId: Long, startDate: String? = null, endDate: String? = null): List<SeasonPitcherRow>
 }

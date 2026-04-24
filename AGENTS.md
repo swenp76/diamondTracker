@@ -10,7 +10,7 @@ Sie hilft beim Verwalten von Teams, Erstellen von Aufstellungen und Tracken von 
 - **Datenbank:** Room (SQLite) über DAOs + DatabaseHelper-Wrapper
 - **UI:** Jetpack Compose (Material 3)
 - **Package:** de.baseball.diamond9
-- **DB-Datei:** `pitcher.db` (Version 18)
+- **DB-Datei:** `pitcher.db` (Version 19)
 - **Lokalisierung:** Deutsch (Fallback, `values/`), Englisch (`values-en/`)
 
 ## Projektstruktur
@@ -237,7 +237,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 
 ---
 
-## Datenbankschema (Version 17)
+## Datenbankschema (Version 19)
 
 | Tabelle | Wichtige Felder |
 |---------|----------------|
@@ -246,7 +246,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | `players` | id, team_id, name, number, primary_position, secondary_position, is_pitcher, birth_year |
 | `games` | id, date, opponent, team_id, inning, outs, leadoff_slot, **start_time**, **elapsed_time_ms**, **game_time**, **is_home**, **current_inning**, **is_top_half** |
 | `pitchers` | id, game_id, name, player_id |
-| `pitches` | id, pitcher_id, at_bat_id, type, sequence_nr, inning |
+| `pitches` | id, **pitcher_id (nullable)**, **at_bat_id (nullable)**, type, sequence_nr, inning |
 | `at_bats` | id, game_id, player_id, slot, inning, result |
 | `pitcher_appearances` | id, player_id, game_id, date, batters_faced |
 | `opponent_lineup` | id, game_id, batting_order, jersey_number |
@@ -286,7 +286,8 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | 15 → 16 | `pitches.type` null backfill | ✅ |
 | 16 → 17 | `pitches.at_bat_id` null backfill (0L) | ✅ |
 | 17 → 18 | `FOREIGN KEY` + `ON DELETE CASCADE` (games/at_bats/pitchers/pitches) | ✅ |
-| 18 → 19 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
-| 19 → 20 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
+| 18 → 19 | `pitches` Tabelle: `pitcher_id` und `at_bat_id` nullable (Fix für Offense Tracking) | ✅ |
+| 19 → 20 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
+| 20 → 21 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
 
 **Hinweis:** Jede Migration hier eintragen und gleichzeitig `BackupManager` aktualisieren.

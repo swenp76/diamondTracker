@@ -62,7 +62,7 @@ data class Pitcher(
 )
 data class Pitch(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "pitcher_id") val pitcherId: Long = 0,
+    @ColumnInfo(name = "pitcher_id") val pitcherId: Long? = null,
     @ColumnInfo(name = "at_bat_id") val atBatId: Long? = null,
     @ColumnInfo(defaultValue = "") val type: String = "",
     @ColumnInfo(name = "sequence_nr") val sequenceNr: Int,
