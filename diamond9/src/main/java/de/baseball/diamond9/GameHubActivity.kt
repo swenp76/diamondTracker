@@ -148,11 +148,14 @@ private fun GameHubScreen(
 ) {
     val leagueSettings = remember { db.getLeagueSettings(ownTeamId) }
     var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
+    var scoreboardKey by remember { mutableLongStateOf(0L) }
+
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 halfInningState = db.getHalfInningState(gameId)
+                scoreboardKey = System.currentTimeMillis()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -194,11 +197,19 @@ private fun GameHubScreen(
                 .background(colorResource(R.color.color_background)),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Scoreboard(gameId, ownTeam, opponent, isHome, leagueSettings.innings, db)
+            Scoreboard(gameId, ownTeam, opponent, isHome, leagueSettings.innings, db, scoreboardKey)
 
             GameTimer(gameId, db)
 
-            HalfInningBar(gameId, db, isHome, leagueSettings.timeLimitMinutes, onOffense, onDefense)
+            HalfInningBar(
+                gameId = gameId,
+                db = db,
+                isHome = isHome,
+                timeLimitMinutes = leagueSettings.timeLimitMinutes,
+                onOffense = onOffense,
+                onDefense = onDefense,
+                onStateChanged = { scoreboardKey = System.currentTimeMillis() }
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -219,7 +230,8 @@ private fun Scoreboard(
     opponent: String,
     isHome: Int,
     innings: Int,
-    db: DatabaseHelper
+    db: DatabaseHelper,
+    refreshKey: Long = 0L
 ) {
     val guestTeam = if (isHome == 1) opponent else ownTeam
     val homeTeam = if (isHome == 1) ownTeam else opponent
@@ -238,8 +250,8 @@ private fun Scoreboard(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     // runs[teamIndex][inning-1]
-    val runs = remember { mutableStateOf(Array(2) { t -> IntArray(innings) { inn -> db.getScoreboardRuns(gameId, inn + 1, t) } }) }
-    val hasEntry = remember { mutableStateOf(Array(2) { t -> BooleanArray(innings) { inn -> db.hasScoreboardEntry(gameId, inn + 1, t) } }) }
+    val runs = remember(refreshKey) { mutableStateOf(Array(2) { t -> IntArray(innings) { inn -> db.getScoreboardRuns(gameId, inn + 1, t) } }) }
+    val hasEntry = remember(refreshKey) { mutableStateOf(Array(2) { t -> BooleanArray(innings) { inn -> db.hasScoreboardEntry(gameId, inn + 1, t) } }) }
 
     fun reload() {
         runs.value = Array(2) { t -> IntArray(innings) { inn -> db.getScoreboardRuns(gameId, inn + 1, t) } }
@@ -520,12 +532,15 @@ private fun HalfInningBar(
     isHome: Int,
     timeLimitMinutes: Int?,
     onOffense: () -> Unit,
-    onDefense: () -> Unit
+    onDefense: () -> Unit,
+    onStateChanged: () -> Unit = {}
 ) {
     var state by remember { mutableStateOf(db.getHalfInningState(gameId)) }
     var showEditDialog by remember { mutableStateOf(false) }
     var pendingState by remember { mutableStateOf<HalfInningState?>(null) }
     var showTimeLimitSheet by remember { mutableStateOf(false) }
+    var showRunSuggestion by remember { mutableStateOf(false) }
+    var lastHalfInningForSuggestion by remember { mutableStateOf<HalfInningState?>(null) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -539,9 +554,83 @@ private fun HalfInningBar(
     }
 
     fun applyState(newState: HalfInningState) {
+        val prevState = state
         db.updateHalfInning(gameId, newState.inning, newState.isTopHalf)
         db.updateGameState(gameId, newState.inning, 0)
         state = newState
+        onStateChanged()
+
+        // Trigger Run Suggestion if moving forward in time
+        val movedForward = newState.inning > prevState.inning || (newState.inning == prevState.inning && prevState.isTopHalf && !newState.isTopHalf)
+        if (movedForward) {
+            lastHalfInningForSuggestion = prevState
+            showRunSuggestion = true
+        }
+    }
+
+    if (showRunSuggestion) {
+        lastHalfInningForSuggestion?.let { last ->
+            val isDefense = (last.isTopHalf && isHome == 1) || (!last.isTopHalf && isHome == 0)
+            val reachedBase = db.getRunnersWhoReachedBase(gameId, last.inning, isDefense = isDefense)
+            val runnerOuts = db.getRunnerOuts(gameId, last.inning, isDefense = isDefense)
+
+            RunSuggestionDialog(
+                reachedBaseCount = reachedBase,
+                runnerOuts = runnerOuts,
+                onConfirm = { runs ->
+                    val teamIndex = if (last.isTopHalf) 0 else 1
+                    db.upsertScoreboardRun(gameId, last.inning, teamIndex, runs)
+                    showRunSuggestion = false
+                    onStateChanged()
+                },
+                onDismiss = { showRunSuggestion = false }
+            )
+        }
+    }
+
+    val isOurOffense = (state.isTopHalf && isHome == 0) || (!state.isTopHalf && isHome == 1)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .background(
+                color = colorResource(R.color.color_primary),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = state.label,
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedButton(
+            onClick = if (isOurOffense) onOffense else onDefense,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.7f)),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            modifier = Modifier.height(32.dp)
+        ) {
+            Text(
+                text = stringResource(if (isOurOffense) R.string.gamehub_offense else R.string.gamehub_defense),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        IconButton(onClick = { showEditDialog = true }) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = stringResource(R.string.content_desc_edit_half_inning),
+                tint = Color.White
+            )
+        }
     }
 
     if (showEditDialog) {
@@ -614,51 +703,6 @@ private fun HalfInningBar(
                     Text(stringResource(R.string.gamehub_time_limit_cancel), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-        }
-    }
-
-    val isOurOffense = (state.isTopHalf && isHome == 0) || (!state.isTopHalf && isHome == 1)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-            .background(
-                color = colorResource(R.color.color_primary),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = state.label,
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f)
-        )
-        OutlinedButton(
-            onClick = if (isOurOffense) onOffense else onDefense,
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.7f)),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            modifier = Modifier.height(32.dp)
-        ) {
-            Text(
-                text = stringResource(if (isOurOffense) R.string.gamehub_offense else R.string.gamehub_defense),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        IconButton(onClick = { showEditDialog = true }) {
-            Icon(
-                imageVector = Icons.Default.Edit,
-                contentDescription = stringResource(R.string.content_desc_edit_half_inning),
-                tint = Color.White
-            )
         }
     }
 }

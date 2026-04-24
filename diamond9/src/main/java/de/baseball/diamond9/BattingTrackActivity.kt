@@ -176,7 +176,7 @@ class BattingTrackActivity : ComponentActivity() {
 
             db.updateAtBatResult(abId, result)
 
-            val newOuts = savedOuts + if (result == "DP") 2 else 1
+            val newOuts = savedOuts + 1
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
                 prevInningForHalfInning = savedInning
@@ -210,7 +210,7 @@ class BattingTrackActivity : ComponentActivity() {
             // batter stays but count resets — start fresh at-bat for same slot
             val newAtBatId = startNewAtBat(currentSlot)
 
-            val newOuts = savedOuts + if (result == "DP") 2 else 1
+            val newOuts = savedOuts + 1
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
                 prevInningForHalfInning = savedInning
