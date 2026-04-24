@@ -331,8 +331,8 @@ class PitchTrackActivity : ComponentActivity() {
                 reachedBaseCount = reachedBase,
                 runnerOuts = runnerOuts,
                 onConfirm = { runs ->
-                    val isOpponentHome = if (halfInningState.isTopHalf) 1 else 0
-                    db.upsertScoreboardRun(gameId, prevInningForHalfInning, isOpponentHome, runs)
+                    val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+                    db.upsertScoreboardRun(gameId, prevInningForHalfInning, teamIndex, runs)
                     showRunSuggestion = false
                     showHalfInningSheet = true
                 },
