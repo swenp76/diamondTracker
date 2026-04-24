@@ -97,11 +97,12 @@ abstract class PitcherDao {
 
     @Query("""
         SELECT p.player_id AS player_id,
-            pl.name AS name,
-            COUNT(CASE WHEN pi.type IN ('B', 'S', 'F', 'HBP', 'H', '1B', '2B', '3B', 'HR', 'GO', 'FO', 'LO', 'FC', 'E', 'DP', 'SAC') THEN 1 END) AS total_pitches,
+            pl.name AS player_name,
+            pl.number AS player_number,
+            COUNT(CASE WHEN pi.type IN ('B', 'S', 'F', 'HBP', 'H', '1B', '2B', '3B', 'HR', 'GO', 'FO', 'LO', 'FC', 'E', 'DP', 'SAC', 'SO', 'KL', 'W') THEN 1 END) AS total_pitches,
             COUNT(CASE WHEN pi.type = 'BF'                           THEN 1 END)           AS bf,
             COUNT(CASE WHEN pi.type = 'B'                            THEN 1 END)           AS balls,
-            COUNT(CASE WHEN pi.type IN ('S', 'H', '1B', '2B', '3B', 'HR', 'GO', 'FO', 'LO', 'FC', 'E', 'DP', 'SAC') THEN 1 END) AS strikes,
+            COUNT(CASE WHEN pi.type IN ('S', 'H', '1B', '2B', '3B', 'HR', 'GO', 'FO', 'LO', 'FC', 'E', 'DP', 'SAC', 'SO', 'KL') THEN 1 END) AS strikes,
             COUNT(CASE WHEN pi.type = 'F'                            THEN 1 END)           AS fouls,
             COUNT(CASE WHEN pi.type = 'W'                            THEN 1 END)           AS walks,
             COUNT(CASE WHEN pi.type IN ('H', '1B', '2B', '3B', 'HR') THEN 1 END)           AS hits,
@@ -113,7 +114,7 @@ abstract class PitcherDao {
         JOIN pitchers p ON p.id = pi.pitcher_id
         JOIN games g ON g.id = p.game_id
         LEFT JOIN players pl ON pl.id = p.player_id
-        WHERE g.team_id = :teamId AND p.player_id != 0
+        WHERE g.team_id = :teamId AND p.player_id > 0
           AND (:startDate IS NULL OR :startDate = '' OR (substr(g.date,7,4)||substr(g.date,4,2)||substr(g.date,1,2)) >= :startDate)
           AND (:endDate IS NULL OR :endDate = '' OR (substr(g.date,7,4)||substr(g.date,4,2)||substr(g.date,1,2)) <= :endDate)
         GROUP BY p.player_id

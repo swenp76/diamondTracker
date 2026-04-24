@@ -257,7 +257,8 @@ data class SeasonBatterRow(
 
 data class SeasonPitcherRow(
     @ColumnInfo(name = "player_id") val playerId: Long,
-    @ColumnInfo(name = "name") val name: String?,
+    @ColumnInfo(name = "player_name") val playerName: String?,
+    @ColumnInfo(name = "player_number") val playerNumber: String?,
     @ColumnInfo(name = "total_pitches") val totalPitches: Int,
     @ColumnInfo(name = "bf") val bf: Int,
     @ColumnInfo(name = "balls") val balls: Int,

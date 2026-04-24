@@ -489,14 +489,17 @@ private fun BatterStatsTab(teamId: Long, db: DatabaseHelper, startDate: String, 
 @Composable
 private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper, startDate: String, endDate: String) {
     val rawRows = remember(teamId, startDate, endDate) { db.getSeasonPitcherStats(teamId, startDate, endDate) }
-    val players = remember(teamId) { db.getPlayersForTeam(teamId).associateBy { it.id } }
 
     // Default: sort by S% descending (col index 3)
     var sortCol by remember { mutableStateOf(3) }
     var sortAsc by remember { mutableStateOf(false) }
 
     val rows = remember(rawRows, sortCol, sortAsc) {
-        fun name(r: SeasonPitcherRow) = players[r.playerId]?.name ?: ""
+        fun name(r: SeasonPitcherRow): String {
+            val name = r.playerName ?: ""
+            val num = r.playerNumber?.let { "#$it " } ?: ""
+            return "$num$name".trim()
+        }
         fun spct(r: SeasonPitcherRow) =
             if (r.totalPitches > 0) (r.strikes + r.fouls).toFloat() / r.totalPitches else -1f
         val sorted = when (sortCol) {
@@ -574,8 +577,11 @@ private fun PitcherStatsTab(teamId: Long, db: DatabaseHelper, startDate: String,
 
         LazyColumn {
             itemsIndexed(rows) { index, row ->
-                val name = players[row.playerId]?.let { "#${it.number} ${it.name}" }
-                    ?: stringResource(R.string.season_stats_unknown_player)
+                val name = run {
+                    val n = row.playerName ?: ""
+                    val num = row.playerNumber?.let { "#$it " } ?: ""
+                    "$num$n".trim()
+                }.ifBlank { stringResource(R.string.season_stats_unknown_player) }
                 val strikePctStr = if (row.totalPitches > 0)
                     "%.0f%%".format((row.strikes + row.fouls).toFloat() / row.totalPitches * 100)
                 else "---"
