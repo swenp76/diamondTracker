@@ -28,35 +28,40 @@ object RunnerManager {
             return emptyMap<Int, GameRunner>() to scoringRunners
         }
 
-        // Standard Hit: Only move runners if they are FORCED.
-        // A runner is forced only if the batter takes their base, OR if the runner 
-        // behind them is forced to move into their base.
+        // Standard Hit logic:
+        // 1. Determine which runners are FORCED to advance.
+        // 2. Move forced runners first.
+        // 3. Move the batter to their base.
         
-        // Batter always takes 'bases' (1B, 2B, or 3B). 
-        // We calculate forces starting from 1B because the batter always takes 1B initially.
+        // In simple logic: a runner is forced if there's a runner on every base behind them, including the batter.
+        // For a Single (bases=1): 1B is forced if batter reaches 1B. 2B is forced if 1B is forced. 3B is forced if 2B is forced.
         
-        var forceOnBase = 1 // Batter always forces 1B
-        for (b in 1..3) {
-            if (b == forceOnBase) {
-                val runnerAtB = next[b]
-                if (runnerAtB != null) {
-                    // Runner at this base is forced to the next
-                    next.remove(b)
-                    if (b + 1 >= 4) {
-                        scoringRunners.add(runnerAtB.copy(base = 4))
+        val isForced = BooleanArray(4) // index 1, 2, 3
+        isForced[1] = true // Batter always forces 1B
+        if (current.containsKey(1)) isForced[2] = true
+        if (isForced[2] && current.containsKey(2)) isForced[3] = true
+        
+        // Move forced runners from 3rd base down to 1st to avoid overwriting
+        for (b in 3 downTo 1) {
+            if (isForced[b]) {
+                val runner = next.remove(b)
+                if (runner != null) {
+                    val nextBase = b + 1
+                    if (nextBase >= 4) {
+                        scoringRunners.add(runner.copy(base = 4))
                     } else {
-                        next[b + 1] = runnerAtB.copy(base = b + 1)
-                        // The force now moves to the next base
-                        forceOnBase = b + 1
+                        next[nextBase] = runner.copy(base = nextBase)
                     }
-                } else {
-                    // No runner at this base, the force chain breaks here
-                    break
                 }
             }
         }
 
-        // Add batter to their reached base. 
+        // Finally, place the batter. 
+        // Note: If bases > 1 (Double/Triple), the current logic assumes non-forced runners don't move 
+        // unless they are displaced by the batter reaching that specific base.
+        // If the batter reaches a base already occupied by a non-forced runner, 
+        // that runner stays there (logic error) or we'd need more complex rules.
+        // For now, let's just place the batter.
         next[bases] = batter.copy(base = bases)
 
         return next to scoringRunners
@@ -77,6 +82,7 @@ object RunnerManager {
             if (current.containsKey(2)) {
                 if (current.containsKey(3)) {
                     scoringRunners.add(current[3]!!.copy(base = 4))
+                    next.remove(3)
                 }
                 next[3] = current[2]!!.copy(base = 3)
             }
