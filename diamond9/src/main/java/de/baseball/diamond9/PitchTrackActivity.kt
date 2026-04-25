@@ -86,6 +86,7 @@ class PitchTrackActivity : ComponentActivity() {
         var showHitSheet by remember { mutableStateOf(false) }
         var showOutSheet by remember { mutableStateOf(false) }
         var showHalfInningSheet by remember { mutableStateOf(false) }
+        var showRunSuggestion by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
         var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
@@ -117,10 +118,12 @@ class PitchTrackActivity : ComponentActivity() {
             val newOuts = savedOuts + 1
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
-                prevInningForHalfInning = savedInning
-                inning++
+                prevInningForHalfInning = halfInningState.inning
+                if (!halfInningState.isTopHalf) {
+                    inning++
+                }
                 outs = 0
-                showHalfInningSheet = true
+                showRunSuggestion = true
             } else {
                 outs = newOuts
             }
@@ -142,10 +145,12 @@ class PitchTrackActivity : ComponentActivity() {
             val newOuts = savedOuts + 1
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
-                prevInningForHalfInning = savedInning
-                inning++
+                prevInningForHalfInning = halfInningState.inning
+                if (!halfInningState.isTopHalf) {
+                    inning++
+                }
                 outs = 0
-                showHalfInningSheet = true
+                showRunSuggestion = true
             } else {
                 outs = newOuts
             }
@@ -321,6 +326,25 @@ class PitchTrackActivity : ComponentActivity() {
                     onShowTrend = { showTrendSheet = true }
                 )
             }
+        }
+
+        if (showRunSuggestion) {
+            val reachedBase = db.getRunnersWhoReachedBase(gameId, prevInningForHalfInning, isDefense = true)
+            val runnerOuts = db.getRunnerOuts(gameId, prevInningForHalfInning, isDefense = true)
+            RunSuggestionDialog(
+                reachedBaseCount = reachedBase,
+                runnerOuts = runnerOuts,
+                onConfirm = { runs ->
+                    val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+                    db.upsertScoreboardRun(gameId, prevInningForHalfInning, teamIndex, runs)
+                    showRunSuggestion = false
+                    showHalfInningSheet = true
+                },
+                onDismiss = {
+                    showRunSuggestion = false
+                    showHalfInningSheet = true
+                }
+            )
         }
 
         if (showHalfInningSheet) {

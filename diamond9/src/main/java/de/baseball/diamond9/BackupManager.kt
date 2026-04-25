@@ -28,6 +28,7 @@ import java.io.File
  *  16 → pitches.type backfilled (null → '')
  *  17 → pitches.at_bat_id backfilled (null → 0)
  *  18 → added foreign key constraints with CASCADE
+ *  19 → pitches table: pitcher_id and at_bat_id made nullable
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
@@ -38,7 +39,7 @@ class BackupManager constructor(
     constructor(context: Context) : this(context, DatabaseHelper(context))
 
     companion object {
-        const val DB_VERSION = 18
+        const val DB_VERSION = 19
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
@@ -453,13 +454,15 @@ class BackupManager constructor(
             val obj = arr.getJSONObject(i)
             db.rawInsertWithConflictIgnore("pitches", ContentValues().apply {
                 put("id", obj.getLong("id"))
-                put("pitcher_id", obj.getLong("pitcher_id"))
-                val abId = obj.optLong("at_bat_id", -1L)
-                if (obj.isNull("at_bat_id") || abId == -1L || abId == 0L) {
-                    putNull("at_bat_id")
-                } else {
-                    put("at_bat_id", abId)
-                }
+                
+                val pid = obj.optLong("pitcher_id", 0L)
+                if (obj.isNull("pitcher_id") || pid == 0L) putNull("pitcher_id")
+                else put("pitcher_id", pid)
+
+                val abid = obj.optLong("at_bat_id", 0L)
+                if (obj.isNull("at_bat_id") || abid == 0L) putNull("at_bat_id")
+                else put("at_bat_id", abid)
+
                 put("type", obj.getString("type"))
                 put("sequence_nr", obj.getInt("sequence_nr"))
                 put("inning", obj.getInt("inning"))
@@ -704,6 +707,23 @@ class BackupManager constructor(
         // Migration 17 → 18: Foreign Key CASCADE – no JSON structure change needed.
         if (v < 18 && toVersion >= 18) {
             v = 18
+        }
+
+        // Migration 18 → 19: at_bat_id and pitcher_id in pitches table made nullable.
+        if (v < 19 && toVersion >= 19) {
+            val pitches = current.optJSONArray("pitches")
+            if (pitches != null) {
+                for (i in 0 until pitches.length()) {
+                    val p = pitches.getJSONObject(i)
+                    if (p.has("pitcher_id") && p.optLong("pitcher_id") == 0L) {
+                        p.put("pitcher_id", JSONObject.NULL)
+                    }
+                    if (p.has("at_bat_id") && p.optLong("at_bat_id") == 0L) {
+                        p.put("at_bat_id", JSONObject.NULL)
+                    }
+                }
+            }
+            v = 19
         }
 
         return current

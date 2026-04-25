@@ -43,6 +43,20 @@ abstract class AtBatDao {
     @Query("DELETE FROM pitches WHERE at_bat_id = :atBatId")
     abstract fun deletePitchesForAtBat(atBatId: Long)
 
+    @Query("""
+        SELECT COUNT(*) FROM at_bats 
+        WHERE game_id = :gameId AND inning = :inning 
+          AND result IN ('H', '1B', '2B', '3B', 'HR', 'BB', 'HBP', 'FC', 'E', 'ROE')
+    """)
+    abstract fun getRunnersReachedBase(gameId: Long, inning: Int): Int
+
+    @Query("""
+        SELECT 
+            (SELECT COUNT(*) FROM at_bats WHERE game_id = :gameId AND inning = :inning AND result = 'DP') +
+            (SELECT COUNT(*) FROM at_bats WHERE game_id = :gameId AND inning = :inning AND result IS NULL AND id < (SELECT MAX(id) FROM at_bats WHERE game_id = :gameId AND inning = :inning))
+    """)
+    abstract fun getRunnerOuts(gameId: Long, inning: Int): Int
+
     @Query("SELECT COUNT(*) FROM at_bats WHERE game_id = :gameId AND result IN ('K','KL','GO','FO','LO','SAC','DP','OUT')")
     abstract fun getOutsForGame(gameId: Long): Int
 

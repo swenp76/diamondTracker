@@ -62,7 +62,7 @@ data class Pitcher(
 )
 data class Pitch(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "pitcher_id") val pitcherId: Long = 0,
+    @ColumnInfo(name = "pitcher_id") val pitcherId: Long? = null,
     @ColumnInfo(name = "at_bat_id") val atBatId: Long? = null,
     @ColumnInfo(defaultValue = "") val type: String = "",
     @ColumnInfo(name = "sequence_nr") val sequenceNr: Int,
@@ -257,7 +257,8 @@ data class SeasonBatterRow(
 
 data class SeasonPitcherRow(
     @ColumnInfo(name = "player_id") val playerId: Long,
-    @ColumnInfo(name = "name") val name: String?,
+    @ColumnInfo(name = "player_name") val playerName: String?,
+    @ColumnInfo(name = "player_number") val playerNumber: String?,
     @ColumnInfo(name = "total_pitches") val totalPitches: Int,
     @ColumnInfo(name = "bf") val bf: Int,
     @ColumnInfo(name = "balls") val balls: Int,
@@ -752,6 +753,22 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
 
     fun saveLeagueSettings(settings: LeagueSettings) =
         leagueSettingsDao.upsert(settings)
+
+    fun getRunnersWhoReachedBase(gameId: Long, inning: Int, isDefense: Boolean): Int {
+        return if (isDefense) {
+            pitcherDao.getRunnersReachedBase(gameId, inning)
+        } else {
+            atBatDao.getRunnersReachedBase(gameId, inning)
+        }
+    }
+
+    fun getRunnerOuts(gameId: Long, inning: Int, isDefense: Boolean): Int {
+        return if (isDefense) {
+            pitcherDao.getRunnerOuts(gameId, inning)
+        } else {
+            atBatDao.getRunnerOuts(gameId, inning)
+        }
+    }
 
     fun reparentAtBat(atBatId: Long, newGameId: Long) {
         val ab = atBatDao.getAtBatById(atBatId) ?: return

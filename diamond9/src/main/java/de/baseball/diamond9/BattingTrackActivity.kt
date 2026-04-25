@@ -65,6 +65,7 @@ class BattingTrackActivity : ComponentActivity() {
         var pitches by remember { mutableStateOf(emptyList<Pitch>()) }
         var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
         var showHalfInningSheet by remember { mutableStateOf(false) }
+        var showRunSuggestion by remember { mutableStateOf(false) }
 
         // Saved before the 3rd out is recorded; used by HalfInningChange undo
         var prevLeadoffForHalfInning by remember { mutableStateOf(1) }
@@ -178,13 +179,15 @@ class BattingTrackActivity : ComponentActivity() {
             val newOuts = savedOuts + 1
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
-                prevInningForHalfInning = savedInning
+                prevInningForHalfInning = halfInningState.inning
                 val maxSlot = if (lineup.containsKey(10)) 10 else 9
                 val nextLeadoff = (slot % maxSlot) + 1
                 db.updateLeadoffSlot(gameId, nextLeadoff)
-                inning++
+                if (!halfInningState.isTopHalf) {
+                    inning++
+                }
                 outs = 0
-                showHalfInningSheet = true
+                showRunSuggestion = true
             } else {
                 outs = newOuts
             }
@@ -212,12 +215,14 @@ class BattingTrackActivity : ComponentActivity() {
             val newOuts = savedOuts + 1
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
-                prevInningForHalfInning = savedInning
+                prevInningForHalfInning = halfInningState.inning
                 // leadoff = current batter (runner was out, not this batter)
                 db.updateLeadoffSlot(gameId, savedSlot)
-                inning++
+                if (!halfInningState.isTopHalf) {
+                    inning++
+                }
                 outs = 0
-                showHalfInningSheet = true
+                showRunSuggestion = true
             } else {
                 outs = newOuts
             }
@@ -234,6 +239,25 @@ class BattingTrackActivity : ComponentActivity() {
 
         var showKSheet by remember { mutableStateOf(false) }
         var showBBSheet by remember { mutableStateOf(false) }
+
+        if (showRunSuggestion) {
+            val reachedBase = db.getRunnersWhoReachedBase(gameId, prevInningForHalfInning, isDefense = false)
+            val runnerOuts = db.getRunnerOuts(gameId, prevInningForHalfInning, isDefense = false)
+            RunSuggestionDialog(
+                reachedBaseCount = reachedBase,
+                runnerOuts = runnerOuts,
+                onConfirm = { runs ->
+                    val isOwnHome = if (halfInningState.isTopHalf) 0 else 1
+                    db.upsertScoreboardRun(gameId, prevInningForHalfInning, isOwnHome, runs)
+                    showRunSuggestion = false
+                    showHalfInningSheet = true
+                },
+                onDismiss = {
+                    showRunSuggestion = false
+                    showHalfInningSheet = true
+                }
+            )
+        }
 
         // Half-inning suggestion sheet
         if (showHalfInningSheet) {
