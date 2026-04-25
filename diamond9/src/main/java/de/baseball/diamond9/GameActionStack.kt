@@ -46,7 +46,18 @@ sealed class GameAction {
     data class HalfInningChange(
         val prevState: HalfInningState,
         val prevLeadoffSlot: Int,
-        val prevInning: Int
+        val prevInning: Int,
+        val prevRunners: List<GameRunner> = emptyList()
+    ) : GameAction()
+
+    /**
+     * Runners advanced or were manually moved.
+     * prevRunners: the state of the runners before this change.
+     * prevScoreboardValue: optional, the runs value in the DB for the current half-inning before the change.
+     */
+    data class RunnerAdvance(
+        val prevRunners: List<GameRunner>,
+        val prevScoreboardValue: Int? = null
     ) : GameAction()
 }
 

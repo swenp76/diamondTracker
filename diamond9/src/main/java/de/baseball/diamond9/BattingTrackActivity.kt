@@ -86,8 +86,34 @@ class BattingTrackActivity : ComponentActivity() {
         }
 
         var lineup by remember { mutableStateOf(emptyMap<Int, Player>()) }
+        var runners by remember { mutableStateOf(emptyMap<Int, GameRunner>()) }
+        var runnerToEdit by remember { mutableStateOf<GameRunner?>(null) }
+        var currentScoringNotification by remember { mutableStateOf<List<GameRunner>>(emptyList()) }
+
+        fun refreshRunners() {
+            runners = db.getRunners(gameId).associateBy { it.base }
+        }
 
         fun refreshLineup() { lineup = db.getEffectiveLineup(gameId) }
+
+        fun updateRunnersInDb(next: Map<Int, GameRunner>, scoringRunners: List<GameRunner>) {
+            val prevList = db.getRunners(gameId)
+            val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+            val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
+            
+            db.clearRunners(gameId)
+            next.values.forEach { db.insertRunner(it) }
+            if (scoringRunners.isNotEmpty()) {
+                db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoringRunners.size)
+                currentScoringNotification = scoringRunners
+            }
+            
+            actionStack.push(GameAction.RunnerAdvance(
+                prevRunners = prevList,
+                prevScoreboardValue = currentRuns
+            ))
+            refreshRunners()
+        }
 
         fun startNewAtBat(slot: Int): Long {
             val player = lineup[slot]
@@ -123,6 +149,7 @@ class BattingTrackActivity : ComponentActivity() {
         LaunchedEffect(gameId) {
             if (gameId != -1L) {
                 refreshLineup()
+                refreshRunners()
                 val (i, o) = db.getGameState(gameId)
                 inning = i
                 outs = o
@@ -246,6 +273,7 @@ class BattingTrackActivity : ComponentActivity() {
             RunSuggestionDialog(
                 reachedBaseCount = reachedBase,
                 runnerOuts = runnerOuts,
+                initialLob = runners.size,
                 onConfirm = { runs ->
                     val isOwnHome = if (halfInningState.isTopHalf) 0 else 1
                     db.upsertScoreboardRun(gameId, prevInningForHalfInning, isOwnHome, runs)
@@ -283,13 +311,17 @@ class BattingTrackActivity : ComponentActivity() {
                         Button(
                             onClick = {
                                 val prevState = halfInningState
+                                val prevRunners = db.getRunners(gameId)
                                 db.updateHalfInning(gameId, suggested.inning, suggested.isTopHalf)
+                                db.updateGameState(gameId, suggested.inning, 0)
+                                db.clearRunners(gameId)
                                 halfInningState = suggested
                                 showHalfInningSheet = false
                                 actionStack.push(GameAction.HalfInningChange(
                                     prevState = prevState,
                                     prevLeadoffSlot = prevLeadoffForHalfInning,
-                                    prevInning = prevInningForHalfInning
+                                    prevInning = prevInningForHalfInning,
+                                    prevRunners = prevRunners
                                 ))
                                 val resultIntent = Intent().apply {
                                     putExtra(GameHubActivity.EXTRA_NEXT_IS_OFFENSE, false)
@@ -313,30 +345,39 @@ class BattingTrackActivity : ComponentActivity() {
             containerColor = colorResource(R.color.color_background),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(stringResource(R.string.gamehub_offense))
-                            Text(
-                                text = halfInningState.shortLabel,
-                                fontSize = 13.sp,
-                                color = colorResource(R.color.color_text_secondary)
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { finish() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.White,
-                        titleContentColor = colorResource(R.color.color_text_primary),
-                        navigationIconContentColor = colorResource(R.color.color_text_primary)
+                // Scoring Notification overlays the top bar
+                Box {
+                    TopAppBar(
+                        title = {
+                            Column {
+                                Text(stringResource(R.string.gamehub_offense))
+                                Text(
+                                    text = halfInningState.shortLabel,
+                                    fontSize = 13.sp,
+                                    color = colorResource(R.color.color_text_secondary)
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { finish() }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.White,
+                            titleContentColor = colorResource(R.color.color_text_primary),
+                            navigationIconContentColor = colorResource(R.color.color_text_primary)
+                        )
                     )
-                )
+                    
+                    ScoringNotification(
+                        scoringRunners = currentScoringNotification,
+                        onFinished = { currentScoringNotification = emptyList() }
+                    )
+                }
             }
-        ) { padding ->
+        )
+{ padding ->
             Column(
                 modifier = Modifier
                     .padding(padding)
@@ -345,6 +386,20 @@ class BattingTrackActivity : ComponentActivity() {
             ) {
                 StatsBar(inning, outs, pitches, onRunnerOut = { recordRunnerOut() })
                 BatterStrip(currentSlot, lineup, launcher)
+                
+                DiamondInfield(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .padding(vertical = 8.dp),
+                    runners = runners,
+                    onBaseClick = { base ->
+                        if (base != 0) {
+                            runners[base]?.let { runnerToEdit = it }
+                        }
+                    }
+                )
+
                 Box(modifier = Modifier.weight(1f)) {
                     PitchLog(pitches)
                 }
@@ -418,18 +473,68 @@ class BattingTrackActivity : ComponentActivity() {
                                 outs = 2  // 3rd out was what triggered the change
                                 db.updateGameState(gameId, inning, outs)
                                 halfInningState = action.prevState
+                                
+                                // Restore runners
+                                db.clearRunners(gameId)
+                                action.prevRunners.forEach { db.insertRunner(it) }
+                                refreshRunners()
+                            }
+                            is GameAction.RunnerAdvance -> {
+                                db.clearRunners(gameId)
+                                action.prevRunners.forEach { db.insertRunner(it) }
+                                if (action.prevScoreboardValue != null) {
+                                    val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+                                    db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, action.prevScoreboardValue)
+                                }
+                                refreshRunners()
                             }
                             null -> { /* nothing to undo */ }
                         }
                     },
                     onResult = { result ->
                         val abId = ensureAtBat()
+                        val currentPlayer = lineup[currentSlot]
+                        val batterRunner = GameRunner(
+                            gameId = gameId,
+                            base = 0,
+                            playerId = currentPlayer?.id ?: 0L,
+                            slot = currentSlot,
+                            jerseyNumber = currentPlayer?.number,
+                            name = currentPlayer?.name ?: ""
+                        )
+
                         when (result) {
-                            "H", "1B", "2B", "3B", "HR" -> {
+                            "H", "1B" -> {
+                                val (next, scoring) = RunnerManager.advanceOnHit(runners, batterRunner, 1)
+                                updateRunnersInDb(next, scoring)
                                 db.insertPitchForAtBat(abId, "H", inning)
                                 actionStack.push(GameAction.Pitch(abId))
                             }
+                            "2B" -> {
+                                val (next, scoring) = RunnerManager.advanceOnHit(runners, batterRunner, 2)
+                                updateRunnersInDb(next, scoring)
+                                db.insertPitchForAtBat(abId, "H", inning)
+                                actionStack.push(GameAction.Pitch(abId))
+                            }
+                            "3B" -> {
+                                val (next, scoring) = RunnerManager.advanceOnHit(runners, batterRunner, 3)
+                                updateRunnersInDb(next, scoring)
+                                db.insertPitchForAtBat(abId, "H", inning)
+                                actionStack.push(GameAction.Pitch(abId))
+                            }
+                            "HR" -> {
+                                val (next, scoring) = RunnerManager.advanceOnHit(runners, batterRunner, 4)
+                                updateRunnersInDb(next, scoring)
+                                db.insertPitchForAtBat(abId, "H", inning)
+                                actionStack.push(GameAction.Pitch(abId))
+                            }
+                            "BB" -> {
+                                val (next, scoring) = RunnerManager.advanceOnWalk(runners, batterRunner)
+                                updateRunnersInDb(next, scoring)
+                            }
                             "HBP" -> {
+                                val (next, scoring) = RunnerManager.advanceOnWalk(runners, batterRunner)
+                                updateRunnersInDb(next, scoring)
                                 db.insertPitchForAtBat(abId, "HBP", inning)
                                 actionStack.push(GameAction.Pitch(abId))
                             }
@@ -441,6 +546,10 @@ class BattingTrackActivity : ComponentActivity() {
                                 db.insertPitchForAtBat(abId, "S", inning)
                                 actionStack.push(GameAction.Pitch(abId))
                             }
+                            "ROE", "FC" -> {
+                                val (next, scoring) = RunnerManager.advanceOnHit(runners, batterRunner, 1)
+                                updateRunnersInDb(next, scoring)
+                            }
                         }
                         db.updateAtBatResult(abId, result)
                         if (isOutResult(result)) recordBatterOut(result)
@@ -448,6 +557,53 @@ class BattingTrackActivity : ComponentActivity() {
                     }
                 )
             }
+        }
+
+        runnerToEdit?.let { runner ->
+            RunnerManagementSheet(
+                runner = runner,
+                onDismiss = { runnerToEdit = null },
+                onMarkOut = {
+                    val prevList = db.getRunners(gameId)
+                    db.deleteRunner(gameId, runner.base)
+                    recordRunnerOut()
+                    actionStack.push(GameAction.RunnerAdvance(prevList))
+                    refreshRunners()
+                    runnerToEdit = null
+                },
+                onMove = { newBase ->
+                    val prevList = db.getRunners(gameId)
+                    val currentMap = prevList.associateBy { it.base }
+                    
+                    if (newBase == 0) {
+                        // User clicked "Score": move this runner and all ahead of them to score
+                        val scoring = mutableListOf<GameRunner>()
+                        val next = currentMap.toMutableMap()
+                        
+                        for (b in runner.base..3) {
+                            next.remove(b)?.let { scoring.add(it.copy(base = 4)) }
+                        }
+                        
+                        db.clearRunners(gameId)
+                        next.values.forEach { db.insertRunner(it) }
+                        
+                        val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+                        val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
+                        db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoring.size)
+                        
+                        currentScoringNotification = scoring
+                        actionStack.push(GameAction.RunnerAdvance(prevList, currentRuns))
+                    } else {
+                        // Normal move to another base
+                        db.deleteRunner(gameId, runner.base)
+                        db.insertRunner(runner.copy(base = newBase))
+                        actionStack.push(GameAction.RunnerAdvance(prevList))
+                    }
+
+                    refreshRunners()
+                    runnerToEdit = null
+                }
+            )
         }
     }
 
@@ -534,7 +690,7 @@ class BattingTrackActivity : ComponentActivity() {
         val lineupSize = if (lineup.containsKey(10)) 10 else 9
         val leadoff = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
 
-        val onDeckSlot = ((slot + lineupSize - 1) % lineupSize) + 1
+        val onDeckSlot = (slot % lineupSize) + 1
         val inHoleSlot = (onDeckSlot % lineupSize) + 1
 
         val currentPlayer = lineup[slot]

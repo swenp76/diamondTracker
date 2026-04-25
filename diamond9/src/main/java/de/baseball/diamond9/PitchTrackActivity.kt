@@ -86,10 +86,14 @@ class PitchTrackActivity : ComponentActivity() {
         var showHitSheet by remember { mutableStateOf(false) }
         var showOutSheet by remember { mutableStateOf(false) }
         var showHalfInningSheet by remember { mutableStateOf(false) }
-        var showRunSuggestion by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
         var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
+        var runners by remember { mutableStateOf(emptyMap<Int, GameRunner>()) }
+        var runnerToEdit by remember { mutableStateOf<GameRunner?>(null) }
+        var currentScoringNotification by remember { mutableStateOf<List<GameRunner>>(emptyList()) }
+        var showRunSuggestion by remember { mutableStateOf(false) }
+
         val actionStack = remember { GameActionStack() }
 
         // Captured before 3rd out, used by HalfInningChange undo
@@ -109,6 +113,7 @@ class PitchTrackActivity : ComponentActivity() {
 
         fun refresh() {
             stats = db.getStatsForPitcher(pitcherId)
+            runners = db.getRunners(gameId).associateBy { it.base }
         }
 
         /** Out-button: batter was put out (BF already inserted before this call). */
@@ -193,6 +198,7 @@ class PitchTrackActivity : ComponentActivity() {
                 val (i, o) = db.getGameState(gameId)
                 inning = i
                 outs = o
+                refresh()
             }
         }
 
@@ -205,34 +211,75 @@ class PitchTrackActivity : ComponentActivity() {
             }
         }
 
+        fun updateRunnersInDb(next: Map<Int, GameRunner>, scoringRunners: List<GameRunner>) {
+            val prevList = db.getRunners(gameId)
+            val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+            val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
+
+            db.clearRunners(gameId)
+            next.values.forEach { db.insertRunner(it) }
+            if (scoringRunners.isNotEmpty()) {
+                db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoringRunners.size)
+                currentScoringNotification = scoringRunners
+            }
+            
+            actionStack.push(GameAction.RunnerAdvance(
+                prevRunners = prevList,
+                prevScoreboardValue = currentRuns
+            ))
+            refresh()
+        }
+
+        fun getBatterRunner(): GameRunner {
+            val gameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else (stats?.bf ?: 0)
+            val currentSlot = (gameBF % 9) + 1
+            val jersey = getBatterJersey(currentSlot)
+            return GameRunner(
+                gameId = gameId,
+                base = 0,
+                playerId = 0L,
+                slot = currentSlot,
+                jerseyNumber = jersey,
+                name = getString(R.string.label_batter_slot).format(currentSlot)
+            )
+        }
+
         Scaffold(
             containerColor = colorResource(R.color.color_background),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(pitcherName)
-                            Text(
-                                text = halfInningState.shortLabel,
-                                fontSize = 13.sp,
-                                color = colorResource(R.color.color_text_secondary)
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { finish() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.White,
-                        titleContentColor = colorResource(R.color.color_text_primary),
-                        navigationIconContentColor = colorResource(R.color.color_text_primary)
+                Box {
+                    TopAppBar(
+                        title = {
+                            Column {
+                                Text(pitcherName)
+                                Text(
+                                    text = halfInningState.shortLabel,
+                                    fontSize = 13.sp,
+                                    color = colorResource(R.color.color_text_secondary)
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { finish() }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.White,
+                            titleContentColor = colorResource(R.color.color_text_primary),
+                            navigationIconContentColor = colorResource(R.color.color_text_primary)
+                        )
                     )
-                )
+                    
+                    ScoringNotification(
+                        scoringRunners = currentScoringNotification,
+                        onFinished = { currentScoringNotification = emptyList() }
+                    )
+                }
             }
-        ) { padding ->
+        )
+{ padding ->
             Column(
                 modifier = Modifier
                     .padding(padding)
@@ -242,6 +289,20 @@ class PitchTrackActivity : ComponentActivity() {
                 stats?.let { s ->
                     StatsBar(s, inning, outs, onRunnerOut = { recordRunnerOut() })
                     BatterStrip(s, opponentLineupLauncher)
+                    
+                    DiamondInfield(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .padding(vertical = 4.dp),
+                        runners = runners,
+                        onBaseClick = { base ->
+                            if (base != 0) {
+                                runners[base]?.let { runnerToEdit = it }
+                            }
+                        }
+                    )
+
                     Box(modifier = Modifier.weight(1f)) {
                         PitchLog(s, listState)
                     }
@@ -252,6 +313,8 @@ class PitchTrackActivity : ComponentActivity() {
                         db.insertPitch(pitcherId, "B", inning)
                         actionStack.push(GameAction.Pitch(-1L))
                         if (ballsBefore >= 3) {
+                            val (next, scoring) = RunnerManager.advanceOnWalk(runners, getBatterRunner())
+                            updateRunnersInDb(next, scoring)
                             db.insertPitch(pitcherId, "W", inning)
                             db.insertPitch(pitcherId, "BF", inning)
                         }
@@ -275,6 +338,8 @@ class PitchTrackActivity : ComponentActivity() {
                         refresh()
                     },
                     onHbp = {
+                        val (next, scoring) = RunnerManager.advanceOnWalk(runners, getBatterRunner())
+                        updateRunnersInDb(next, scoring)
                         db.insertPitch(pitcherId, "HBP", inning)
                         db.insertPitch(pitcherId, "BF", inning)
                         actionStack.push(GameAction.Pitch(-1L))
@@ -314,6 +379,20 @@ class PitchTrackActivity : ComponentActivity() {
                                 outs = 2
                                 if (gameId != -1L) db.updateGameState(gameId, inning, outs)
                                 halfInningState = action.prevState
+
+                                // Restore runners
+                                db.clearRunners(gameId)
+                                action.prevRunners.forEach { db.insertRunner(it) }
+                                refresh()
+                            }
+                            is GameAction.RunnerAdvance -> {
+                                db.clearRunners(gameId)
+                                action.prevRunners.forEach { db.insertRunner(it) }
+                                if (action.prevScoreboardValue != null) {
+                                    val teamIndex = if (halfInningState.isTopHalf) 1 else 0
+                                    db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, action.prevScoreboardValue)
+                                }
+                                refresh()
                             }
                             null -> {
                                 // fallback: plain pitch undo
@@ -334,6 +413,7 @@ class PitchTrackActivity : ComponentActivity() {
             RunSuggestionDialog(
                 reachedBaseCount = reachedBase,
                 runnerOuts = runnerOuts,
+                initialLob = runners.size,
                 onConfirm = { runs ->
                     val teamIndex = if (halfInningState.isTopHalf) 0 else 1
                     db.upsertScoreboardRun(gameId, prevInningForHalfInning, teamIndex, runs)
@@ -370,13 +450,17 @@ class PitchTrackActivity : ComponentActivity() {
                         Button(
                             onClick = {
                                 val prevState = halfInningState
+                                val prevRunners = db.getRunners(gameId)
                                 db.updateHalfInning(gameId, suggested.inning, suggested.isTopHalf)
+                                db.updateGameState(gameId, suggested.inning, 0)
+                                db.clearRunners(gameId)
                                 halfInningState = suggested
                                 showHalfInningSheet = false
                                 actionStack.push(GameAction.HalfInningChange(
                                     prevState = prevState,
                                     prevLeadoffSlot = prevLeadoffForHalfInning,
-                                    prevInning = prevInningForHalfInning
+                                    prevInning = prevInningForHalfInning,
+                                    prevRunners = prevRunners
                                 ))
                                 val resultIntent = Intent().apply {
                                     putExtra(GameHubActivity.EXTRA_NEXT_IS_OFFENSE, true)
@@ -422,6 +506,8 @@ class PitchTrackActivity : ComponentActivity() {
                             val color = if (type == "HR") colorResource(R.color.color_hit_homer) else colorResource(R.color.color_hit)
                             Button(
                                 onClick = {
+                                    val (next, scoring) = RunnerManager.advanceOnHit(runners, getBatterRunner(), i + 1)
+                                    updateRunnersInDb(next, scoring)
                                     db.insertPitch(pitcherId, type, inning)
                                     db.insertPitch(pitcherId, "BF", inning)
                                     refresh()
@@ -471,6 +557,53 @@ class PitchTrackActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+
+        runnerToEdit?.let { runner ->
+            RunnerManagementSheet(
+                runner = runner,
+                onDismiss = { runnerToEdit = null },
+                onMarkOut = {
+                    val prevList = db.getRunners(gameId)
+                    db.deleteRunner(gameId, runner.base)
+                    recordRunnerOut()
+                    actionStack.push(GameAction.RunnerAdvance(prevList))
+                    refresh()
+                    runnerToEdit = null
+                },
+                onMove = { newBase ->
+                    val prevList = db.getRunners(gameId)
+                    val currentMap = prevList.associateBy { it.base }
+
+                    if (newBase == 0) {
+                        // User clicked "Score": move this runner and all ahead of them to score
+                        val scoring = mutableListOf<GameRunner>()
+                        val next = currentMap.toMutableMap()
+
+                        for (b in runner.base..3) {
+                            next.remove(b)?.let { scoring.add(it.copy(base = 4)) }
+                        }
+
+                        db.clearRunners(gameId)
+                        next.values.forEach { db.insertRunner(it) }
+
+                        val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+                        val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
+                        db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoring.size)
+
+                        currentScoringNotification = scoring
+                        actionStack.push(GameAction.RunnerAdvance(prevList, currentRuns))
+                    } else {
+                        // Normal move to another base
+                        db.deleteRunner(gameId, runner.base)
+                        db.insertRunner(runner.copy(base = newBase))
+                        actionStack.push(GameAction.RunnerAdvance(prevList))
+                    }
+
+                    refresh()
+                    runnerToEdit = null
+                }
+            )
         }
     }
 
@@ -560,7 +693,11 @@ class PitchTrackActivity : ComponentActivity() {
     fun BatterStrip(stats: PitcherStats, opponentLineupLauncher: ManagedActivityResultLauncher<Intent, ActivityResult>) {
         val context = LocalContext.current
         val gameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
-        val currentBattingOrder = (gameBF % 9) + 1
+        
+        // Lineup size is 10 if slot 10 is occupied, else 9
+        val lineupSize = if (db.getJerseyAtBattingOrder(gameId, 10).isNotEmpty()) 10 else 9
+        
+        val currentBattingOrder = (gameBF % lineupSize) + 1
         val jerseyDisplay = getBatterJersey(currentBattingOrder)
         val batterText = if (jerseyDisplay.isNotEmpty())
             stringResource(R.string.label_batter_slot_with_jersey, jerseyDisplay, currentBattingOrder)
