@@ -211,13 +211,20 @@ class PitchTrackActivity : ComponentActivity() {
         }
 
         fun updateRunnersInDb(next: Map<Int, GameRunner>, scoredCount: Int) {
+            val prevList = db.getRunners(gameId)
+            val teamIndex = if (halfInningState.isTopHalf) 1 else 0
+            val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
+
             db.clearRunners(gameId)
             next.values.forEach { db.insertRunner(it) }
             if (scoredCount > 0) {
-                val teamIndex = if (halfInningState.isTopHalf) 1 else 0
-                val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
                 db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoredCount)
             }
+            
+            actionStack.push(GameAction.RunnerAdvance(
+                prevRunners = prevList,
+                prevScoreboardValue = currentRuns
+            ))
             refresh()
         }
 
@@ -362,6 +369,15 @@ class PitchTrackActivity : ComponentActivity() {
                                 outs = 2
                                 if (gameId != -1L) db.updateGameState(gameId, inning, outs)
                                 halfInningState = action.prevState
+                            }
+                            is GameAction.RunnerAdvance -> {
+                                db.clearRunners(gameId)
+                                action.prevRunners.forEach { db.insertRunner(it) }
+                                if (action.prevScoreboardValue != null) {
+                                    val teamIndex = if (halfInningState.isTopHalf) 1 else 0
+                                    db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, action.prevScoreboardValue)
+                                }
+                                refresh()
                             }
                             null -> {
                                 // fallback: plain pitch undo
@@ -530,16 +546,32 @@ class PitchTrackActivity : ComponentActivity() {
                 runner = runner,
                 onDismiss = { runnerToEdit = null },
                 onMarkOut = {
+                    val prevList = db.getRunners(gameId)
                     db.deleteRunner(gameId, runner.base)
                     recordRunnerOut()
+                    actionStack.push(GameAction.RunnerAdvance(prevList))
                     refresh()
                     runnerToEdit = null
                 },
                 onMove = { newBase ->
+                    val prevList = db.getRunners(gameId)
                     db.deleteRunner(gameId, runner.base)
+                    var scoreIncr = 0
                     if (newBase > 0) {
                         db.insertRunner(runner.copy(base = newBase))
+                    } else {
+                        scoreIncr = 1
                     }
+
+                    if (scoreIncr > 0) {
+                        val teamIndex = if (halfInningState.isTopHalf) 1 else 0
+                        val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
+                        db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoreIncr)
+                        actionStack.push(GameAction.RunnerAdvance(prevList, currentRuns))
+                    } else {
+                        actionStack.push(GameAction.RunnerAdvance(prevList))
+                    }
+
                     refresh()
                     runnerToEdit = null
                 }

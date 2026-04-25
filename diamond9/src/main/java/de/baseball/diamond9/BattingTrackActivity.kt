@@ -96,13 +96,20 @@ class BattingTrackActivity : ComponentActivity() {
         fun refreshLineup() { lineup = db.getEffectiveLineup(gameId) }
 
         fun updateRunnersInDb(next: Map<Int, GameRunner>, scoredCount: Int) {
+            val prevList = db.getRunners(gameId)
+            val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+            val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
+            
             db.clearRunners(gameId)
             next.values.forEach { db.insertRunner(it) }
             if (scoredCount > 0) {
-                val teamIndex = if (halfInningState.isTopHalf) 0 else 1
-                val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
                 db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoredCount)
             }
+            
+            actionStack.push(GameAction.RunnerAdvance(
+                prevRunners = prevList,
+                prevScoreboardValue = currentRuns
+            ))
             refreshRunners()
         }
 
@@ -453,6 +460,15 @@ class BattingTrackActivity : ComponentActivity() {
                                 db.updateGameState(gameId, inning, outs)
                                 halfInningState = action.prevState
                             }
+                            is GameAction.RunnerAdvance -> {
+                                db.clearRunners(gameId)
+                                action.prevRunners.forEach { db.insertRunner(it) }
+                                if (action.prevScoreboardValue != null) {
+                                    val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+                                    db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, action.prevScoreboardValue)
+                                }
+                                refreshRunners()
+                            }
                             null -> { /* nothing to undo */ }
                         }
                     },
@@ -529,16 +545,32 @@ class BattingTrackActivity : ComponentActivity() {
                 runner = runner,
                 onDismiss = { runnerToEdit = null },
                 onMarkOut = {
+                    val prevList = db.getRunners(gameId)
                     db.deleteRunner(gameId, runner.base)
                     recordRunnerOut()
+                    actionStack.push(GameAction.RunnerAdvance(prevList))
                     refreshRunners()
                     runnerToEdit = null
                 },
                 onMove = { newBase ->
+                    val prevList = db.getRunners(gameId)
                     db.deleteRunner(gameId, runner.base)
+                    var scoreIncr = 0
                     if (newBase > 0) {
                         db.insertRunner(runner.copy(base = newBase))
+                    } else {
+                        scoreIncr = 1
                     }
+                    
+                    if (scoreIncr > 0) {
+                        val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+                        val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
+                        db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoreIncr)
+                        actionStack.push(GameAction.RunnerAdvance(prevList, currentRuns))
+                    } else {
+                        actionStack.push(GameAction.RunnerAdvance(prevList))
+                    }
+
                     refreshRunners()
                     runnerToEdit = null
                 }
