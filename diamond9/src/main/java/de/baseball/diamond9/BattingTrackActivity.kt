@@ -179,11 +179,13 @@ class BattingTrackActivity : ComponentActivity() {
             val newOuts = savedOuts + 1
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
-                prevInningForHalfInning = savedInning
+                prevInningForHalfInning = halfInningState.inning
                 val maxSlot = if (lineup.containsKey(10)) 10 else 9
                 val nextLeadoff = (slot % maxSlot) + 1
                 db.updateLeadoffSlot(gameId, nextLeadoff)
-                inning++
+                if (!halfInningState.isTopHalf) {
+                    inning++
+                }
                 outs = 0
                 showRunSuggestion = true
             } else {
@@ -213,10 +215,12 @@ class BattingTrackActivity : ComponentActivity() {
             val newOuts = savedOuts + 1
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
-                prevInningForHalfInning = savedInning
+                prevInningForHalfInning = halfInningState.inning
                 // leadoff = current batter (runner was out, not this batter)
                 db.updateLeadoffSlot(gameId, savedSlot)
-                inning++
+                if (!halfInningState.isTopHalf) {
+                    inning++
+                }
                 outs = 0
                 showRunSuggestion = true
             } else {

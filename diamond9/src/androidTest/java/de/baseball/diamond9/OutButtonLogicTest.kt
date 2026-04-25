@@ -22,15 +22,21 @@ class OutButtonLogicTest {
         inning = 1
         outs = 0
         batterSlot = 1
+        isTopHalf = true
     }
+
+    private var isTopHalf = true
 
     // ── replicated logic from BattingTrackScreen ───────────────────────────────
 
     private fun incrementOuts() {
         val newOuts = outs + 1
         if (newOuts >= 3) {
-            inning++
+            if (!isTopHalf) {
+                inning++
+            }
             outs = 0
+            isTopHalf = !isTopHalf // simplified transition for this test
         } else {
             outs = newOuts
         }
@@ -68,10 +74,18 @@ class OutButtonLogicTest {
     }
 
     @Test
-    fun outButton_threeOuts_advancesInning_resetsOuts() {
+    fun outButton_threeOuts_staysInFirstInning_resetsOuts() {
         incrementOuts()
         incrementOuts()
         incrementOuts()
+        assertEquals(1, inning) // TOP 1 finished -> still Inning 1 (now BOT 1)
+        assertEquals(0, outs)
+    }
+
+    @Test
+    fun outButton_sixOuts_advancesInning_resetsOuts() {
+        repeat(3) { incrementOuts() } // TOP 1 ends
+        repeat(3) { incrementOuts() } // BOT 1 ends
         assertEquals(2, inning)
         assertEquals(0, outs)
     }
@@ -99,13 +113,12 @@ class OutButtonLogicTest {
     }
 
     @Test
-    fun strikeOut_threeOuts_advancesInning_andBatter() {
-        strikeOut()
-        strikeOut()
-        strikeOut()
+    fun strikeOut_sixOuts_advancesInning_andBatter() {
+        repeat(3) { strikeOut() } // TOP 1
+        repeat(3) { strikeOut() } // BOT 1
         assertEquals(2, inning)
         assertEquals(0, outs)
-        assertEquals(4, batterSlot)
+        assertEquals(7, batterSlot)
     }
 
     @Test

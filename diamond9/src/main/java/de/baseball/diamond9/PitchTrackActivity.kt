@@ -118,8 +118,10 @@ class PitchTrackActivity : ComponentActivity() {
             val newOuts = savedOuts + 1
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
-                prevInningForHalfInning = savedInning
-                inning++
+                prevInningForHalfInning = halfInningState.inning
+                if (!halfInningState.isTopHalf) {
+                    inning++
+                }
                 outs = 0
                 showRunSuggestion = true
             } else {
@@ -143,8 +145,10 @@ class PitchTrackActivity : ComponentActivity() {
             val newOuts = savedOuts + 1
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
-                prevInningForHalfInning = savedInning
-                inning++
+                prevInningForHalfInning = halfInningState.inning
+                if (!halfInningState.isTopHalf) {
+                    inning++
+                }
                 outs = 0
                 showRunSuggestion = true
             } else {
