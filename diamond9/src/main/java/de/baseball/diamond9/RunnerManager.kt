@@ -16,26 +16,48 @@ object RunnerManager {
         batter: GameRunner,
         bases: Int
     ): Pair<Map<Int, GameRunner>, List<GameRunner>> {
-        val next = mutableMapOf<Int, GameRunner>()
+        val next = current.toMutableMap()
         val scoringRunners = mutableListOf<GameRunner>()
 
-        // Simple "Advance N Bases" logic for all current runners
-        for (base in 1..3) {
-            val r = current[base] ?: continue
-            val target = base + bases
-            if (target >= 4) {
-                scoringRunners.add(r.copy(base = 4))
-            } else {
-                next[target] = r.copy(base = target)
+        if (bases >= 4) {
+            // Home Run: Everyone scores
+            for (base in 1..3) {
+                current[base]?.let { scoringRunners.add(it.copy(base = 4)) }
+            }
+            scoringRunners.add(batter.copy(base = 4))
+            return emptyMap<Int, GameRunner>() to scoringRunners
+        }
+
+        // Standard Hit: Only move runners if they are FORCED.
+        // A runner is forced only if the batter takes their base, OR if the runner 
+        // behind them is forced to move into their base.
+        
+        // Batter always takes 'bases' (1B, 2B, or 3B). 
+        // We calculate forces starting from 1B because the batter always takes 1B initially.
+        
+        var forceOnBase = 1 // Batter always forces 1B
+        for (b in 1..3) {
+            if (b == forceOnBase) {
+                val runnerAtB = next[b]
+                if (runnerAtB != null) {
+                    // Runner at this base is forced to the next
+                    next.remove(b)
+                    if (b + 1 >= 4) {
+                        scoringRunners.add(runnerAtB.copy(base = 4))
+                    } else {
+                        next[b + 1] = runnerAtB.copy(base = b + 1)
+                        // The force now moves to the next base
+                        forceOnBase = b + 1
+                    }
+                } else {
+                    // No runner at this base, the force chain breaks here
+                    break
+                }
             }
         }
 
-        // Add batter to their base
-        if (bases < 4) {
-            next[bases] = batter.copy(base = bases)
-        } else {
-            scoringRunners.add(batter.copy(base = 4))
-        }
+        // Add batter to their reached base. 
+        next[bases] = batter.copy(base = bases)
 
         return next to scoringRunners
     }
