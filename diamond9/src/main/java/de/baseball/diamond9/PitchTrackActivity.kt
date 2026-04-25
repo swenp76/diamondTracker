@@ -403,6 +403,7 @@ class PitchTrackActivity : ComponentActivity() {
             RunSuggestionDialog(
                 reachedBaseCount = reachedBase,
                 runnerOuts = runnerOuts,
+                initialLob = runners.size,
                 onConfirm = { runs ->
                     val teamIndex = if (halfInningState.isTopHalf) 0 else 1
                     db.upsertScoreboardRun(gameId, prevInningForHalfInning, teamIndex, runs)

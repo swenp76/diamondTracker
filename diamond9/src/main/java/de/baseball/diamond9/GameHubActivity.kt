@@ -541,6 +541,7 @@ private fun HalfInningBar(
     var showTimeLimitSheet by remember { mutableStateOf(false) }
     var showRunSuggestion by remember { mutableStateOf(false) }
     var lastHalfInningForSuggestion by remember { mutableStateOf<HalfInningState?>(null) }
+    var lastLobCount by remember { mutableIntStateOf(0) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -555,6 +556,7 @@ private fun HalfInningBar(
 
     fun applyState(newState: HalfInningState) {
         val prevState = state
+        val currentRunners = db.getRunners(gameId)
         db.updateHalfInning(gameId, newState.inning, newState.isTopHalf)
         db.updateGameState(gameId, newState.inning, 0)
         db.clearRunners(gameId)
@@ -565,6 +567,7 @@ private fun HalfInningBar(
         val movedForward = newState.inning > prevState.inning || (newState.inning == prevState.inning && prevState.isTopHalf && !newState.isTopHalf)
         if (movedForward) {
             lastHalfInningForSuggestion = prevState
+            lastLobCount = currentRunners.size
             showRunSuggestion = true
         }
     }
@@ -578,6 +581,7 @@ private fun HalfInningBar(
             RunSuggestionDialog(
                 reachedBaseCount = reachedBase,
                 runnerOuts = runnerOuts,
+                initialLob = lastLobCount,
                 onConfirm = { runs ->
                     val teamIndex = if (last.isTopHalf) 0 else 1
                     db.upsertScoreboardRun(gameId, last.inning, teamIndex, runs)

@@ -14,10 +14,11 @@ import androidx.compose.ui.unit.sp
 fun RunSuggestionDialog(
     reachedBaseCount: Int,
     runnerOuts: Int,
+    initialLob: Int = 0,
     onConfirm: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var lob by remember { mutableIntStateOf(0) }
+    var lob by remember { mutableIntStateOf(initialLob) }
     val suggestedRuns = (reachedBaseCount - runnerOuts - lob).coerceAtLeast(0)
 
     AlertDialog(
