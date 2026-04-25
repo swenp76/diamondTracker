@@ -25,7 +25,6 @@ class UISecurityTest {
     }
 
     private fun navigateToTeamList() {
-<<<<<<< HEAD
         // Wait for the Compose hierarchy to be active and for the splash screen to finish.
         // We use a custom check to avoid IllegalStateException if the hierarchy is temporarily empty.
         composeTestRule.waitUntil(timeoutMillis = 15000) {
@@ -36,12 +35,6 @@ class UISecurityTest {
                 // Hierarchy not yet available
                 false
             }
-=======
-        // Wait for splash screen to finish (it has a delay(2500))
-        composeTestRule.mainClock.autoAdvance = true
-        composeTestRule.waitUntil(timeoutMillis = 10000) {
-            composeTestRule.onAllNodesWithContentDescription(getString(R.string.nav_home)).fetchSemanticsNodes().isNotEmpty()
->>>>>>> 38b789b (Fix: resolve IllegalStateException in UISecurityTest)
         }
 
         // Ensure the screen is idle
