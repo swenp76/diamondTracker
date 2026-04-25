@@ -15,16 +15,16 @@ object RunnerManager {
         current: Map<Int, GameRunner>,
         batter: GameRunner,
         bases: Int
-    ): Pair<Map<Int, GameRunner>, Int> {
+    ): Pair<Map<Int, GameRunner>, List<GameRunner>> {
         val next = mutableMapOf<Int, GameRunner>()
-        var scores = 0
+        val scoringRunners = mutableListOf<GameRunner>()
 
         // Simple "Advance N Bases" logic for all current runners
         for (base in 1..3) {
             val r = current[base] ?: continue
             val target = base + bases
             if (target >= 4) {
-                scores++
+                scoringRunners.add(r.copy(base = 4))
             } else {
                 next[target] = r.copy(base = target)
             }
@@ -34,10 +34,10 @@ object RunnerManager {
         if (bases < 4) {
             next[bases] = batter.copy(base = bases)
         } else {
-            scores++
+            scoringRunners.add(batter.copy(base = 4))
         }
 
-        return next to scores
+        return next to scoringRunners
     }
 
     /**
@@ -47,14 +47,14 @@ object RunnerManager {
     fun advanceOnWalk(
         current: Map<Int, GameRunner>,
         batter: GameRunner
-    ): Pair<Map<Int, GameRunner>, Int> {
+    ): Pair<Map<Int, GameRunner>, List<GameRunner>> {
         val next = current.toMutableMap()
-        var scores = 0
+        val scoringRunners = mutableListOf<GameRunner>()
 
         if (current.containsKey(1)) {
             if (current.containsKey(2)) {
                 if (current.containsKey(3)) {
-                    scores++
+                    scoringRunners.add(current[3]!!.copy(base = 4))
                 }
                 next[3] = current[2]!!.copy(base = 3)
             }
@@ -62,6 +62,6 @@ object RunnerManager {
         }
         next[1] = batter.copy(base = 1)
 
-        return next to scores
+        return next to scoringRunners
     }
 }

@@ -91,6 +91,7 @@ class PitchTrackActivity : ComponentActivity() {
         var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
         var runners by remember { mutableStateOf(emptyMap<Int, GameRunner>()) }
         var runnerToEdit by remember { mutableStateOf<GameRunner?>(null) }
+        var currentScoringNotification by remember { mutableStateOf<List<GameRunner>>(emptyList()) }
         var showRunSuggestion by remember { mutableStateOf(false) }
 
         val actionStack = remember { GameActionStack() }
@@ -210,15 +211,16 @@ class PitchTrackActivity : ComponentActivity() {
             }
         }
 
-        fun updateRunnersInDb(next: Map<Int, GameRunner>, scoredCount: Int) {
+        fun updateRunnersInDb(next: Map<Int, GameRunner>, scoringRunners: List<GameRunner>) {
             val prevList = db.getRunners(gameId)
             val teamIndex = if (halfInningState.isTopHalf) 0 else 1
             val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
 
             db.clearRunners(gameId)
             next.values.forEach { db.insertRunner(it) }
-            if (scoredCount > 0) {
-                db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoredCount)
+            if (scoringRunners.isNotEmpty()) {
+                db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoringRunners.size)
+                currentScoringNotification = scoringRunners
             }
             
             actionStack.push(GameAction.RunnerAdvance(
@@ -246,30 +248,38 @@ class PitchTrackActivity : ComponentActivity() {
             containerColor = colorResource(R.color.color_background),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(pitcherName)
-                            Text(
-                                text = halfInningState.shortLabel,
-                                fontSize = 13.sp,
-                                color = colorResource(R.color.color_text_secondary)
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { finish() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.White,
-                        titleContentColor = colorResource(R.color.color_text_primary),
-                        navigationIconContentColor = colorResource(R.color.color_text_primary)
+                Box {
+                    TopAppBar(
+                        title = {
+                            Column {
+                                Text(pitcherName)
+                                Text(
+                                    text = halfInningState.shortLabel,
+                                    fontSize = 13.sp,
+                                    color = colorResource(R.color.color_text_secondary)
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { finish() }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.White,
+                            titleContentColor = colorResource(R.color.color_text_primary),
+                            navigationIconContentColor = colorResource(R.color.color_text_primary)
+                        )
                     )
-                )
+                    
+                    ScoringNotification(
+                        scoringRunners = currentScoringNotification,
+                        onFinished = { currentScoringNotification = emptyList() }
+                    )
+                }
             }
-        ) { padding ->
+        )
+{ padding ->
             Column(
                 modifier = Modifier
                     .padding(padding)
@@ -303,8 +313,8 @@ class PitchTrackActivity : ComponentActivity() {
                         db.insertPitch(pitcherId, "B", inning)
                         actionStack.push(GameAction.Pitch(-1L))
                         if (ballsBefore >= 3) {
-                            val (next, scored) = RunnerManager.advanceOnWalk(runners, getBatterRunner())
-                            updateRunnersInDb(next, scored)
+                            val (next, scoring) = RunnerManager.advanceOnWalk(runners, getBatterRunner())
+                            updateRunnersInDb(next, scoring)
                             db.insertPitch(pitcherId, "W", inning)
                             db.insertPitch(pitcherId, "BF", inning)
                         }
@@ -328,8 +338,8 @@ class PitchTrackActivity : ComponentActivity() {
                         refresh()
                     },
                     onHbp = {
-                        val (next, scored) = RunnerManager.advanceOnWalk(runners, getBatterRunner())
-                        updateRunnersInDb(next, scored)
+                        val (next, scoring) = RunnerManager.advanceOnWalk(runners, getBatterRunner())
+                        updateRunnersInDb(next, scoring)
                         db.insertPitch(pitcherId, "HBP", inning)
                         db.insertPitch(pitcherId, "BF", inning)
                         actionStack.push(GameAction.Pitch(-1L))
@@ -496,8 +506,8 @@ class PitchTrackActivity : ComponentActivity() {
                             val color = if (type == "HR") colorResource(R.color.color_hit_homer) else colorResource(R.color.color_hit)
                             Button(
                                 onClick = {
-                                    val (next, scored) = RunnerManager.advanceOnHit(runners, getBatterRunner(), i + 1)
-                                    updateRunnersInDb(next, scored)
+                                    val (next, scoring) = RunnerManager.advanceOnHit(runners, getBatterRunner(), i + 1)
+                                    updateRunnersInDb(next, scoring)
                                     db.insertPitch(pitcherId, type, inning)
                                     db.insertPitch(pitcherId, "BF", inning)
                                     refresh()
