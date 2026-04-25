@@ -212,7 +212,7 @@ class PitchTrackActivity : ComponentActivity() {
 
         fun updateRunnersInDb(next: Map<Int, GameRunner>, scoredCount: Int) {
             val prevList = db.getRunners(gameId)
-            val teamIndex = if (halfInningState.isTopHalf) 1 else 0
+            val teamIndex = if (halfInningState.isTopHalf) 0 else 1
             val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
 
             db.clearRunners(gameId)
