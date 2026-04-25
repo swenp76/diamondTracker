@@ -345,6 +345,14 @@ class BattingTrackActivity : ComponentActivity() {
             ) {
                 StatsBar(inning, outs, pitches, onRunnerOut = { recordRunnerOut() })
                 BatterStrip(currentSlot, lineup, launcher)
+                
+                DiamondInfield(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .padding(vertical = 8.dp)
+                )
+
                 Box(modifier = Modifier.weight(1f)) {
                     PitchLog(pitches)
                 }
