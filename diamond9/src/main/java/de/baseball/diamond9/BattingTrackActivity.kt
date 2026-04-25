@@ -668,7 +668,7 @@ class BattingTrackActivity : ComponentActivity() {
         val lineupSize = if (lineup.containsKey(10)) 10 else 9
         val leadoff = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
 
-        val onDeckSlot = ((slot + lineupSize - 1) % lineupSize) + 1
+        val onDeckSlot = (slot % lineupSize) + 1
         val inHoleSlot = (onDeckSlot % lineupSize) + 1
 
         val currentPlayer = lineup[slot]
