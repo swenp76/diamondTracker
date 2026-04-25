@@ -573,20 +573,30 @@ class PitchTrackActivity : ComponentActivity() {
                 },
                 onMove = { newBase ->
                     val prevList = db.getRunners(gameId)
-                    db.deleteRunner(gameId, runner.base)
-                    var scoreIncr = 0
-                    if (newBase > 0) {
-                        db.insertRunner(runner.copy(base = newBase))
-                    } else {
-                        scoreIncr = 1
-                    }
+                    val currentMap = prevList.associateBy { it.base }
 
-                    if (scoreIncr > 0) {
-                        val teamIndex = if (halfInningState.isTopHalf) 1 else 0
+                    if (newBase == 0) {
+                        // User clicked "Score": move this runner and all ahead of them to score
+                        val scoring = mutableListOf<GameRunner>()
+                        val next = currentMap.toMutableMap()
+
+                        for (b in runner.base..3) {
+                            next.remove(b)?.let { scoring.add(it.copy(base = 4)) }
+                        }
+
+                        db.clearRunners(gameId)
+                        next.values.forEach { db.insertRunner(it) }
+
+                        val teamIndex = if (halfInningState.isTopHalf) 0 else 1
                         val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
-                        db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoreIncr)
+                        db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoring.size)
+
+                        currentScoringNotification = scoring
                         actionStack.push(GameAction.RunnerAdvance(prevList, currentRuns))
                     } else {
+                        // Normal move to another base
+                        db.deleteRunner(gameId, runner.base)
+                        db.insertRunner(runner.copy(base = newBase))
                         actionStack.push(GameAction.RunnerAdvance(prevList))
                     }
 
