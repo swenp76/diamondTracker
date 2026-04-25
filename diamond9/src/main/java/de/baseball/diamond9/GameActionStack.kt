@@ -46,7 +46,8 @@ sealed class GameAction {
     data class HalfInningChange(
         val prevState: HalfInningState,
         val prevLeadoffSlot: Int,
-        val prevInning: Int
+        val prevInning: Int,
+        val prevRunners: List<GameRunner> = emptyList()
     ) : GameAction()
 
     /**

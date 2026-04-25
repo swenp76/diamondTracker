@@ -369,6 +369,11 @@ class PitchTrackActivity : ComponentActivity() {
                                 outs = 2
                                 if (gameId != -1L) db.updateGameState(gameId, inning, outs)
                                 halfInningState = action.prevState
+
+                                // Restore runners
+                                db.clearRunners(gameId)
+                                action.prevRunners.forEach { db.insertRunner(it) }
+                                refresh()
                             }
                             is GameAction.RunnerAdvance -> {
                                 db.clearRunners(gameId)
@@ -434,6 +439,7 @@ class PitchTrackActivity : ComponentActivity() {
                         Button(
                             onClick = {
                                 val prevState = halfInningState
+                                val prevRunners = db.getRunners(gameId)
                                 db.updateHalfInning(gameId, suggested.inning, suggested.isTopHalf)
                                 db.updateGameState(gameId, suggested.inning, 0)
                                 db.clearRunners(gameId)
@@ -442,7 +448,8 @@ class PitchTrackActivity : ComponentActivity() {
                                 actionStack.push(GameAction.HalfInningChange(
                                     prevState = prevState,
                                     prevLeadoffSlot = prevLeadoffForHalfInning,
-                                    prevInning = prevInningForHalfInning
+                                    prevInning = prevInningForHalfInning,
+                                    prevRunners = prevRunners
                                 ))
                                 val resultIntent = Intent().apply {
                                     putExtra(GameHubActivity.EXTRA_NEXT_IS_OFFENSE, true)

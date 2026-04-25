@@ -557,6 +557,7 @@ private fun HalfInningBar(
         val prevState = state
         db.updateHalfInning(gameId, newState.inning, newState.isTopHalf)
         db.updateGameState(gameId, newState.inning, 0)
+        db.clearRunners(gameId)
         state = newState
         onStateChanged()
 

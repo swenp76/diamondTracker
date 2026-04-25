@@ -308,6 +308,7 @@ class BattingTrackActivity : ComponentActivity() {
                         Button(
                             onClick = {
                                 val prevState = halfInningState
+                                val prevRunners = db.getRunners(gameId)
                                 db.updateHalfInning(gameId, suggested.inning, suggested.isTopHalf)
                                 db.updateGameState(gameId, suggested.inning, 0)
                                 db.clearRunners(gameId)
@@ -316,7 +317,8 @@ class BattingTrackActivity : ComponentActivity() {
                                 actionStack.push(GameAction.HalfInningChange(
                                     prevState = prevState,
                                     prevLeadoffSlot = prevLeadoffForHalfInning,
-                                    prevInning = prevInningForHalfInning
+                                    prevInning = prevInningForHalfInning,
+                                    prevRunners = prevRunners
                                 ))
                                 val resultIntent = Intent().apply {
                                     putExtra(GameHubActivity.EXTRA_NEXT_IS_OFFENSE, false)
@@ -459,6 +461,11 @@ class BattingTrackActivity : ComponentActivity() {
                                 outs = 2  // 3rd out was what triggered the change
                                 db.updateGameState(gameId, inning, outs)
                                 halfInningState = action.prevState
+                                
+                                // Restore runners
+                                db.clearRunners(gameId)
+                                action.prevRunners.forEach { db.insertRunner(it) }
+                                refreshRunners()
                             }
                             is GameAction.RunnerAdvance -> {
                                 db.clearRunners(gameId)
