@@ -24,7 +24,7 @@ fun ScoringNotification(
     if (scoringRunners.isEmpty()) return
 
     LaunchedEffect(scoringRunners) {
-        delay(4000) // Show for 4 seconds
+        delay(2500) // Show for 2.5 seconds
         onFinished()
     }
 
