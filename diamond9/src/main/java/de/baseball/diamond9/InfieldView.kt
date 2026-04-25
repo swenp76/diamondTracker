@@ -20,14 +20,14 @@ fun DiamondInfield(
         val h = size.height
         val minDim = minOf(w, h)
         val center = Offset(w / 2, h / 2)
-        val radius = minDim * 0.35f
+        val radius = minDim * 0.31f // Reduced from 0.35 to avoid clipping
 
         // 1. Draw Infield Dirt Area (simplified as a rotated square)
         rotate(45f, pivot = center) {
             drawRect(
                 color = Color(0xFFD2B48C), // Tan color for dirt
-                topLeft = Offset(center.x - radius * 1.1f, center.y - radius * 1.1f),
-                size = Size(radius * 2.2f, radius * 2.2f)
+                topLeft = Offset(center.x - radius * 1.05f, center.y - radius * 1.05f),
+                size = Size(radius * 2.1f, radius * 2.1f)
             )
         }
 
@@ -77,12 +77,12 @@ private fun DrawScope.drawHomePlate(center: Offset, size: Float) {
     val h = size
     val w = size
     val path = Path().apply {
-        // Starting from top peak (pointing towards 2nd base)
-        moveTo(center.x, center.y - h / 2)
-        lineTo(center.x + w / 2, center.y)
-        lineTo(center.x + w / 2, center.y + h / 2)
-        lineTo(center.x - w / 2, center.y + h / 2)
+        // Starting from bottom peak (pointing towards catcher/down)
+        moveTo(center.x, center.y + h / 2)
         lineTo(center.x - w / 2, center.y)
+        lineTo(center.x - w / 2, center.y - h / 2)
+        lineTo(center.x + w / 2, center.y - h / 2)
+        lineTo(center.x + w / 2, center.y)
         close()
     }
     drawPath(path, Color.White)
