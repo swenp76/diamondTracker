@@ -672,7 +672,11 @@ class PitchTrackActivity : ComponentActivity() {
     fun BatterStrip(stats: PitcherStats, opponentLineupLauncher: ManagedActivityResultLauncher<Intent, ActivityResult>) {
         val context = LocalContext.current
         val gameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else stats.bf
-        val currentBattingOrder = (gameBF % 9) + 1
+        
+        // Lineup size is 10 if slot 10 is occupied, else 9
+        val lineupSize = if (db.getJerseyAtBattingOrder(gameId, 10).isNotEmpty()) 10 else 9
+        
+        val currentBattingOrder = (gameBF % lineupSize) + 1
         val jerseyDisplay = getBatterJersey(currentBattingOrder)
         val batterText = if (jerseyDisplay.isNotEmpty())
             stringResource(R.string.label_batter_slot_with_jersey, jerseyDisplay, currentBattingOrder)
