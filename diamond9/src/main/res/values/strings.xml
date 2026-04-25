@@ -471,4 +471,7 @@
     <string name="dialog_run_suggestion_summary">%1$d reached base − %2$d LOB = %3$d Runs</string>
     <string name="dialog_run_suggestion_summary_with_outs">%1$d reached − %2$d runner outs − %3$d LOB = %4$d Runs</string>
     <string name="btn_save_to_scoreboard">Save to Scoreboard</string>
+    <string name="runner_mgmt_currently_on">Currently on %dB</string>
+    <string name="runner_mgmt_score">Score ✓</string>
+    <string name="runner_mgmt_out">Runner Out</string>
 </resources>

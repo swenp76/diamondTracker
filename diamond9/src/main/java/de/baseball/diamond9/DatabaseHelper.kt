@@ -240,6 +240,46 @@ data class GameBatterStatsRow(
     @ColumnInfo(name = "hbp")        val hbp: Int
 )
 
+@Entity(
+    tableName = "game_runners",
+    foreignKeys = [
+        ForeignKey(
+            entity = Game::class,
+            parentColumns = ["id"],
+            childColumns = ["game_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["game_id"])]
+)
+data class GameRunner(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "game_id") val gameId: Long,
+    val base: Int, // 1, 2, 3
+    @ColumnInfo(name = "player_id") val playerId: Long = 0,
+    val slot: Int = 0,
+    @ColumnInfo(name = "jersey_number") val jerseyNumber: String? = null,
+    @ColumnInfo(name = "name") val name: String = ""
+)
+
+@Dao
+interface RunnerDao {
+    @Query("SELECT * FROM game_runners WHERE game_id = :gameId ORDER BY base ASC")
+    fun getRunnersForGame(gameId: Long): List<GameRunner>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertRunner(runner: GameRunner): Long
+
+    @Query("DELETE FROM game_runners WHERE game_id = :gameId AND base = :base")
+    fun deleteRunner(gameId: Long, base: Int)
+
+    @Query("DELETE FROM game_runners WHERE game_id = :gameId")
+    fun clearRunners(gameId: Long)
+
+    @Update
+    fun updateRunner(runner: GameRunner)
+}
+
 data class SeasonBatterRow(
     @ColumnInfo(name = "player_id") val playerId: Long,
     @ColumnInfo(name = "player_name") val playerName: String?,
@@ -301,6 +341,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     private val opponentTeamDao = db.opponentTeamDao()
     private val scoreboardDao = db.scoreboardDao()
     private val leagueSettingsDao = db.leagueSettingsDao()
+    private val runnerDao = db.runnerDao()
 
     fun purgeAllData() {
         db.clearAllTables()
@@ -779,4 +820,16 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
         val p = pitcherDao.getPitcherById(pitcherId) ?: return
         pitcherDao.updatePitcher(p.copy(gameId = newGameId))
     }
+
+    // ── Runners ──────────────────────────────────────────────────────────────
+
+    fun getRunners(gameId: Long): List<GameRunner> = runnerDao.getRunnersForGame(gameId)
+
+    fun updateRunner(runner: GameRunner) = runnerDao.updateRunner(runner)
+
+    fun deleteRunner(gameId: Long, base: Int) = runnerDao.deleteRunner(gameId, base)
+
+    fun clearRunners(gameId: Long) = runnerDao.clearRunners(gameId)
+
+    fun insertRunner(runner: GameRunner) = runnerDao.insertRunner(runner)
 }

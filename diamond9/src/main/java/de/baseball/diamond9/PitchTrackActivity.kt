@@ -86,10 +86,13 @@ class PitchTrackActivity : ComponentActivity() {
         var showHitSheet by remember { mutableStateOf(false) }
         var showOutSheet by remember { mutableStateOf(false) }
         var showHalfInningSheet by remember { mutableStateOf(false) }
-        var showRunSuggestion by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
         var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
+        var runners by remember { mutableStateOf(emptyMap<Int, GameRunner>()) }
+        var runnerToEdit by remember { mutableStateOf<GameRunner?>(null) }
+        var showRunSuggestion by remember { mutableStateOf(false) }
+
         val actionStack = remember { GameActionStack() }
 
         // Captured before 3rd out, used by HalfInningChange undo
@@ -109,6 +112,7 @@ class PitchTrackActivity : ComponentActivity() {
 
         fun refresh() {
             stats = db.getStatsForPitcher(pitcherId)
+            runners = db.getRunners(gameId).associateBy { it.base }
         }
 
         /** Out-button: batter was put out (BF already inserted before this call). */
@@ -193,6 +197,7 @@ class PitchTrackActivity : ComponentActivity() {
                 val (i, o) = db.getGameState(gameId)
                 inning = i
                 outs = o
+                refresh()
             }
         }
 
@@ -203,6 +208,31 @@ class PitchTrackActivity : ComponentActivity() {
                 )
                 showInningSnackbar = false
             }
+        }
+
+        fun updateRunnersInDb(next: Map<Int, GameRunner>, scoredCount: Int) {
+            db.clearRunners(gameId)
+            next.values.forEach { db.insertRunner(it) }
+            if (scoredCount > 0) {
+                val teamIndex = if (halfInningState.isTopHalf) 1 else 0
+                val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
+                db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoredCount)
+            }
+            refresh()
+        }
+
+        fun getBatterRunner(): GameRunner {
+            val gameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else (stats?.bf ?: 0)
+            val currentSlot = (gameBF % 9) + 1
+            val jersey = getBatterJersey(currentSlot)
+            return GameRunner(
+                gameId = gameId,
+                base = 0,
+                playerId = 0L,
+                slot = currentSlot,
+                jerseyNumber = jersey,
+                name = getString(R.string.label_batter_slot).format(currentSlot)
+            )
         }
 
         Scaffold(
@@ -247,7 +277,13 @@ class PitchTrackActivity : ComponentActivity() {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(180.dp)
-                            .padding(vertical = 4.dp)
+                            .padding(vertical = 4.dp),
+                        runners = runners,
+                        onBaseClick = { base ->
+                            if (base != 0) {
+                                runners[base]?.let { runnerToEdit = it }
+                            }
+                        }
                     )
 
                     Box(modifier = Modifier.weight(1f)) {
@@ -260,6 +296,8 @@ class PitchTrackActivity : ComponentActivity() {
                         db.insertPitch(pitcherId, "B", inning)
                         actionStack.push(GameAction.Pitch(-1L))
                         if (ballsBefore >= 3) {
+                            val (next, scored) = RunnerManager.advanceOnWalk(runners, getBatterRunner())
+                            updateRunnersInDb(next, scored)
                             db.insertPitch(pitcherId, "W", inning)
                             db.insertPitch(pitcherId, "BF", inning)
                         }
@@ -283,6 +321,8 @@ class PitchTrackActivity : ComponentActivity() {
                         refresh()
                     },
                     onHbp = {
+                        val (next, scored) = RunnerManager.advanceOnWalk(runners, getBatterRunner())
+                        updateRunnersInDb(next, scored)
                         db.insertPitch(pitcherId, "HBP", inning)
                         db.insertPitch(pitcherId, "BF", inning)
                         actionStack.push(GameAction.Pitch(-1L))
@@ -379,6 +419,8 @@ class PitchTrackActivity : ComponentActivity() {
                             onClick = {
                                 val prevState = halfInningState
                                 db.updateHalfInning(gameId, suggested.inning, suggested.isTopHalf)
+                                db.updateGameState(gameId, suggested.inning, 0)
+                                db.clearRunners(gameId)
                                 halfInningState = suggested
                                 showHalfInningSheet = false
                                 actionStack.push(GameAction.HalfInningChange(
@@ -430,6 +472,8 @@ class PitchTrackActivity : ComponentActivity() {
                             val color = if (type == "HR") colorResource(R.color.color_hit_homer) else colorResource(R.color.color_hit)
                             Button(
                                 onClick = {
+                                    val (next, scored) = RunnerManager.advanceOnHit(runners, getBatterRunner(), i + 1)
+                                    updateRunnersInDb(next, scored)
                                     db.insertPitch(pitcherId, type, inning)
                                     db.insertPitch(pitcherId, "BF", inning)
                                     refresh()
@@ -479,6 +523,27 @@ class PitchTrackActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+
+        runnerToEdit?.let { runner ->
+            RunnerManagementSheet(
+                runner = runner,
+                onDismiss = { runnerToEdit = null },
+                onMarkOut = {
+                    db.deleteRunner(gameId, runner.base)
+                    recordRunnerOut()
+                    refresh()
+                    runnerToEdit = null
+                },
+                onMove = { newBase ->
+                    db.deleteRunner(gameId, runner.base)
+                    if (newBase > 0) {
+                        db.insertRunner(runner.copy(base = newBase))
+                    }
+                    refresh()
+                    runnerToEdit = null
+                }
+            )
         }
     }
 
