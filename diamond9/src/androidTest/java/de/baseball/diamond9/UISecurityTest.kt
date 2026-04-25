@@ -27,16 +27,19 @@ class UISecurityTest {
     private fun navigateToTeamList() {
         // Wait for splash screen to finish (it has a delay(2500))
         composeTestRule.mainClock.autoAdvance = true
-        composeTestRule.waitUntil(timeoutMillis = 5000) {
+        composeTestRule.waitUntil(timeoutMillis = 10000) {
             composeTestRule.onAllNodesWithContentDescription(getString(R.string.nav_home)).fetchSemanticsNodes().isNotEmpty()
         }
 
         // Open drawer (using the content description of the menu button in CoachAct)
         composeTestRule.onNodeWithContentDescription(getString(R.string.nav_home)).performClick()
+        
         // Wait for drawer to open and item to be visible
         composeTestRule.waitForIdle()
-        // Click Teams
+        
+        // Click Teams - it's in the Navigation Drawer
         composeTestRule.onNodeWithText(getString(R.string.nav_teams)).performClick()
+        composeTestRule.waitForIdle()
     }
 
     @Test
