@@ -136,7 +136,11 @@ private fun OwnLineupScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 halfInningState = db.getHalfInningState(gameId)
-                totalBF = db.getTotalBFForGame(gameId)
+                if (isOffenseMode) {
+                    totalBF = db.getAtBatsForGame(gameId).count { it.result != null }
+                } else {
+                    totalBF = db.getTotalBFForGame(gameId)
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -266,9 +270,12 @@ private fun OwnLineupScreen(
                 items(slotStates) { state ->
                     val hasSubs = substitutions.any { it.slot == state.slot }
                     val leadoff = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
-                    val lineupSize = slotStates.count { it.currentPlayer != null || it.slot <= 9 }
+                    
+                    // Lineup size is 10 if slot 10 is occupied, else 9
+                    val lineupSize = if (lineup.containsKey(10)) 10 else 9
+                    
                     val currentBatterSlot = ((leadoff - 1 + totalBF) % lineupSize) + 1
-                    val isCurrentBatter = state.slot == currentBatterSlot
+                    val isCurrentBatter = isOffenseMode && state.slot == currentBatterSlot
 
                     StarterRow(
                         state = state,

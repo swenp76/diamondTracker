@@ -125,7 +125,7 @@ fun OpponentLineupScreen(
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                totalAtBats = db.getAtBatsForGame(gameId).size
+                totalAtBats = db.getTotalBFForGame(gameId)
                 val (slots, _) = computeState(db, gameId)
                 lineupSize = slots.count { it.currentJersey.isNotEmpty() || it.slot <= 9 }
             }
@@ -219,8 +219,9 @@ fun OpponentLineupScreen(
                 items(slotStates) { state ->
                     val subs = db.getOpponentSubstitutionsForGame(gameId)
                     val hasSubs = subs.any { it.slot == state.slot }
-                    val leadoff = if (gameId != -1L) db.getLeadoffSlot(gameId) else 1
-                    val currentBatterSlot = ((leadoff - 1 + totalAtBats) % lineupSize) + 1
+                    
+                    // Opponent leadoff is currently always 1 (not stored separately in DB)
+                    val currentBatterSlot = (totalAtBats % lineupSize) + 1
                     val isCurrentBatter = state.slot == currentBatterSlot
 
                     OpponentStarterRow(
