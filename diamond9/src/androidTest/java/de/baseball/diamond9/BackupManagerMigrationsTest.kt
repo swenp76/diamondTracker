@@ -39,9 +39,28 @@ class BackupManagerMigrationsTest {
     // ── DB_VERSION sanity ─────────────────────────────────────────────────────
 
     @Test
-    fun dbVersion_is18() {
+    fun dbVersion_is19() {
         // Bumping AppDatabase.version without updating DB_VERSION breaks backup compatibility.
-        assertEquals(18, BackupManager.DB_VERSION)
+        assertEquals(19, BackupManager.DB_VERSION)
+    }
+
+    // ── Migration 18 → 19 : pitcher_id and at_bat_id nullable ─────────────────
+
+    @Test
+    fun migration_v18_nullfillsZeroIds() {
+        val pitch = JSONObject().apply {
+            put("id", 1)
+            put("pitcher_id", 0L)
+            put("at_bat_id", 0L)
+        }
+        val json = JSONObject().apply {
+            put("dbVersion", 18)
+            put("pitches", JSONArray().put(pitch))
+        }
+        val result = migrate(json, fromVersion = 18)
+        val p = result.getJSONArray("pitches").getJSONObject(0)
+        assertTrue(p.isNull("pitcher_id"))
+        assertTrue(p.isNull("at_bat_id"))
     }
 
     // ── Migration 5 → 6 : scoreboard_runs array added ─────────────────────────
@@ -307,7 +326,9 @@ class BackupManagerMigrationsTest {
         }
         val result = migrate(json, fromVersion = 16)
         val p = result.getJSONArray("pitches").getJSONObject(0)
-        assertEquals(0L, p.getLong("at_bat_id"))
+        // Migration 16 -> 17 fills null with 0L
+        // Then Migration 18 -> 19 fills 0L with NULL
+        assertTrue(p.isNull("at_bat_id"))
     }
 
     // ── Full chain: v5 → latest ───────────────────────────────────────────────
@@ -342,7 +363,7 @@ class BackupManagerMigrationsTest {
 
         // Pitch defaults
         assertEquals("", p.getString("type"))
-        assertEquals(0L, p.getLong("at_bat_id"))
+        assertTrue(p.isNull("at_bat_id"))
 
         // scoreboard_runs array should be present
         assertTrue(result.has("scoreboard_runs"))
