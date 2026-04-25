@@ -25,11 +25,20 @@ class UISecurityTest {
     }
 
     private fun navigateToTeamList() {
-        // Wait for splash screen to finish (it has a delay(2500))
-        composeTestRule.mainClock.autoAdvance = true
-        composeTestRule.waitUntil(timeoutMillis = 10000) {
-            composeTestRule.onAllNodesWithContentDescription(getString(R.string.nav_home)).fetchSemanticsNodes().isNotEmpty()
+        // Wait for the Compose hierarchy to be active and for the splash screen to finish.
+        // We use a custom check to avoid IllegalStateException if the hierarchy is temporarily empty.
+        composeTestRule.waitUntil(timeoutMillis = 15000) {
+            try {
+                composeTestRule.onAllNodesWithContentDescription(getString(R.string.nav_home))
+                    .fetchSemanticsNodes().isNotEmpty()
+            } catch (e: IllegalStateException) {
+                // Hierarchy not yet available
+                false
+            }
         }
+
+        // Ensure the screen is idle
+        composeTestRule.waitForIdle()
 
         // Open drawer (using the content description of the menu button in CoachAct)
         composeTestRule.onNodeWithContentDescription(getString(R.string.nav_home)).performClick()
