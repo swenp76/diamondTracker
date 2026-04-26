@@ -120,7 +120,8 @@ class PitcherListActivity : ComponentActivity() {
         val teamId = db.getGame(gameId)?.teamId ?: 0L
         
         val players = if (effectiveLineup.isNotEmpty()) {
-            effectiveLineup.values.toList().sortedBy { it.number.toIntOrNull() ?: 999 }
+            effectiveLineup.filter { it.key in 1..9 }.values.toList()
+                .sortedBy { it.number.toIntOrNull() ?: 999 }
         } else if (teamId > 0) {
             db.getPlayersForTeam(teamId)
         } else {
