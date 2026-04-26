@@ -1150,6 +1150,7 @@ class BackupManager constructor(
                 val oppBenchArray = JSONArray()
                 val oppSubsArray = JSONArray()
                 val appearancesArray = JSONArray()
+                val runnersArray = JSONArray()
 
                 games.forEach { g ->
                     gamesArray.put(JSONObject().apply {
@@ -1206,6 +1207,17 @@ class BackupManager constructor(
                             put("slot", ab.slot)
                             put("inning", ab.inning)
                             put("result", ab.result ?: JSONObject.NULL)
+                        })
+                    }
+
+                    db.getRunners(g.id).forEach { runner ->
+                        runnersArray.put(JSONObject().apply {
+                            put("game_id", g.id)
+                            put("base", runner.base)
+                            put("player_id", runner.playerId)
+                            put("slot", runner.slot)
+                            put("jersey_number", runner.jerseyNumber ?: JSONObject.NULL)
+                            put("name", runner.name)
                         })
                     }
 
@@ -1273,6 +1285,7 @@ class BackupManager constructor(
                 put("opponent_bench", oppBenchArray)
                 put("opponent_substitutions", oppSubsArray)
                 put("pitcher_appearances", appearancesArray)
+                put("game_runners", runnersArray)
 
                 val oppTeamsArray = JSONArray()
                 db.getOpponentTeamsForTeam(teamId).forEach { opp ->
@@ -1458,6 +1471,25 @@ class BackupManager constructor(
                     val pid = playerMapping[obj.getLong("player_id")] ?: continue
                     val gid = gameMapping[obj.getLong("game_id")] ?: continue
                     db.savePitcherAppearance(pid, gid, obj.optString("date", ""), obj.getInt("batters_faced"))
+                }
+            }
+
+            val runnersArr = json.optJSONArray("game_runners")
+            if (runnersArr != null) {
+                for (i in 0 until runnersArr.length()) {
+                    val obj = runnersArr.getJSONObject(i)
+                    val gid = gameMapping[obj.getLong("game_id")] ?: continue
+                    val pid = playerMapping[obj.getLong("player_id")] ?: 0L
+                    db.insertRunner(
+                        GameRunner(
+                            gameId = gid,
+                            base = obj.getInt("base"),
+                            playerId = pid,
+                            slot = obj.optInt("slot", 0),
+                            jerseyNumber = if (obj.isNull("jersey_number")) null else obj.getString("jersey_number"),
+                            name = obj.optString("name", "")
+                        )
+                    )
                 }
             }
 
