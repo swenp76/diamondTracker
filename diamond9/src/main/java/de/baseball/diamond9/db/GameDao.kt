@@ -36,6 +36,9 @@ abstract class GameDao {
     @Query("UPDATE games SET current_inning = :inning, is_top_half = :isTopHalf WHERE id = :gameId")
     abstract fun updateHalfInning(gameId: Long, inning: Int, isTopHalf: Int)
 
+    @Query("UPDATE games SET is_locked = :locked WHERE id = :gameId")
+    abstract fun updateLocked(gameId: Long, locked: Int)
+
     @Transaction
     open fun deleteGameWithCascade(gameId: Long) {
         val pitcherIds = getPitcherIdsForGame(gameId)
