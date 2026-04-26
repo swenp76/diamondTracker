@@ -476,4 +476,6 @@
     <string name="runner_mgmt_out">Runner Out</string>
     <string name="score_notif_single">Runner Scored!</string>
     <string name="score_notif_multiple">%d Runners Scored!</string>
+    <string name="toast_fc_check_runners">Fielder\'s Choice: Please check and update runners manually.</string>
+    <string name="toast_dp_check_runners">Double Play: Please check and update runners manually.</string>
 </resources>

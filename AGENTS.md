@@ -10,7 +10,7 @@ Sie hilft beim Verwalten von Teams, Erstellen von Aufstellungen und Tracken von 
 - **Datenbank:** Room (SQLite) über DAOs + DatabaseHelper-Wrapper
 - **UI:** Jetpack Compose (Material 3)
 - **Package:** de.baseball.diamond9
-- **DB-Datei:** `pitcher.db` (Version 19)
+- **DB-Datei:** `pitcher.db` (Version 21)
 - **Lokalisierung:** Deutsch (Fallback, `values/`), Englisch (`values-en/`)
 
 ## Projektstruktur
@@ -287,7 +287,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | 16 → 17 | `pitches.at_bat_id` null backfill (0L) | ✅ |
 | 17 → 18 | `FOREIGN KEY` + `ON DELETE CASCADE` (games/at_bats/pitchers/pitches) | ✅ |
 | 18 → 19 | `pitches` Tabelle: `pitcher_id` und `at_bat_id` nullable (Fix für Offense Tracking) | ✅ |
-| 19 → 20 | `seasons`-Tabelle + `season_id` in `games` (#8) | geplant |
-| 20 → 21 | `innings`, `sport_type`, `max_substitutes` in `teams` (#11, #12, #13) | geplant |
+| 19 → 20 | `game_runners` Tabelle hinzugefügt | ✅ |
+| 20 → 21 | `is_locked` Feld in `games` Tabelle | ✅ |
 
 **Hinweis:** Jede Migration hier eintragen und gleichzeitig `BackupManager` aktualisieren.

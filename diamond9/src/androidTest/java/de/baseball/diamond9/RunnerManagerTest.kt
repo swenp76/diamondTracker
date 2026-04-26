@@ -87,4 +87,39 @@ class RunnerManagerTest {
         assertTrue(next.isEmpty())
         assertEquals(4, scoring.size)
     }
+
+    @Test
+    fun walk_runnerOn3BOnly_doesNotMoveRunnerOn3B() {
+        val current = mapOf(3 to r3)
+        val (next, scoring) = RunnerManager.advanceOnWalk(current, batter)
+
+        assertEquals(2, next.size)
+        assertEquals(1, next[1]?.base) // Batter on 1B
+        assertEquals(3, next[3]?.base) // Runner still on 3B
+        assertTrue(scoring.isEmpty())
+    }
+
+    @Test
+    fun walk_runnerOn2BAnd3B_doesNotMoveRunners() {
+        val current = mapOf(2 to r2, 3 to r3)
+        val (next, scoring) = RunnerManager.advanceOnWalk(current, batter)
+
+        assertEquals(3, next.size)
+        assertEquals(1, next[1]?.base) // Batter
+        assertEquals(2, next[2]?.base) // Runner on 2B
+        assertEquals(3, next[3]?.base) // Runner on 3B
+        assertTrue(scoring.isEmpty())
+    }
+
+    @Test
+    fun walk_runnersOn1BAnd3B_movesRunnerTo2B() {
+        val current = mapOf(1 to r1, 3 to r3)
+        val (next, scoring) = RunnerManager.advanceOnWalk(current, batter)
+
+        assertEquals(3, next.size)
+        assertEquals(1, next[1]?.base) // Batter
+        assertEquals(2, next[2]?.base) // R1 forced to 2B
+        assertEquals(3, next[3]?.base) // R3 NOT forced
+        assertTrue(scoring.isEmpty())
+    }
 }

@@ -503,11 +503,19 @@ private fun GameItem(
             IconButton(onClick = onExport) {
                 Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = colorResource(R.color.color_primary))
             }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, null, tint = colorResource(R.color.color_primary))
+            IconButton(onClick = onEdit, enabled = game.isLocked == 0) {
+                Icon(
+                    Icons.Default.Edit,
+                    null,
+                    tint = if (game.isLocked == 0) colorResource(R.color.color_primary) else colorResource(R.color.color_text_secondary).copy(alpha = 0.38f)
+                )
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, null, tint = colorResource(R.color.color_strike))
+            IconButton(onClick = onDelete, enabled = game.isLocked == 0) {
+                Icon(
+                    Icons.Default.Delete,
+                    null,
+                    tint = if (game.isLocked == 0) colorResource(R.color.color_strike) else colorResource(R.color.color_text_secondary).copy(alpha = 0.38f)
+                )
             }
         }
     }

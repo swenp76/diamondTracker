@@ -22,7 +22,8 @@ data class Game(
     @ColumnInfo(name = "is_home", defaultValue = "1") val isHome: Int = 1,  // 1 = home, 0 = away
     @ColumnInfo(name = "current_inning", defaultValue = "1") val currentInning: Int = 1,
     @ColumnInfo(name = "is_top_half", defaultValue = "1") val isTopHalf: Int = 1,  // 1 = top, 0 = bottom
-    @ColumnInfo(name = "game_number", defaultValue = "") val gameNumber: String = ""
+    @ColumnInfo(name = "game_number", defaultValue = "") val gameNumber: String = "",
+    @ColumnInfo(name = "is_locked", defaultValue = "0") val isLocked: Int = 0
 )
 
 @Entity(
@@ -794,6 +795,13 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
 
     fun saveLeagueSettings(settings: LeagueSettings) =
         leagueSettingsDao.upsert(settings)
+
+    fun isGameLocked(gameId: Long): Boolean =
+        gameDao.getGame(gameId)?.isLocked == 1
+
+    fun setGameLocked(gameId: Long, locked: Boolean) {
+        gameDao.updateLocked(gameId, if (locked) 1 else 0)
+    }
 
     fun getRunnersWhoReachedBase(gameId: Long, inning: Int, isDefense: Boolean): Int {
         return if (isDefense) {

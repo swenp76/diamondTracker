@@ -2,6 +2,7 @@ package de.baseball.diamond9
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -549,9 +550,15 @@ class BattingTrackActivity : ComponentActivity() {
                             "ROE", "FC" -> {
                                 val (next, scoring) = RunnerManager.advanceOnHit(runners, batterRunner, 1)
                                 updateRunnersInDb(next, scoring)
+                                if (result == "FC") {
+                                    Toast.makeText(this@BattingTrackActivity, R.string.toast_fc_check_runners, Toast.LENGTH_LONG).show()
+                                }
                             }
                         }
                         db.updateAtBatResult(abId, result)
+                        if (result == "DP") {
+                            Toast.makeText(this@BattingTrackActivity, R.string.toast_dp_check_runners, Toast.LENGTH_LONG).show()
+                        }
                         if (isOutResult(result)) recordBatterOut(result)
                         else nextBatter()
                     }

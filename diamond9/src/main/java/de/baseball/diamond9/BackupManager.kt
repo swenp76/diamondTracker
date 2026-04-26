@@ -29,6 +29,8 @@ import java.io.File
  *  17 → pitches.at_bat_id backfilled (null → 0)
  *  18 → added foreign key constraints with CASCADE
  *  19 → pitches table: pitcher_id and at_bat_id made nullable
+ *  20 → added game_runners table
+ *  21 → added is_locked column to games
  *
  * Restore logic applies incremental migrations when importing older backups.
  */
@@ -39,7 +41,7 @@ class BackupManager constructor(
     constructor(context: Context) : this(context, DatabaseHelper(context))
 
     companion object {
-        const val DB_VERSION = 19
+        const val DB_VERSION = 21
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
@@ -127,6 +129,7 @@ class BackupManager constructor(
                 put("current_inning", g.currentInning)
                 put("is_top_half", g.isTopHalf)
                 put("game_number", g.gameNumber ?: "")
+                put("is_locked", g.isLocked)
             }
         }))
 
@@ -329,6 +332,23 @@ class BackupManager constructor(
         }
         root.put("pitcher_appearances", allAppearances)
 
+        // game_runners (added in DB version 20)
+        val allRunners = JSONArray()
+        db.getAllGames().forEach { game ->
+            db.getRunners(game.id).forEach { runner ->
+                allRunners.put(JSONObject().apply {
+                    put("id", runner.id)
+                    put("game_id", runner.gameId)
+                    put("base", runner.base)
+                    put("player_id", runner.playerId)
+                    put("slot", runner.slot)
+                    put("jersey_number", runner.jerseyNumber ?: JSONObject.NULL)
+                    put("name", runner.name)
+                })
+            }
+        }
+        root.put("game_runners", allRunners)
+
         return root
     }
 
@@ -373,6 +393,7 @@ class BackupManager constructor(
             restorePitcherAppearances(migrated)
             restoreOpponentTeams(migrated)
             restoreLeagueSettings(migrated)
+            restoreGameRunners(migrated)
         }
     }
 
@@ -431,6 +452,7 @@ class BackupManager constructor(
                 put("current_inning", obj.optInt("current_inning", 1))
                 put("is_top_half", obj.optInt("is_top_half", 1))
                 put("game_number", obj.optString("game_number", "").take(20))
+                put("is_locked", obj.optInt("is_locked", 0))
             })
         }
     }
@@ -709,21 +731,29 @@ class BackupManager constructor(
             v = 18
         }
 
-        // Migration 18 → 19: at_bat_id and pitcher_id in pitches table made nullable.
+        // Migration 18 → 19: Nullable pitch columns – no JSON structure change needed.
         if (v < 19 && toVersion >= 19) {
-            val pitches = current.optJSONArray("pitches")
-            if (pitches != null) {
-                for (i in 0 until pitches.length()) {
-                    val p = pitches.getJSONObject(i)
-                    if (p.has("pitcher_id") && p.optLong("pitcher_id") == 0L) {
-                        p.put("pitcher_id", JSONObject.NULL)
-                    }
-                    if (p.has("at_bat_id") && p.optLong("at_bat_id") == 0L) {
-                        p.put("at_bat_id", JSONObject.NULL)
-                    }
+            v = 19
+        }
+
+        // Migration 19 → 20: game_runners table introduced.
+        if (v < 20 && toVersion >= 20) {
+            if (!current.has("game_runners")) {
+                current.put("game_runners", JSONArray())
+            }
+            v = 20
+        }
+
+        // Migration 20 → 21: is_locked column added to games.
+        if (v < 21 && toVersion >= 21) {
+            val games = current.optJSONArray("games")
+            if (games != null) {
+                for (i in 0 until games.length()) {
+                    val g = games.getJSONObject(i)
+                    if (!g.has("is_locked")) g.put("is_locked", 0)
                 }
             }
-            v = 19
+            v = 21
         }
 
         return current
@@ -768,6 +798,24 @@ class BackupManager constructor(
         }
     }
 
+    private fun restoreGameRunners(json: JSONObject) {
+        val arr = json.optJSONArray("game_runners") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.insertRunner(
+                GameRunner(
+                    id = obj.optLong("id", 0L),
+                    gameId = obj.getLong("game_id"),
+                    base = obj.getInt("base"),
+                    playerId = obj.optLong("player_id", 0L),
+                    slot = obj.optInt("slot", 0),
+                    jerseyNumber = if (obj.isNull("jersey_number")) null else obj.getString("jersey_number"),
+                    name = obj.optString("name", "")
+                )
+            )
+        }
+    }
+
     // ── Single Game Export/Import ───────────────────────────────────────────────
 
     fun exportGame(gameId: Long): JSONObject {
@@ -797,6 +845,7 @@ class BackupManager constructor(
             put("current_inning", game.currentInning)
             put("is_top_half", game.isTopHalf)
             put("game_number", game.gameNumber ?: "")
+            put("is_locked", game.isLocked)
         }
         root.put("game", gObj)
 
@@ -911,6 +960,7 @@ class BackupManager constructor(
             isHome = isHome,
             gameNumber = gData.optString("game_number", "").take(20)
         )
+        db.setGameLocked(gameId, gData.optInt("is_locked", 0) == 1)
         db.updateGameState(gameId, gData.optInt("inning", 1), gData.optInt("outs", 0))
         db.updateLeadoffSlot(gameId, gData.optInt("leadoff_slot", 1))
         db.setStartTime(gameId, gData.optLong("start_time", 0L))
@@ -1100,6 +1150,7 @@ class BackupManager constructor(
                 val oppBenchArray = JSONArray()
                 val oppSubsArray = JSONArray()
                 val appearancesArray = JSONArray()
+                val runnersArray = JSONArray()
 
                 games.forEach { g ->
                     gamesArray.put(JSONObject().apply {
@@ -1117,6 +1168,7 @@ class BackupManager constructor(
                         put("current_inning", g.currentInning)
                         put("is_top_half", g.isTopHalf)
                         put("game_number", g.gameNumber)
+                        put("is_locked", g.isLocked)
                     })
 
                     db.getScoreboard(g.id).forEach { r ->
@@ -1155,6 +1207,17 @@ class BackupManager constructor(
                             put("slot", ab.slot)
                             put("inning", ab.inning)
                             put("result", ab.result ?: JSONObject.NULL)
+                        })
+                    }
+
+                    db.getRunners(g.id).forEach { runner ->
+                        runnersArray.put(JSONObject().apply {
+                            put("game_id", g.id)
+                            put("base", runner.base)
+                            put("player_id", runner.playerId)
+                            put("slot", runner.slot)
+                            put("jersey_number", runner.jerseyNumber ?: JSONObject.NULL)
+                            put("name", runner.name)
                         })
                     }
 
@@ -1222,6 +1285,7 @@ class BackupManager constructor(
                 put("opponent_bench", oppBenchArray)
                 put("opponent_substitutions", oppSubsArray)
                 put("pitcher_appearances", appearancesArray)
+                put("game_runners", runnersArray)
 
                 val oppTeamsArray = JSONArray()
                 db.getOpponentTeamsForTeam(teamId).forEach { opp ->
@@ -1291,6 +1355,7 @@ class BackupManager constructor(
                         isHome = obj.optInt("is_home", 1),
                         gameNumber = obj.optString("game_number", "").take(20)
                     )
+                    db.setGameLocked(newId, obj.optInt("is_locked", 0) == 1)
                     db.updateGameState(newId, obj.optInt("inning", 1), obj.optInt("outs", 0))
                     db.updateLeadoffSlot(newId, obj.optInt("leadoff_slot", 1))
                     db.setStartTime(newId, obj.optLong("start_time", 0L))
@@ -1406,6 +1471,25 @@ class BackupManager constructor(
                     val pid = playerMapping[obj.getLong("player_id")] ?: continue
                     val gid = gameMapping[obj.getLong("game_id")] ?: continue
                     db.savePitcherAppearance(pid, gid, obj.optString("date", ""), obj.getInt("batters_faced"))
+                }
+            }
+
+            val runnersArr = json.optJSONArray("game_runners")
+            if (runnersArr != null) {
+                for (i in 0 until runnersArr.length()) {
+                    val obj = runnersArr.getJSONObject(i)
+                    val gid = gameMapping[obj.getLong("game_id")] ?: continue
+                    val pid = playerMapping[obj.getLong("player_id")] ?: 0L
+                    db.insertRunner(
+                        GameRunner(
+                            gameId = gid,
+                            base = obj.getInt("base"),
+                            playerId = pid,
+                            slot = obj.optInt("slot", 0),
+                            jerseyNumber = if (obj.isNull("jersey_number")) null else obj.getString("jersey_number"),
+                            name = obj.optString("name", "")
+                        )
+                    )
                 }
             }
 

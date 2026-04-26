@@ -19,6 +19,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -149,6 +151,7 @@ private fun GameHubScreen(
     val leagueSettings = remember { db.getLeagueSettings(ownTeamId) }
     var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
     var scoreboardKey by remember { mutableLongStateOf(0L) }
+    var isLocked by remember { mutableStateOf(db.isGameLocked(gameId)) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -156,14 +159,15 @@ private fun GameHubScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 halfInningState = db.getHalfInningState(gameId)
                 scoreboardKey = System.currentTimeMillis()
+                isLocked = db.isGameLocked(gameId)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val isFirstHalfInning = halfInningState.inning == 1 && halfInningState.isTopHalf
-    val offenseEnabled = !(isFirstHalfInning && isHome == 1)
-    val defenseEnabled = !(isFirstHalfInning && isHome == 0)
+    val offenseEnabled = !isLocked && !(isFirstHalfInning && isHome == 1)
+    val defenseEnabled = !isLocked && !(isFirstHalfInning && isHome == 0)
 
     Scaffold(
         containerColor = colorResource(R.color.color_background),
@@ -181,6 +185,16 @@ private fun GameHubScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        val newLocked = !isLocked
+                        db.setGameLocked(gameId, newLocked)
+                        isLocked = newLocked
+                    }) {
+                        Icon(
+                            if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                            contentDescription = if (isLocked) "Unlock Game" else "Lock Game"
+                        )
+                    }
                     IconButton(onClick = onStats) {
                         Icon(Icons.Default.ShowChart, contentDescription = stringResource(R.string.btn_stats))
                     }
@@ -197,15 +211,16 @@ private fun GameHubScreen(
                 .background(colorResource(R.color.color_background)),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Scoreboard(gameId, ownTeam, opponent, isHome, leagueSettings.innings, db, scoreboardKey)
+            Scoreboard(gameId, ownTeam, opponent, isHome, leagueSettings.innings, db, scoreboardKey, isLocked)
 
-            GameTimer(gameId, db)
+            GameTimer(gameId, db, isLocked)
 
             HalfInningBar(
                 gameId = gameId,
                 db = db,
                 isHome = isHome,
                 timeLimitMinutes = leagueSettings.timeLimitMinutes,
+                isLocked = isLocked,
                 onOffense = onOffense,
                 onDefense = onDefense,
                 onStateChanged = { scoreboardKey = System.currentTimeMillis() }
@@ -215,8 +230,8 @@ private fun GameHubScreen(
 
             HubButton(stringResource(R.string.gamehub_offense), colorResource(R.color.color_primary), onOffense, offenseEnabled)
             HubButton(stringResource(R.string.gamehub_defense), colorResource(R.color.color_primary), onDefense, defenseEnabled)
-            HubButton(stringResource(R.string.gamehub_lineup), colorResource(R.color.color_primary), onLineup)
-            HubButton(stringResource(R.string.gamehub_oppo_lineup), colorResource(R.color.color_primary), onOpponentLineup)
+            HubButton(stringResource(R.string.gamehub_lineup), colorResource(R.color.color_primary), onLineup, !isLocked)
+            HubButton(stringResource(R.string.gamehub_oppo_lineup), colorResource(R.color.color_primary), onOpponentLineup, !isLocked)
 
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -231,7 +246,8 @@ private fun Scoreboard(
     isHome: Int,
     innings: Int,
     db: DatabaseHelper,
-    refreshKey: Long = 0L
+    refreshKey: Long = 0L,
+    isLocked: Boolean = false
 ) {
     val guestTeam = if (isHome == 1) opponent else ownTeam
     val homeTeam = if (isHome == 1) ownTeam else opponent
@@ -312,7 +328,7 @@ private fun Scoreboard(
                 ScoreCell(guestTeam, 100.dp, false, FontWeight.Bold, startPadding = 8.dp)
                 (1..innings).forEach { inn ->
                     val r = if (hasEntry.value[0][inn - 1]) runs.value[0][inn - 1].toString() else "-"
-                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(0, inn) }, highlightEdge = if (inn == currentInning) "top" else "none")
+                    ScoreCell(r, 30.dp, false, onClick = if (!isLocked) { { editCell = Pair(0, inn) } } else null, highlightEdge = if (inn == currentInning) "top" else "none")
                 }
                 ScoreCell(totalFor(0).toString(), 40.dp, false, FontWeight.Bold)
             }
@@ -322,7 +338,7 @@ private fun Scoreboard(
                 ScoreCell(homeTeam, 100.dp, false, FontWeight.Bold, startPadding = 8.dp)
                 (1..innings).forEach { inn ->
                     val r = if (hasEntry.value[1][inn - 1]) runs.value[1][inn - 1].toString() else "-"
-                    ScoreCell(r, 30.dp, false, onClick = { editCell = Pair(1, inn) }, highlightEdge = if (inn == currentInning) "bottom" else "none")
+                    ScoreCell(r, 30.dp, false, onClick = if (!isLocked) { { editCell = Pair(1, inn) } } else null, highlightEdge = if (inn == currentInning) "bottom" else "none")
                 }
                 ScoreCell(totalFor(1).toString(), 40.dp, false, FontWeight.Bold)
             }
@@ -331,7 +347,7 @@ private fun Scoreboard(
 }
 
 @Composable
-private fun GameTimer(gameId: Long, db: DatabaseHelper) {
+private fun GameTimer(gameId: Long, db: DatabaseHelper, isLocked: Boolean = false) {
     var startTime by remember { mutableStateOf(db.getStartTime(gameId)) }
     var baseElapsedMs by remember { mutableStateOf(db.getElapsedTime(gameId)) }
     var currentElapsedMs by remember { mutableStateOf(0L) }
@@ -411,55 +427,57 @@ private fun GameTimer(gameId: Long, db: DatabaseHelper) {
             }
 
             Row {
-                if (!isRunning) {
-                    // Start or Resume
-                    Button(
-                        onClick = {
-                            val now = System.currentTimeMillis()
-                            db.setStartTime(gameId, now)
-                            startTime = now
-                            isRunning = true
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.widthIn(min = 96.dp).padding(end = 4.dp)
-                    ) {
-                        Text(
-                            text = if (totalElapsedMs == 0L) stringResource(R.string.timer_btn_start) else stringResource(R.string.timer_btn_resume),
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                if (!isLocked) {
+                    if (!isRunning) {
+                        // Start or Resume
+                        Button(
+                            onClick = {
+                                val now = System.currentTimeMillis()
+                                db.setStartTime(gameId, now)
+                                startTime = now
+                                isRunning = true
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.widthIn(min = 96.dp).padding(end = 4.dp)
+                        ) {
+                            Text(
+                                text = if (totalElapsedMs == 0L) stringResource(R.string.timer_btn_start) else stringResource(R.string.timer_btn_resume),
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    } else {
+                        // Pause
+                        Button(
+                            onClick = {
+                                val now = System.currentTimeMillis()
+                                val sessionElapsed = now - startTime
+                                val newTotalElapsed = baseElapsedMs + sessionElapsed
+                                db.setElapsedTime(gameId, newTotalElapsed)
+                                db.setStartTime(gameId, 0L)
+                                baseElapsedMs = newTotalElapsed
+                                startTime = 0L
+                                currentElapsedMs = 0L
+                                isRunning = false
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.widthIn(min = 96.dp).padding(end = 4.dp)
+                        ) {
+                            Text(stringResource(R.string.timer_btn_pause), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
-                } else {
-                    // Pause
-                    Button(
-                        onClick = {
-                            val now = System.currentTimeMillis()
-                            val sessionElapsed = now - startTime
-                            val newTotalElapsed = baseElapsedMs + sessionElapsed
-                            db.setElapsedTime(gameId, newTotalElapsed)
-                            db.setStartTime(gameId, 0L)
-                            baseElapsedMs = newTotalElapsed
-                            startTime = 0L
-                            currentElapsedMs = 0L
-                            isRunning = false
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.widthIn(min = 96.dp).padding(end = 4.dp)
-                    ) {
-                        Text(stringResource(R.string.timer_btn_pause), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
 
-                if (totalElapsedMs > 0L) {
-                    // Reset
-                    OutlinedButton(
-                        onClick = { showResetDialog = true },
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(stringResource(R.string.timer_btn_reset), color = Color.Red, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (totalElapsedMs > 0L) {
+                        // Reset
+                        OutlinedButton(
+                            onClick = { showResetDialog = true },
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(stringResource(R.string.timer_btn_reset), color = Color.Red, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
                 }
             }
@@ -531,6 +549,7 @@ private fun HalfInningBar(
     db: DatabaseHelper,
     isHome: Int,
     timeLimitMinutes: Int?,
+    isLocked: Boolean = false,
     onOffense: () -> Unit,
     onDefense: () -> Unit,
     onStateChanged: () -> Unit = {}
@@ -616,8 +635,12 @@ private fun HalfInningBar(
         )
         OutlinedButton(
             onClick = if (isOurOffense) onOffense else onDefense,
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.7f)),
+            enabled = !isLocked,
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = Color.White,
+                disabledContentColor = Color.White.copy(alpha = 0.4f)
+            ),
+            border = androidx.compose.foundation.BorderStroke(1.dp, if (isLocked) Color.White.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.7f)),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             modifier = Modifier.height(32.dp)
         ) {
@@ -629,12 +652,14 @@ private fun HalfInningBar(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        IconButton(onClick = { showEditDialog = true }) {
-            Icon(
-                imageVector = Icons.Default.Edit,
-                contentDescription = stringResource(R.string.content_desc_edit_half_inning),
-                tint = Color.White
-            )
+        if (!isLocked) {
+            IconButton(onClick = { showEditDialog = true }) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = stringResource(R.string.content_desc_edit_half_inning),
+                    tint = Color.White
+                )
+            }
         }
     }
 
