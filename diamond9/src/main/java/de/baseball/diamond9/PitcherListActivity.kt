@@ -116,8 +116,16 @@ class PitcherListActivity : ComponentActivity() {
     }
 
     private fun showAddPitcherDialog(onSuccess: () -> Unit) {
+        val effectiveLineup = db.getEffectiveLineup(gameId)
         val teamId = db.getGame(gameId)?.teamId ?: 0L
-        val players = if (teamId > 0) db.getPlayersForTeam(teamId) else emptyList()
+        
+        val players = if (effectiveLineup.isNotEmpty()) {
+            effectiveLineup.values.toList().sortedBy { it.number.toIntOrNull() ?: 999 }
+        } else if (teamId > 0) {
+            db.getPlayersForTeam(teamId)
+        } else {
+            emptyList()
+        }
 
         if (players.isEmpty()) {
             val et = EditText(this).apply {
