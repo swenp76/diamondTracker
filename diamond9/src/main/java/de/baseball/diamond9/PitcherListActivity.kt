@@ -116,11 +116,8 @@ class PitcherListActivity : ComponentActivity() {
     }
 
     private fun showAddPitcherDialog(onSuccess: () -> Unit) {
-        val starters = db.getOwnLineupStarters(gameId)
         val teamId = db.getGame(gameId)?.teamId ?: 0L
-        val players = if (starters.isNotEmpty()) starters
-        else if (teamId > 0) db.getPlayersForTeam(teamId)
-        else emptyList()
+        val players = if (teamId > 0) db.getPlayersForTeam(teamId) else emptyList()
 
         if (players.isEmpty()) {
             val et = EditText(this).apply {
