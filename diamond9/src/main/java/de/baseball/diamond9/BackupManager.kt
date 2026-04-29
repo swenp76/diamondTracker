@@ -731,8 +731,20 @@ class BackupManager constructor(
             v = 18
         }
 
-        // Migration 18 → 19: Nullable pitch columns – no JSON structure change needed.
+        // Migration 18 → 19: Nullable pitch columns – backfill 0 to null.
         if (v < 19 && toVersion >= 19) {
+            val pitches = current.optJSONArray("pitches")
+            if (pitches != null) {
+                for (i in 0 until pitches.length()) {
+                    val p = pitches.getJSONObject(i)
+                    if (p.has("pitcher_id") && p.optLong("pitcher_id") == 0L) {
+                        p.put("pitcher_id", JSONObject.NULL)
+                    }
+                    if (p.has("at_bat_id") && p.optLong("at_bat_id") == 0L) {
+                        p.put("at_bat_id", JSONObject.NULL)
+                    }
+                }
+            }
             v = 19
         }
 
