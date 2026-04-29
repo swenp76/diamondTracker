@@ -39,9 +39,9 @@ class BackupManagerMigrationsTest {
     // ── DB_VERSION sanity ─────────────────────────────────────────────────────
 
     @Test
-    fun dbVersion_is19() {
+    fun dbVersion_is21() {
         // Bumping AppDatabase.version without updating DB_VERSION breaks backup compatibility.
-        assertEquals(19, BackupManager.DB_VERSION)
+        assertEquals(21, BackupManager.DB_VERSION)
     }
 
     // ── Migration 18 → 19 : pitcher_id and at_bat_id nullable ─────────────────
@@ -360,13 +360,15 @@ class BackupManagerMigrationsTest {
         assertEquals(1,   g.getInt("is_home"))
         assertEquals(0L,  g.getLong("elapsed_time_ms"))
         assertEquals("",  g.getString("game_number"))
+        assertEquals(0,   g.getInt("is_locked"))
 
         // Pitch defaults
         assertEquals("", p.getString("type"))
         assertTrue(p.isNull("at_bat_id"))
 
-        // scoreboard_runs array should be present
+        // scoreboard_runs and game_runners array should be present
         assertTrue(result.has("scoreboard_runs"))
+        assertTrue(result.has("game_runners"))
 
         // Opponent team should have team_id = 0
         assertEquals(0L, o.getLong("team_id"))
