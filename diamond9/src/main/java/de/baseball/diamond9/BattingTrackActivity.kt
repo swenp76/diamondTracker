@@ -859,7 +859,7 @@ class BattingTrackActivity : ComponentActivity() {
         onUndo: () -> Unit,
         onResult: (String) -> Unit
     ) {
-        var outExpanded by remember { mutableStateOf(false) }
+        var showOutSheet by remember { mutableStateOf(false) }
         var showMoreSheet by remember { mutableStateOf(false) }
         var showHSheet by remember { mutableStateOf(false) }
 
@@ -899,6 +899,18 @@ class BattingTrackActivity : ComponentActivity() {
                     Button(onClick = { onResult("K"); onKSheetDismiss() }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_strikeout_swinging), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     Spacer(Modifier.width(8.dp))
                     Button(onClick = { onResult("KL"); onKSheetDismiss() }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike_looking)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_strikeout_looking), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                }
+            }
+        }
+
+        if (showOutSheet) {
+            ModalBottomSheet(onDismissRequest = { showOutSheet = false }) {
+                Row(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp).fillMaxWidth().height(72.dp)) {
+                    listOf("GO" to R.string.btn_result_go, "FO" to R.string.btn_result_fo, "LO" to R.string.btn_result_lo)
+                        .forEachIndexed { i, (key, labelRes) ->
+                            if (i > 0) Spacer(Modifier.width(8.dp))
+                            Button(onClick = { onResult(key); showOutSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(labelRes), fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        }
                 }
             }
         }
@@ -954,10 +966,10 @@ class BattingTrackActivity : ComponentActivity() {
                             Button(
                                 onClick = {
                                     when (key) {
-                                        "H"  -> { showHSheet = true; outExpanded = false }
-                                        "K"  -> { onShowKSheet(); outExpanded = false }
-                                        "BB" -> { onShowBBSheet(); outExpanded = false }
-                                        else -> { onResult(key); outExpanded = false }
+                                        "H"  -> { showHSheet = true; showOutSheet = false }
+                                        "K"  -> { onShowKSheet(); showOutSheet = false }
+                                        "BB" -> { onShowBBSheet(); showOutSheet = false }
+                                        else -> { onResult(key); showOutSheet = false }
                                     }
                                 },
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -976,33 +988,23 @@ class BattingTrackActivity : ComponentActivity() {
                         }
                     Spacer(Modifier.width(6.dp))
                     Button(
-                        onClick = { outExpanded = !outExpanded; showMoreSheet = false },
+                        onClick = { showOutSheet = true; showMoreSheet = false },
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         contentPadding = PaddingValues(horizontal = 4.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (outExpanded) colorResource(R.color.color_orange) else colorResource(R.color.color_orange_bright)),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange_bright)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_result_out), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(Modifier.width(6.dp))
                     Button(
-                        onClick = { showMoreSheet = true; outExpanded = false },
+                        onClick = { showMoreSheet = true; showOutSheet = false },
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         contentPadding = PaddingValues(horizontal = 4.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(stringResource(R.string.btn_result_more), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-                if (outExpanded) {
-                    Spacer(Modifier.height(6.dp))
-                    Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                        listOf("GO" to R.string.btn_result_go, "FO" to R.string.btn_result_fo, "LO" to R.string.btn_result_lo)
-                            .forEachIndexed { i, (key, labelRes) ->
-                                if (i > 0) Spacer(Modifier.width(6.dp))
-                                Button(onClick = { onResult(key); outExpanded = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(labelRes), fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                            }
                     }
                 }
             }
