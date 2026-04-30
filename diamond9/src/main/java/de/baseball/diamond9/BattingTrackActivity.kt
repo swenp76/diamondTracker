@@ -897,14 +897,16 @@ class BattingTrackActivity : ComponentActivity() {
             ModalBottomSheet(onDismissRequest = { showMoreSheet = false }) {
                 Row(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp).fillMaxWidth().height(60.dp)) {
                     listOf(
-                        R.string.btn_result_hbp to colorResource(R.color.color_hbp),
-                        R.string.btn_result_sac to colorResource(R.color.color_orange),
-                        R.string.btn_result_fc  to colorResource(R.color.color_primary),
-                        R.string.btn_result_dp  to colorResource(R.color.color_text_secondary)
-                    ).forEachIndexed { i, (labelRes, color) ->
+                        "HBP" to R.string.btn_result_hbp to colorResource(R.color.color_hbp),
+                        "SAC" to R.string.btn_result_sac to colorResource(R.color.color_orange),
+                        "FC"  to R.string.btn_result_fc  to colorResource(R.color.color_primary),
+                        "DP"  to R.string.btn_result_dp  to colorResource(R.color.color_text_secondary)
+                    ).forEachIndexed { i, entry ->
+                        val (pair, color) = entry
+                        val (key, labelRes) = pair
                         val label = stringResource(labelRes)
                         if (i > 0) Spacer(Modifier.width(8.dp))
-                        Button(onClick = { onResult(label); showMoreSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = color), shape = RoundedCornerShape(8.dp)) { Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        Button(onClick = { onResult(key); showMoreSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = color), shape = RoundedCornerShape(8.dp)) { Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
                 }
             }
@@ -930,37 +932,66 @@ class BattingTrackActivity : ComponentActivity() {
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = colorResource(R.color.color_divider_light))
                 Row(modifier = Modifier.fillMaxWidth().height(72.dp)) {
-                    listOf(R.string.btn_result_h to colorResource(R.color.color_green), R.string.btn_result_k to colorResource(R.color.color_strike), R.string.btn_result_bb to colorResource(R.color.color_primary))
-                        .forEachIndexed { i, (labelRes, color) ->
-                            val label = stringResource(labelRes)
+                    listOf(
+                        "H" to R.string.btn_result_h to colorResource(R.color.color_green),
+                        "K" to R.string.btn_result_k to colorResource(R.color.color_strike),
+                        "BB" to R.string.btn_result_bb to colorResource(R.color.color_primary)
+                    )
+                        .forEachIndexed { i, entry ->
+                            val (pair, color) = entry
+                            val (key, labelRes) = pair
                             if (i > 0) Spacer(Modifier.width(6.dp))
                             Button(
                                 onClick = {
-                                    when (labelRes) {
-                                        R.string.btn_result_h  -> { showHSheet = true; outExpanded = false }
-                                        R.string.btn_result_k  -> { onShowKSheet(); outExpanded = false }
-                                        R.string.btn_result_bb -> { onShowBBSheet(); outExpanded = false }
-                                        else -> { onResult(label); outExpanded = false }
+                                    when (key) {
+                                        "H"  -> { showHSheet = true; outExpanded = false }
+                                        "K"  -> { onShowKSheet(); outExpanded = false }
+                                        "BB" -> { onShowBBSheet(); outExpanded = false }
+                                        else -> { onResult(key); outExpanded = false }
                                     }
                                 },
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
+                                contentPadding = PaddingValues(horizontal = 4.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = color),
                                 shape = RoundedCornerShape(8.dp)
-                            ) { Text(label, fontSize = if (labelRes == R.string.btn_result_bb) 12.sp else 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                            ) {
+                                Text(
+                                    text = stringResource(labelRes),
+                                    fontSize = if (key == "BB") 11.sp else 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     Spacer(Modifier.width(6.dp))
-                    Button(onClick = { outExpanded = !outExpanded; showMoreSheet = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = if (outExpanded) colorResource(R.color.color_orange) else colorResource(R.color.color_orange_bright)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_out), fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    Button(
+                        onClick = { outExpanded = !outExpanded; showMoreSheet = false },
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (outExpanded) colorResource(R.color.color_orange) else colorResource(R.color.color_orange_bright)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(stringResource(R.string.btn_result_out), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                     Spacer(Modifier.width(6.dp))
-                    Button(onClick = { showMoreSheet = true; outExpanded = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(R.string.btn_result_more), fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    Button(
+                        onClick = { showMoreSheet = true; outExpanded = false },
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(stringResource(R.string.btn_result_more), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
                 if (outExpanded) {
                     Spacer(Modifier.height(6.dp))
                     Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                        listOf(R.string.btn_result_go, R.string.btn_result_fo, R.string.btn_result_lo)
-                            .forEachIndexed { i, labelRes ->
-                                val label = stringResource(labelRes)
+                        listOf("GO" to R.string.btn_result_go, "FO" to R.string.btn_result_fo, "LO" to R.string.btn_result_lo)
+                            .forEachIndexed { i, (key, labelRes) ->
                                 if (i > 0) Spacer(Modifier.width(6.dp))
-                                Button(onClick = { onResult(label); outExpanded = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)), shape = RoundedCornerShape(8.dp)) { Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                                Button(onClick = { onResult(key); outExpanded = false }, modifier = Modifier.weight(1f).fillMaxHeight(), colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)), shape = RoundedCornerShape(8.dp)) { Text(stringResource(labelRes), fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                             }
                     }
                 }
