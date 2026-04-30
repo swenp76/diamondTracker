@@ -401,6 +401,7 @@
     <string name="runner_mgmt_out">Läufer Out</string>
     <string name="score_notif_single">Run erzielt!</string>
     <string name="score_notif_multiple">%d Runs erzielt!</string>
+    <string name="error_overtake_runner">Führenden Läufer zuerst bewegen!</string>
     <string name="toast_fc_check_runners">Fielder\'s Choice: Bitte Läufer manuell prüfen und anpassen.</string>
     <string name="toast_dp_check_runners">Double Play: Bitte Läufer manuell prüfen und anpassen.</string>
 </resources>

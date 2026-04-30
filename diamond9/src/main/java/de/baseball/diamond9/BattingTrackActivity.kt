@@ -90,6 +90,7 @@ class BattingTrackActivity : ComponentActivity() {
         var runners by remember { mutableStateOf(emptyMap<Int, GameRunner>()) }
         var runnerToEdit by remember { mutableStateOf<GameRunner?>(null) }
         var currentScoringNotification by remember { mutableStateOf<List<GameRunner>>(emptyList()) }
+        var warningMessage by remember { mutableStateOf<String?>(null) }
 
         fun refreshRunners() {
             runners = db.getRunners(gameId).associateBy { it.base }
@@ -375,6 +376,11 @@ class BattingTrackActivity : ComponentActivity() {
                         scoringRunners = currentScoringNotification,
                         onFinished = { currentScoringNotification = emptyList() }
                     )
+                    
+                    WarningNotification(
+                        message = warningMessage,
+                        onFinished = { warningMessage = null }
+                    )
                 }
             }
         )
@@ -581,8 +587,11 @@ class BattingTrackActivity : ComponentActivity() {
                 onMove = { newBase ->
                     val prevList = db.getRunners(gameId)
                     val currentMap = prevList.associateBy { it.base }
-                    
-                    if (newBase == 0) {
+
+                    if (RunnerManager.isOvertaking(currentMap, runner.base, newBase)) {
+                        warningMessage = getString(R.string.error_overtake_runner)
+                        runnerToEdit = null
+                    } else if (newBase == 0) {
                         // User clicked "Score": move this runner and all ahead of them to score
                         val scoring = mutableListOf<GameRunner>()
                         val next = currentMap.toMutableMap()
@@ -600,15 +609,16 @@ class BattingTrackActivity : ComponentActivity() {
                         
                         currentScoringNotification = scoring
                         actionStack.push(GameAction.RunnerAdvance(prevList, currentRuns))
+                        refreshRunners()
+                        runnerToEdit = null
                     } else {
                         // Normal move to another base
                         db.deleteRunner(gameId, runner.base)
                         db.insertRunner(runner.copy(base = newBase))
                         actionStack.push(GameAction.RunnerAdvance(prevList))
+                        refreshRunners()
+                        runnerToEdit = null
                     }
-
-                    refreshRunners()
-                    runnerToEdit = null
                 }
             )
         }
