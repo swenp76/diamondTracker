@@ -122,4 +122,36 @@ class RunnerManagerTest {
         assertEquals(3, next[3]?.base) // R3 NOT forced
         assertTrue(scoring.isEmpty())
     }
+
+    // ── Manual Overtaking Checks ──────────────────────────────────────────────
+
+    @Test
+    fun isOvertaking_1Bto3B_withRunnerOn2B_returnsTrue() {
+        val current = mapOf(1 to r1, 2 to r2)
+        assertTrue(RunnerManager.isOvertaking(current, 1, 3))
+    }
+
+    @Test
+    fun isOvertaking_1Bto3B_noRunnerOn2B_returnsFalse() {
+        val current = mapOf(1 to r1)
+        org.junit.Assert.assertFalse(RunnerManager.isOvertaking(current, 1, 3))
+    }
+
+    @Test
+    fun isOvertaking_1BtoHome_withRunnerOn3B_returnsTrue() {
+        val current = mapOf(1 to r1, 3 to r3)
+        assertTrue(RunnerManager.isOvertaking(current, 1, 0)) // 0 means Score/Home
+    }
+
+    @Test
+    fun isOvertaking_2BtoHome_noRunnerOn3B_returnsFalse() {
+        val current = mapOf(2 to r2)
+        org.junit.Assert.assertFalse(RunnerManager.isOvertaking(current, 2, 0))
+    }
+
+    @Test
+    fun isOvertaking_2Bto1B_withRunnerOn1B_returnsTrue() {
+        val current = mapOf(2 to r2, 1 to r1)
+        assertTrue(RunnerManager.isOvertaking(current, 2, 1))
+    }
 }

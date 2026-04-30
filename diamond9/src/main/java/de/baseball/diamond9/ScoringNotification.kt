@@ -72,3 +72,47 @@ fun ScoringNotification(
         }
     }
 }
+
+@Composable
+fun WarningNotification(
+    message: String?,
+    onFinished: () -> Unit
+) {
+    if (message == null) return
+
+    LaunchedEffect(message) {
+        delay(3000) 
+        onFinished()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Surface(
+            color = colorResource(R.color.color_strike),
+            contentColor = Color.White,
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 8.dp,
+            shadowElevation = 4.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "⚠️",
+                    fontSize = 24.sp
+                )
+                Text(
+                    text = message,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+            }
+        }
+    }
+}

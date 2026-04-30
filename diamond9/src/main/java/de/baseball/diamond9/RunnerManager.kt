@@ -68,6 +68,34 @@ object RunnerManager {
     }
 
     /**
+     * Checks if moving a runner from [currentBase] to [newBase] would overtake another runner.
+     * [current]: Map of base index to GameRunner.
+     * [currentBase]: The base where the runner is currently.
+     * [newBase]: The target base (1, 2, 3, or 0/4 for Home/Score).
+     * 
+     * Returns true if the move is BLOCKED (overtaking occurs).
+     */
+    fun isOvertaking(current: Map<Int, GameRunner>, currentBase: Int, newBase: Int): Boolean {
+        // Target base 0 or 4 means Home
+        val target = if (newBase == 0) 4 else newBase
+        
+        // If moving forward (target > currentBase)
+        if (target > currentBase) {
+            // Check all bases between currentBase and target
+            for (b in (currentBase + 1)..minOf(target, 3)) {
+                if (current.containsKey(b)) return true
+            }
+        }
+        // If moving backward (target < currentBase)
+        else if (target < currentBase && target > 0) {
+             // Check if target base is occupied
+             if (current.containsKey(target)) return true
+        }
+        
+        return false
+    }
+
+    /**
      * Calculates the next state of runners on a Walk (BB) or HBP.
      * Only runners forced by the batter or preceding runners advance.
      */

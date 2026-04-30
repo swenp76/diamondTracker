@@ -92,6 +92,7 @@ class PitchTrackActivity : ComponentActivity() {
         var runners by remember { mutableStateOf(emptyMap<Int, GameRunner>()) }
         var runnerToEdit by remember { mutableStateOf<GameRunner?>(null) }
         var currentScoringNotification by remember { mutableStateOf<List<GameRunner>>(emptyList()) }
+        var warningMessage by remember { mutableStateOf<String?>(null) }
         var showRunSuggestion by remember { mutableStateOf(false) }
 
         val actionStack = remember { GameActionStack() }
@@ -275,6 +276,11 @@ class PitchTrackActivity : ComponentActivity() {
                     ScoringNotification(
                         scoringRunners = currentScoringNotification,
                         onFinished = { currentScoringNotification = emptyList() }
+                    )
+                    
+                    WarningNotification(
+                        message = warningMessage,
+                        onFinished = { warningMessage = null }
                     )
                 }
             }
@@ -575,7 +581,10 @@ class PitchTrackActivity : ComponentActivity() {
                     val prevList = db.getRunners(gameId)
                     val currentMap = prevList.associateBy { it.base }
 
-                    if (newBase == 0) {
+                    if (RunnerManager.isOvertaking(currentMap, runner.base, newBase)) {
+                        warningMessage = getString(R.string.error_overtake_runner)
+                        runnerToEdit = null
+                    } else if (newBase == 0) {
                         // User clicked "Score": move this runner and all ahead of them to score
                         val scoring = mutableListOf<GameRunner>()
                         val next = currentMap.toMutableMap()
@@ -593,15 +602,16 @@ class PitchTrackActivity : ComponentActivity() {
 
                         currentScoringNotification = scoring
                         actionStack.push(GameAction.RunnerAdvance(prevList, currentRuns))
+                        refresh()
+                        runnerToEdit = null
                     } else {
                         // Normal move to another base
                         db.deleteRunner(gameId, runner.base)
                         db.insertRunner(runner.copy(base = newBase))
                         actionStack.push(GameAction.RunnerAdvance(prevList))
+                        refresh()
+                        runnerToEdit = null
                     }
-
-                    refresh()
-                    runnerToEdit = null
                 }
             )
         }
@@ -849,7 +859,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_primary)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_ball), fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.btn_ball), fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -858,7 +868,7 @@ class PitchTrackActivity : ComponentActivity() {
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_strike), fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.btn_strike), fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -866,57 +876,63 @@ class PitchTrackActivity : ComponentActivity() {
                     Button(
                         onClick = onShowHitSheet,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hit)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_hit), fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.btn_hit), fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = onHbp,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_hbp)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_hbp), fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.btn_hbp), fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = onFoul,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_foul)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_foul), fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.btn_foul), fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.height(56.dp)) {
                     Button(
                         onClick = onBf,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        modifier = Modifier.weight(1.2f).fillMaxHeight(),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green_dark)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_add_batter), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.btn_add_batter), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = onShowOutSheet,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        modifier = Modifier.weight(0.8f).fillMaxHeight(),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_out), fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.btn_out), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = onUndo,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_text_secondary)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(stringResource(R.string.btn_undo), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.btn_undo), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }

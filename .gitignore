@@ -45,3 +45,6 @@ app/release/baselineProfiles/
 
 # Backup files
 *_backup_*
+
+# Baseline profiles
+diamond9-release.dm
