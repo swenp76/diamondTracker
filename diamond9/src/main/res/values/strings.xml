@@ -321,6 +321,7 @@
     <string name="season_stats_col_2b">2B</string>
     <string name="season_stats_col_3b">3B</string>
     <string name="season_stats_col_hr">HR</string>
+    <string name="season_stats_col_rbi">RBI</string>
     <string name="season_stats_col_avg">AVG</string>
     <string name="season_stats_col_obp">OBP</string>
     <string name="season_stats_col_slg">SLG</string>
@@ -482,6 +483,7 @@
     <string name="score_notif_multiple">%d Runners Scored!</string>
     <string name="error_overtake_runner">Move leading runner first!</string>
     <string name="dialog_runner_scored_title">Runner from %dB: scored?</string>
+    <string name="rbi_checkbox_label">RBI for %1$s (#%2$s)</string>
     <string name="btn_runner_scored_yes">Scored ✓</string>
     <string name="btn_runner_scored_hold">Hold at %dB</string>
     <string name="toast_fc_check_runners">Fielder\'s Choice: Please check and update runners manually.</string>

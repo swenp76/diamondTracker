@@ -10,7 +10,7 @@ Sie hilft beim Verwalten von Teams, Erstellen von Aufstellungen und Tracken von 
 - **Datenbank:** Room (SQLite) über DAOs + DatabaseHelper-Wrapper
 - **UI:** Jetpack Compose (Material 3)
 - **Package:** de.baseball.diamond9
-- **DB-Datei:** `pitcher.db` (Version 21)
+- **DB-Datei:** `pitcher.db` (Version 22)
 - **Lokalisierung:** Deutsch (Fallback, `values/`), Englisch (`values-en/`)
 
 ## Projektstruktur
@@ -238,7 +238,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 
 ---
 
-## Datenbankschema (Version 19)
+## Datenbankschema (Version 22)
 
 | Tabelle | Wichtige Felder |
 |---------|----------------|
@@ -248,7 +248,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | `games` | id, date, opponent, team_id, inning, outs, leadoff_slot, **start_time**, **elapsed_time_ms**, **game_time**, **is_home**, **current_inning**, **is_top_half** |
 | `pitchers` | id, game_id, name, player_id |
 | `pitches` | id, **pitcher_id (nullable)**, **at_bat_id (nullable)**, type, sequence_nr, inning |
-| `at_bats` | id, game_id, player_id, slot, inning, result |
+| `at_bats` | id, game_id, player_id, slot, inning, result, **rbi** |
 | `pitcher_appearances` | id, player_id, game_id, date, batters_faced |
 | `opponent_lineup` | id, game_id, batting_order, jersey_number |
 | `opponent_bench` | id, game_id, jersey_number |
@@ -290,5 +290,6 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | 18 → 19 | `pitches` Tabelle: `pitcher_id` und `at_bat_id` nullable (Fix für Offense Tracking) | ✅ |
 | 19 → 20 | `game_runners` Tabelle hinzugefügt | ✅ |
 | 20 → 21 | `is_locked` Feld in `games` Tabelle | ✅ |
+| 21 → 22 | `rbi` Feld in `at_bats` Tabelle | ✅ |
 
 **Hinweis:** Jede Migration hier eintragen und gleichzeitig `BackupManager` aktualisieren.

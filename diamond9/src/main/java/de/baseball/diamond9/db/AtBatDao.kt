@@ -43,6 +43,9 @@ abstract class AtBatDao {
     @Query("DELETE FROM pitches WHERE at_bat_id = :atBatId")
     abstract fun deletePitchesForAtBat(atBatId: Long)
 
+    @Query("UPDATE at_bats SET rbi = rbi + :delta WHERE id = :id")
+    abstract fun addRbi(id: Long, delta: Int)
+
     @Query("""
         SELECT COUNT(*) FROM at_bats 
         WHERE game_id = :gameId AND inning = :inning 
@@ -70,6 +73,7 @@ abstract class AtBatDao {
             SUM(CASE WHEN ab.result = '2B'             THEN 1 ELSE 0 END)                          AS doubles,
             SUM(CASE WHEN ab.result = '3B'             THEN 1 ELSE 0 END)                          AS triples,
             SUM(CASE WHEN ab.result = 'HR'             THEN 1 ELSE 0 END)                          AS homers,
+            SUM(ab.rbi)                                                                             AS rbi,
             SUM(CASE WHEN ab.result = 'BB'             THEN 1 ELSE 0 END)                          AS walks,
             SUM(CASE WHEN ab.result IN ('K','KL')      THEN 1 ELSE 0 END)                          AS strikeouts,
             SUM(CASE WHEN ab.result = 'HBP'            THEN 1 ELSE 0 END)                          AS hbp
@@ -90,6 +94,7 @@ abstract class AtBatDao {
             SUM(CASE WHEN ab.result = '2B'              THEN 1 ELSE 0 END)                             AS doubles,
             SUM(CASE WHEN ab.result = '3B'              THEN 1 ELSE 0 END)                             AS triples,
             SUM(CASE WHEN ab.result = 'HR'              THEN 1 ELSE 0 END)                             AS homers,
+            SUM(ab.rbi)                                                                                AS rbi,
             SUM(CASE WHEN ab.result = 'BB'              THEN 1 ELSE 0 END)                             AS walks,
             SUM(CASE WHEN ab.result IN ('K','KL')       THEN 1 ELSE 0 END)                             AS strikeouts,
             SUM(CASE WHEN ab.result = 'HBP'             THEN 1 ELSE 0 END)                             AS hbp

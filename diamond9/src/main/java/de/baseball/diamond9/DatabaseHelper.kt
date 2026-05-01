@@ -87,7 +87,8 @@ data class AtBat(
     @ColumnInfo(name = "player_id") val playerId: Long,
     @ColumnInfo(name = "slot") val slot: Int,
     @ColumnInfo(name = "inning") val inning: Int,
-    @ColumnInfo(name = "result") val result: String? = null // e.g., "K", "BB", "H", "HBP", "OUT"
+    @ColumnInfo(name = "result") val result: String? = null, // e.g., "K", "BB", "H", "HBP", "OUT"
+    @ColumnInfo(name = "rbi", defaultValue = "0") val rbi: Int = 0
 )
 // type: "B" = Ball, "S" = Strike, "BF" = Batter Faced
 
@@ -236,6 +237,7 @@ data class GameBatterStatsRow(
     @ColumnInfo(name = "doubles")    val doubles: Int,
     @ColumnInfo(name = "triples")    val triples: Int,
     @ColumnInfo(name = "homers")     val homers: Int,
+    @ColumnInfo(name = "rbi")        val rbi: Int,
     @ColumnInfo(name = "walks")      val walks: Int,
     @ColumnInfo(name = "strikeouts") val strikeouts: Int,
     @ColumnInfo(name = "hbp")        val hbp: Int
@@ -291,6 +293,7 @@ data class SeasonBatterRow(
     @ColumnInfo(name = "doubles") val doubles: Int,
     @ColumnInfo(name = "triples") val triples: Int,
     @ColumnInfo(name = "homers") val homers: Int,
+    @ColumnInfo(name = "rbi") val rbi: Int,
     @ColumnInfo(name = "walks") val walks: Int,
     @ColumnInfo(name = "strikeouts") val strikeouts: Int,
     @ColumnInfo(name = "hbp") val hbp: Int
@@ -737,6 +740,11 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     fun updateAtBatResult(atBatId: Long, result: String?) {
         val ab = atBatDao.getAtBatById(atBatId) ?: return
         atBatDao.updateAtBat(ab.copy(result = result))
+    }
+
+    fun addRbiToAtBat(atBatId: Long, delta: Int) {
+        if (delta <= 0 || atBatId <= 0L) return
+        atBatDao.addRbi(atBatId, delta)
     }
 
     fun deleteAtBat(atBatId: Long) {

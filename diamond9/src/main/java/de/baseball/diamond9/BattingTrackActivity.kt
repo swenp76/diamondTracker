@@ -275,10 +275,16 @@ class BattingTrackActivity : ComponentActivity() {
         var pendingAutoScoring by remember { mutableStateOf(emptyList<GameRunner>()) }
         var pendingConfirmedScoring by remember { mutableStateOf(emptyList<GameRunner>()) }
         var pendingNextBatterCallback by remember { mutableStateOf(false) }
+        var pendingRbiCount by remember { mutableStateOf(0) }
+        var currentScorerRbiChecked by remember { mutableStateOf(true) }
 
         fun flushPendingScorers() {
             val allScoring = pendingAutoScoring + pendingConfirmedScoring
             updateRunnersInDb(pendingNextRunners, allScoring)
+            val totalRbi = pendingAutoScoring.size + pendingRbiCount
+            db.addRbiToAtBat(currentAtBatId, totalRbi)
+            pendingRbiCount = 0
+            currentScorerRbiChecked = true
             pendingScorersQueue = emptyList()
             pendingNextRunners = emptyMap()
             pendingAutoScoring = emptyList()
@@ -292,6 +298,7 @@ class BattingTrackActivity : ComponentActivity() {
         fun startHitAdvance(result: HitAdvanceResult) {
             if (result.pendingScorers.isEmpty()) {
                 updateRunnersInDb(result.nextRunners, result.autoScoring)
+                db.addRbiToAtBat(currentAtBatId, result.autoScoring.size)
             } else {
                 pendingNextRunners = result.nextRunners.toMutableMap()
                 pendingAutoScoring = result.autoScoring
@@ -309,9 +316,26 @@ class BattingTrackActivity : ComponentActivity() {
                     Text(stringResource(R.string.dialog_runner_scored_title, scorer.runner.base))
                 },
                 text = {
-                    val name = if (scorer.runner.name.isNotEmpty()) scorer.runner.name else stringResource(R.string.pitcher_default_name)
-                    val num = if (!scorer.runner.jerseyNumber.isNullOrEmpty()) "#${scorer.runner.jerseyNumber}" else ""
-                    Text("$num $name".trim())
+                    val runnerName = if (scorer.runner.name.isNotEmpty()) scorer.runner.name else stringResource(R.string.pitcher_default_name)
+                    val runnerNum = if (!scorer.runner.jerseyNumber.isNullOrEmpty()) "#${scorer.runner.jerseyNumber}" else ""
+                    Column {
+                        Text("$runnerNum $runnerName".trim())
+                        if (!scorer.isForced) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = currentScorerRbiChecked,
+                                    onCheckedChange = { currentScorerRbiChecked = it }
+                                )
+                                val batterName = lineup[currentSlot]?.name ?: ""
+                                val batterNum = lineup[currentSlot]?.number ?: ""
+                                Text(
+                                    text = stringResource(R.string.rbi_checkbox_label, batterName, batterNum),
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
                 },
                 confirmButton = {
                     Column(
@@ -322,6 +346,8 @@ class BattingTrackActivity : ComponentActivity() {
                         // Option 1: SCORE
                         Button(
                             onClick = {
+                                if (scorer.isForced || currentScorerRbiChecked) pendingRbiCount++
+                                currentScorerRbiChecked = true
                                 pendingConfirmedScoring = pendingConfirmedScoring + scorer.runner.copy(base = 4)
                                 pendingScorersQueue = pendingScorersQueue.drop(1)
                                 if (pendingScorersQueue.isEmpty()) flushPendingScorers()
@@ -335,6 +361,7 @@ class BattingTrackActivity : ComponentActivity() {
                         // Option 2: OUT
                         Button(
                             onClick = {
+                                currentScorerRbiChecked = true
                                 recordRunnerOut()
                                 pendingScorersQueue = pendingScorersQueue.drop(1)
                                 if (pendingScorersQueue.isEmpty()) flushPendingScorers()
@@ -349,6 +376,7 @@ class BattingTrackActivity : ComponentActivity() {
                         if (!scorer.isForced) {
                             OutlinedButton(
                                 onClick = {
+                                    currentScorerRbiChecked = true
                                     val stayBase = scorer.stayBase
                                     val updatedRunners = pendingNextRunners.toMutableMap()
                                     if (stayBase > 0) {
@@ -641,10 +669,12 @@ class BattingTrackActivity : ComponentActivity() {
                             "BB" -> {
                                 val (next, scoring) = RunnerManager.advanceOnWalk(runners, batterRunner)
                                 updateRunnersInDb(next, scoring)
+                                db.addRbiToAtBat(abId, scoring.size)
                             }
                             "HBP" -> {
                                 val (next, scoring) = RunnerManager.advanceOnWalk(runners, batterRunner)
                                 updateRunnersInDb(next, scoring)
+                                db.addRbiToAtBat(abId, scoring.size)
                                 db.insertPitchForAtBat(abId, "HBP", inning)
                                 actionStack.push(GameAction.Pitch(abId))
                             }

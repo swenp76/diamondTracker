@@ -182,7 +182,7 @@ private fun GameBatterTab(gameId: Long, db: DatabaseHelper) {
         if (teamId > 0) db.getPlayersForTeam(teamId).associateBy { it.id } else emptyMap()
     }
 
-    var sortCol by remember { mutableStateOf(7) }  // default: AVG desc
+    var sortCol by remember { mutableStateOf(8) }  // default: AVG desc
     var sortAsc by remember { mutableStateOf(false) }
 
     fun avg(r: GameBatterStatsRow) = if (r.ab > 0) r.hits.toFloat() / r.ab else -1f
@@ -214,12 +214,13 @@ private fun GameBatterTab(gameId: Long, db: DatabaseHelper) {
             4  -> rawRows.sortedBy { it.doubles }
             5  -> rawRows.sortedBy { it.triples }
             6  -> rawRows.sortedBy { it.homers }
-            7  -> rawRows.sortedBy { avg(it) }
-            8  -> rawRows.sortedBy { obp(it) }
-            9  -> rawRows.sortedBy { slg(it) }
-            10 -> rawRows.sortedBy { ops(it) }
-            11 -> rawRows.sortedBy { it.walks }
-            12 -> rawRows.sortedBy { it.strikeouts }
+            7  -> rawRows.sortedBy { it.rbi }
+            8  -> rawRows.sortedBy { avg(it) }
+            9  -> rawRows.sortedBy { obp(it) }
+            10 -> rawRows.sortedBy { slg(it) }
+            11 -> rawRows.sortedBy { ops(it) }
+            12 -> rawRows.sortedBy { it.walks }
+            13 -> rawRows.sortedBy { it.strikeouts }
             else -> rawRows.sortedBy { avg(it) }
         }
         if (sortAsc) sorted else sorted.reversed()
@@ -245,6 +246,7 @@ private fun GameBatterTab(gameId: Long, db: DatabaseHelper) {
         stringResource(R.string.season_stats_col_2b)   to colStat,
         stringResource(R.string.season_stats_col_3b)   to colStat,
         stringResource(R.string.season_stats_col_hr)   to colStat,
+        stringResource(R.string.season_stats_col_rbi)  to colStat,
         stringResource(R.string.season_stats_col_avg)  to colDec,
         stringResource(R.string.season_stats_col_obp)  to colDec,
         stringResource(R.string.season_stats_col_slg)  to colDec,
@@ -326,6 +328,7 @@ private fun GameBatterTab(gameId: Long, db: DatabaseHelper) {
                         row.doubles.toString()    to colStat,
                         row.triples.toString()    to colStat,
                         row.homers.toString()     to colStat,
+                        row.rbi.toString()        to colStat,
                         avgStr                    to colDec,
                         obpStr                    to colDec,
                         slgStr                    to colDec,

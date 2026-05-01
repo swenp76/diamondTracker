@@ -41,7 +41,7 @@ class BackupManager constructor(
     constructor(context: Context) : this(context, DatabaseHelper(context))
 
     companion object {
-        const val DB_VERSION = 21
+        const val DB_VERSION = 22
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
@@ -241,6 +241,7 @@ class BackupManager constructor(
                     put("slot", ab.slot)
                     put("inning", ab.inning)
                     if (ab.result != null) put("result", ab.result) else put("result", JSONObject.NULL)
+                    put("rbi", ab.rbi)
                 })
             }
         }
@@ -504,6 +505,7 @@ class BackupManager constructor(
                 put("inning", obj.getInt("inning"))
                 if (obj.isNull("result")) putNull("result")
                 else put("result", obj.getString("result"))
+                put("rbi", obj.optInt("rbi", 0))
             })
         }
     }
@@ -768,6 +770,11 @@ class BackupManager constructor(
             v = 21
         }
 
+        if (v < 22 && toVersion >= 22) {
+            // at_bats.rbi: default 0; optInt handles missing field on restore
+            v = 22
+        }
+
         return current
     }
 
@@ -908,6 +915,7 @@ class BackupManager constructor(
                 put("slot", ab.slot)
                 put("inning", ab.inning)
                 put("result", ab.result)
+                put("rbi", ab.rbi)
                 put("player", getPlayerInfo(ab.playerId))
                 put("pitches", JSONArray(db.getPitchesForAtBat(ab.id).map { p ->
                     JSONObject().apply {
@@ -1048,6 +1056,8 @@ class BackupManager constructor(
                 val result = if (abObj.isNull("result")) null else abObj.getString("result")
                 require(result == null || result in VALID_AT_BAT_RESULTS) { "Invalid at-bat result: $result" }
                 db.updateAtBatResult(abId, result)
+                val rbi = abObj.optInt("rbi", 0)
+                if (rbi > 0) db.addRbiToAtBat(abId, rbi)
                 val pArr = abObj.optJSONArray("pitches")
                 if (pArr != null) {
                     for (j in 0 until pArr.length()) {
@@ -1219,6 +1229,7 @@ class BackupManager constructor(
                             put("slot", ab.slot)
                             put("inning", ab.inning)
                             put("result", ab.result ?: JSONObject.NULL)
+                            put("rbi", ab.rbi)
                         })
                     }
 
@@ -1409,6 +1420,8 @@ class BackupManager constructor(
                     val pid = playerMapping[obj.getLong("player_id")] ?: 0L
                     val newId = db.insertAtBat(gid, pid, obj.getInt("slot"), obj.getInt("inning"))
                     if (!obj.isNull("result")) db.updateAtBatResult(newId, obj.getString("result"))
+                    val rbi = obj.optInt("rbi", 0)
+                    if (rbi > 0) db.addRbiToAtBat(newId, rbi)
                     atBatMapping[oldId] = newId
                 }
             }
