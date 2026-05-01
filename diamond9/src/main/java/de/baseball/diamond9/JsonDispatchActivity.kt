@@ -20,11 +20,13 @@ class JsonDispatchActivity : ComponentActivity() {
     companion object {
         /**
          * Heuristic fallback for older exports that predate the "type" field.
+         *   - has "dbVersion" + "teams"  → backup (full database)
          *   - has "game" key             → single_game
          *   - has "name" + "players"     → team
          *   - has "innings" (no "game")  → league_settings
          */
         fun inferType(json: JSONObject): String = when {
+            json.has("dbVersion") && json.has("teams") -> "backup"
             json.has("game")                        -> "single_game"
             json.has("name") && json.has("players") -> "team"
             json.has("innings")                     -> "league_settings"
@@ -71,11 +73,55 @@ class JsonDispatchActivity : ComponentActivity() {
         onDismiss: () -> Unit
     ) {
         when (fileType) {
+            "backup"          -> BackupImportDialog(json, onDismiss)
             "single_game"     -> GameImportDialog(json, onDismiss)
             "team"            -> TeamImportDialog(json, onDismiss)
             "league_settings" -> LeagueImportDialog(json, onDismiss)
             else              -> UnknownTypeDialog(fileType, onDismiss)
         }
+    }
+
+    // ── backup (full) ────────────────────────────────────────────────────────
+
+    @Composable
+    private fun BackupImportDialog(json: JSONObject, onDismiss: () -> Unit) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(stringResource(R.string.dispatch_backup_title)) },
+            text = { Text(stringResource(R.string.dispatch_backup_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    try {
+                        val backupManager = BackupManager(this@JsonDispatchActivity)
+                        backupManager.restoreFromJson(json)
+                        Toast.makeText(
+                            this@JsonDispatchActivity,
+                            getString(R.string.dispatch_backup_imported),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        // Restart app to clear all states and show fresh data
+                        val i = Intent(this@JsonDispatchActivity, CoachAct::class.java)
+                        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(i)
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            this@JsonDispatchActivity,
+                            getString(R.string.dispatch_import_failed, e.message),
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    onDismiss()
+                }) {
+                    Text(
+                        stringResource(R.string.dispatch_confirm_restore),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.dispatch_cancel)) }
+            }
+        )
     }
 
     // ── single_game ──────────────────────────────────────────────────────────

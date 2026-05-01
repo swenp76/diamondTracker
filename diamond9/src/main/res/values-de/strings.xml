@@ -368,6 +368,10 @@
     <string name="dispatch_league_title">Liga-Einstellungen importieren</string>
     <string name="dispatch_league_message">Möchtest du diese Liga-Einstellungen importieren?\n%s</string>
     <string name="dispatch_league_imported">Liga-Einstellungen importiert ✓</string>
+    <string name="dispatch_backup_title">Vollständiges Backup wiederherstellen</string>
+    <string name="dispatch_backup_message">Diese Datei enthält ein vollständiges Backup. Wenn du fortfährst, werden ALLE vorhandenen Daten in der App gelöscht und durch dieses Backup ersetzt. Dies kann nicht rückgängig gemacht werden!</string>
+    <string name="dispatch_backup_imported">Backup wiederhergestellt ✓</string>
+    <string name="dispatch_confirm_restore">ALLE DATEN WIEDERHERSTELLEN</string>
     <string name="dispatch_unknown_title">Unbekanntes Dateiformat</string>
     <string name="dispatch_unknown_message">Diese JSON-Datei ist kein bekanntes diamond9-Format (type: \"%s\").</string>
 

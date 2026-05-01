@@ -434,6 +434,10 @@
     <string name="dispatch_league_title">Import League Settings</string>
     <string name="dispatch_league_message">Do you want to import these league settings?\n%s</string>
     <string name="dispatch_league_imported">League settings imported ✓</string>
+    <string name="dispatch_backup_title">Restore Full Backup</string>
+    <string name="dispatch_backup_message">This file contains a complete backup. If you proceed, ALL existing data in the app will be deleted and replaced with this backup. This cannot be undone!</string>
+    <string name="dispatch_backup_imported">Backup restored ✓</string>
+    <string name="dispatch_confirm_restore">RESTORE ALL DATA</string>
     <string name="dispatch_unknown_title">Unknown File Format</string>
     <string name="dispatch_unknown_message">This JSON file is not a known diamond9 format (type: \"%s\").</string>
 
