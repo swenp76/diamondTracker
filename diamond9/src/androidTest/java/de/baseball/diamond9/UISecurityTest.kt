@@ -24,29 +24,23 @@ class UISecurityTest {
         return InstrumentationRegistry.getInstrumentation().targetContext.getString(resId)
     }
 
+    /**
+     * Navigates to the TeamListActivity. 
+     * Handles the 2.5s splash screen in CoachAct.
+     */
     private fun navigateToTeamList() {
-        // Wait for the Compose hierarchy to be active and for the splash screen to finish.
-        // We use a custom check to avoid IllegalStateException if the hierarchy is temporarily empty.
-        composeTestRule.waitUntil(timeoutMillis = 15000) {
-            try {
-                composeTestRule.onAllNodesWithContentDescription(getString(R.string.nav_home))
-                    .fetchSemanticsNodes().isNotEmpty()
-            } catch (e: IllegalStateException) {
-                // Hierarchy not yet available
-                false
-            }
+        // 1. Wait for splash screen to disappear and CoachSelectScreen to appear.
+        // The menu icon is only present in CoachSelectScreen.
+        composeTestRule.waitUntil(timeoutMillis = 10000) {
+            composeTestRule.onAllNodesWithContentDescription(getString(R.string.nav_home))
+                .fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Ensure the screen is idle
+        // 2. Open navigation drawer
+        composeTestRule.onNodeWithContentDescription(getString(R.string.nav_home)).performClick()
         composeTestRule.waitForIdle()
 
-        // Open drawer (using the content description of the menu button in CoachAct)
-        composeTestRule.onNodeWithContentDescription(getString(R.string.nav_home)).performClick()
-        
-        // Wait for drawer to open and item to be visible
-        composeTestRule.waitForIdle()
-        
-        // Click Teams - it's in the Navigation Drawer
+        // 3. Click Teams in drawer
         composeTestRule.onNodeWithText(getString(R.string.nav_teams)).performClick()
         composeTestRule.waitForIdle()
     }
