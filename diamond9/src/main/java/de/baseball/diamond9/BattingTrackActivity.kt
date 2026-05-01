@@ -269,6 +269,73 @@ class BattingTrackActivity : ComponentActivity() {
         var showKSheet by remember { mutableStateOf(false) }
         var showBBSheet by remember { mutableStateOf(false) }
 
+        // Pending-scorer queue: non-forced runners who might score after a hit
+        var pendingScorersQueue by remember { mutableStateOf(emptyList<PendingScorer>()) }
+        var pendingNextRunners by remember { mutableStateOf(emptyMap<Int, GameRunner>()) }
+        var pendingAutoScoring by remember { mutableStateOf(emptyList<GameRunner>()) }
+        var pendingConfirmedScoring by remember { mutableStateOf(emptyList<GameRunner>()) }
+        var pendingNextBatterCallback by remember { mutableStateOf(false) }
+
+        fun flushPendingScorers() {
+            val allScoring = pendingAutoScoring + pendingConfirmedScoring
+            updateRunnersInDb(pendingNextRunners, allScoring)
+            pendingScorersQueue = emptyList()
+            pendingNextRunners = emptyMap()
+            pendingAutoScoring = emptyList()
+            pendingConfirmedScoring = emptyList()
+            if (pendingNextBatterCallback) {
+                pendingNextBatterCallback = false
+                nextBatter()
+            }
+        }
+
+        fun startHitAdvance(result: HitAdvanceResult) {
+            if (result.pendingScorers.isEmpty()) {
+                updateRunnersInDb(result.nextRunners, result.autoScoring)
+            } else {
+                pendingNextRunners = result.nextRunners.toMutableMap()
+                pendingAutoScoring = result.autoScoring
+                pendingConfirmedScoring = emptyList()
+                pendingScorersQueue = result.pendingScorers
+                pendingNextBatterCallback = true
+            }
+        }
+
+        if (pendingScorersQueue.isNotEmpty()) {
+            val scorer = pendingScorersQueue.first()
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text(stringResource(R.string.dialog_runner_scored_title, scorer.runner.base)) },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            pendingConfirmedScoring = pendingConfirmedScoring + scorer.runner.copy(base = 4)
+                            pendingScorersQueue = pendingScorersQueue.drop(1)
+                            if (pendingScorersQueue.isEmpty()) flushPendingScorers()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green))
+                    ) { Text(stringResource(R.string.btn_runner_scored_yes)) }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = {
+                            val stayBase = scorer.stayBase
+                            val updatedRunners = pendingNextRunners.toMutableMap()
+                            if (!updatedRunners.containsKey(stayBase)) {
+                                updatedRunners[stayBase] = scorer.runner.copy(base = stayBase)
+                            } else {
+                                // Conflict: base occupied → runner must score
+                                pendingConfirmedScoring = pendingConfirmedScoring + scorer.runner.copy(base = 4)
+                            }
+                            pendingNextRunners = updatedRunners
+                            pendingScorersQueue = pendingScorersQueue.drop(1)
+                            if (pendingScorersQueue.isEmpty()) flushPendingScorers()
+                        }
+                    ) { Text(stringResource(R.string.btn_runner_scored_hold, scorer.stayBase)) }
+                }
+            )
+        }
+
         if (showRunSuggestion) {
             val reachedBase = db.getRunnersWhoReachedBase(gameId, prevInningForHalfInning, isDefense = false)
             val runnerOuts = db.getRunnerOuts(gameId, prevInningForHalfInning, isDefense = false)
@@ -512,26 +579,22 @@ class BattingTrackActivity : ComponentActivity() {
 
                         when (result) {
                             "H", "1B" -> {
-                                val (next, scoring) = RunnerManager.advanceOnHit(runners, batterRunner, 1)
-                                updateRunnersInDb(next, scoring)
+                                startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 1))
                                 db.insertPitchForAtBat(abId, "H", inning)
                                 actionStack.push(GameAction.Pitch(abId))
                             }
                             "2B" -> {
-                                val (next, scoring) = RunnerManager.advanceOnHit(runners, batterRunner, 2)
-                                updateRunnersInDb(next, scoring)
+                                startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 2))
                                 db.insertPitchForAtBat(abId, "H", inning)
                                 actionStack.push(GameAction.Pitch(abId))
                             }
                             "3B" -> {
-                                val (next, scoring) = RunnerManager.advanceOnHit(runners, batterRunner, 3)
-                                updateRunnersInDb(next, scoring)
+                                startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 3))
                                 db.insertPitchForAtBat(abId, "H", inning)
                                 actionStack.push(GameAction.Pitch(abId))
                             }
                             "HR" -> {
-                                val (next, scoring) = RunnerManager.advanceOnHit(runners, batterRunner, 4)
-                                updateRunnersInDb(next, scoring)
+                                startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 4))
                                 db.insertPitchForAtBat(abId, "H", inning)
                                 actionStack.push(GameAction.Pitch(abId))
                             }
@@ -554,8 +617,8 @@ class BattingTrackActivity : ComponentActivity() {
                                 actionStack.push(GameAction.Pitch(abId))
                             }
                             "ROE", "FC" -> {
-                                val (next, scoring) = RunnerManager.advanceOnHit(runners, batterRunner, 1)
-                                updateRunnersInDb(next, scoring)
+                                val r = RunnerManager.advanceOnHit(runners, batterRunner, 1)
+                                updateRunnersInDb(r.nextRunners, r.autoScoring + r.pendingScorers.map { it.runner.copy(base = 4) })
                                 if (result == "FC") {
                                     Toast.makeText(this@BattingTrackActivity, R.string.toast_fc_check_runners, Toast.LENGTH_LONG).show()
                                 }
@@ -566,7 +629,7 @@ class BattingTrackActivity : ComponentActivity() {
                             Toast.makeText(this@BattingTrackActivity, R.string.toast_dp_check_runners, Toast.LENGTH_LONG).show()
                         }
                         if (isOutResult(result)) recordBatterOut(result)
-                        else nextBatter()
+                        else if (pendingScorersQueue.isEmpty()) nextBatter()
                     }
                 )
             }

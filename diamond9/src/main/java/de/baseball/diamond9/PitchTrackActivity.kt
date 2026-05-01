@@ -512,8 +512,9 @@ class PitchTrackActivity : ComponentActivity() {
                             val color = if (type == "HR") colorResource(R.color.color_hit_homer) else colorResource(R.color.color_hit)
                             Button(
                                 onClick = {
-                                    val (next, scoring) = RunnerManager.advanceOnHit(runners, getBatterRunner(), i + 1)
-                                    updateRunnersInDb(next, scoring)
+                                    val result = RunnerManager.advanceOnHit(runners, getBatterRunner(), i + 1)
+                                    val allScoring = result.autoScoring + result.pendingScorers.map { it.runner.copy(base = 4) }
+                                    updateRunnersInDb(result.nextRunners, allScoring)
                                     db.insertPitch(pitcherId, type, inning)
                                     db.insertPitch(pitcherId, "BF", inning)
                                     refresh()

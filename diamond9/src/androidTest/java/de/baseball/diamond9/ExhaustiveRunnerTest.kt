@@ -86,144 +86,163 @@ class ExhaustiveRunnerTest {
     }
 
     // ── SINGLE (1B) ─────────────────────────────────────────────────────────────
-    // Uses advanceOnHit(..., 1). Implements force play rules (same as walk in this app).
+    // Forced runners advance automatically. Non-forced 2B runner auto-advances to 3B.
+    // Non-forced 3B runner becomes a pendingScorer (dialog in UI).
 
     @Test
     fun testSingle_BasesEmpty() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(), b, 1)
-        assertEquals(1, next.size); assertEquals(1, next[1]?.base)
-        assertTrue(scored.isEmpty())
+        val r = RunnerManager.advanceOnHit(getBases(), b, 1)
+        assertEquals(1, r.nextRunners.size); assertEquals(1, r.nextRunners[1]?.base)
+        assertTrue(r.autoScoring.isEmpty()); assertTrue(r.pendingScorers.isEmpty())
     }
 
     @Test
     fun testSingle_RunnerOn1st() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(1), b, 1)
-        assertEquals(2, next.size); assertEquals(1, next[1]?.base); assertEquals(2, next[2]?.base)
-        assertTrue(scored.isEmpty())
+        val r = RunnerManager.advanceOnHit(getBases(1), b, 1)
+        assertEquals(2, r.nextRunners.size); assertEquals(1, r.nextRunners[1]?.base); assertEquals(2, r.nextRunners[2]?.base)
+        assertTrue(r.autoScoring.isEmpty()); assertTrue(r.pendingScorers.isEmpty())
     }
 
     @Test
     fun testSingle_RunnerOn2nd() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(2), b, 1)
-        // Non-forced runner on 2nd stays at 2nd (automation default)
-        assertEquals(2, next.size); assertEquals(1, next[1]?.base); assertEquals(2, next[2]?.base)
-        assertTrue(scored.isEmpty())
+        val r = RunnerManager.advanceOnHit(getBases(2), b, 1)
+        // Non-forced runner on 2B auto-advances to 3B
+        assertEquals(2, r.nextRunners.size); assertEquals(1, r.nextRunners[1]?.base); assertEquals(3, r.nextRunners[3]?.base)
+        assertTrue(r.autoScoring.isEmpty()); assertTrue(r.pendingScorers.isEmpty())
     }
 
     @Test
     fun testSingle_RunnerOn3rd() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(3), b, 1)
-        // Non-forced runner on 3rd stays at 3rd
-        assertEquals(2, next.size); assertEquals(1, next[1]?.base); assertEquals(3, next[3]?.base)
-        assertTrue(scored.isEmpty())
+        val r = RunnerManager.advanceOnHit(getBases(3), b, 1)
+        // Non-forced runner on 3B → pending scorer
+        assertEquals(1, r.nextRunners.size); assertEquals(1, r.nextRunners[1]?.base)
+        assertTrue(r.autoScoring.isEmpty())
+        assertEquals(1, r.pendingScorers.size); assertEquals("R3", r.pendingScorers[0].runner.name)
     }
 
     @Test
     fun testSingle_RunnersOn1stAnd2nd() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(1, 2), b, 1)
-        assertEquals(3, next.size); assertEquals(1, next[1]?.base); assertEquals(2, next[2]?.base); assertEquals(3, next[3]?.base)
-        assertTrue(scored.isEmpty())
+        val r = RunnerManager.advanceOnHit(getBases(1, 2), b, 1)
+        assertEquals(3, r.nextRunners.size); assertEquals(1, r.nextRunners[1]?.base); assertEquals(2, r.nextRunners[2]?.base); assertEquals(3, r.nextRunners[3]?.base)
+        assertTrue(r.autoScoring.isEmpty()); assertTrue(r.pendingScorers.isEmpty())
     }
 
     @Test
     fun testSingle_RunnersOn1stAnd3rd() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(1, 3), b, 1)
-        // R1 forced to 2nd, R3 stays at 3rd
-        assertEquals(3, next.size); assertEquals(1, next[1]?.base); assertEquals(2, next[2]?.base); assertEquals(3, next[3]?.base)
-        assertTrue(scored.isEmpty())
+        val r = RunnerManager.advanceOnHit(getBases(1, 3), b, 1)
+        // R1 forced to 2B, R3 non-forced → pending scorer
+        assertEquals(2, r.nextRunners.size); assertEquals(1, r.nextRunners[1]?.base); assertEquals(2, r.nextRunners[2]?.base)
+        assertTrue(r.autoScoring.isEmpty())
+        assertEquals(1, r.pendingScorers.size); assertEquals("R3", r.pendingScorers[0].runner.name)
     }
 
     @Test
     fun testSingle_RunnersOn2ndAnd3rd() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(2, 3), b, 1)
-        // No forces beyond 1st
-        assertEquals(3, next.size); assertEquals(1, next[1]?.base); assertEquals(2, next[2]?.base); assertEquals(3, next[3]?.base)
-        assertTrue(scored.isEmpty())
+        val r = RunnerManager.advanceOnHit(getBases(2, 3), b, 1)
+        // R2 auto-advances to 3B; R3 non-forced → pending scorer
+        assertEquals(2, r.nextRunners.size); assertEquals(1, r.nextRunners[1]?.base); assertEquals(3, r.nextRunners[3]?.base)
+        assertTrue(r.autoScoring.isEmpty())
+        assertEquals(1, r.pendingScorers.size); assertEquals("R3", r.pendingScorers[0].runner.name)
     }
 
     @Test
     fun testSingle_BasesLoaded() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(1, 2, 3), b, 1)
-        assertEquals(3, next.size); assertEquals(1, next[1]?.base); assertEquals(2, next[2]?.base); assertEquals(3, next[3]?.base)
-        assertEquals(1, scored.size); assertEquals("R3", scored[0].name)
+        val r = RunnerManager.advanceOnHit(getBases(1, 2, 3), b, 1)
+        // Bases loaded: full force chain, R3 auto-scores
+        assertEquals(3, r.nextRunners.size); assertEquals(1, r.nextRunners[1]?.base); assertEquals(2, r.nextRunners[2]?.base); assertEquals(3, r.nextRunners[3]?.base)
+        assertEquals(1, r.autoScoring.size); assertEquals("R3", r.autoScoring[0].name)
+        assertTrue(r.pendingScorers.isEmpty())
     }
 
     // ── DOUBLE (2B) ─────────────────────────────────────────────────────────────
-    // Automation: R2 and R3 score, R1 moves to 3rd.
+    // R1 auto-advances to 3B. R2 and R3 become pendingScorers (dialog in UI),
+    // except when R1 occupies 3B, forcing R2 to auto-score.
 
     @Test
     fun testDouble_BasesEmpty() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(), b, 2)
-        assertEquals(1, next.size); assertEquals(2, next[2]?.base)
-        assertTrue(scored.isEmpty())
+        val r = RunnerManager.advanceOnHit(getBases(), b, 2)
+        assertEquals(1, r.nextRunners.size); assertEquals(2, r.nextRunners[2]?.base)
+        assertTrue(r.autoScoring.isEmpty()); assertTrue(r.pendingScorers.isEmpty())
     }
 
     @Test
     fun testDouble_RunnerOn1st() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(1), b, 2)
-        assertEquals(2, next.size); assertEquals(2, next[2]?.base); assertEquals(3, next[3]?.base)
-        assertTrue(scored.isEmpty())
+        val r = RunnerManager.advanceOnHit(getBases(1), b, 2)
+        assertEquals(2, r.nextRunners.size); assertEquals(2, r.nextRunners[2]?.base); assertEquals(3, r.nextRunners[3]?.base)
+        assertTrue(r.autoScoring.isEmpty()); assertTrue(r.pendingScorers.isEmpty())
     }
 
     @Test
     fun testDouble_RunnerOn2nd() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(2), b, 2)
-        assertEquals(1, next.size); assertEquals(2, next[2]?.base)
-        assertEquals(1, scored.size); assertEquals("R2", scored[0].name)
+        val r = RunnerManager.advanceOnHit(getBases(2), b, 2)
+        // R2 non-forced (3B free) → pending scorer
+        assertEquals(1, r.nextRunners.size); assertEquals(2, r.nextRunners[2]?.base)
+        assertTrue(r.autoScoring.isEmpty())
+        assertEquals(1, r.pendingScorers.size); assertEquals("R2", r.pendingScorers[0].runner.name)
     }
 
     @Test
     fun testDouble_RunnerOn3rd() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(3), b, 2)
-        assertEquals(1, next.size); assertEquals(2, next[2]?.base)
-        assertEquals(1, scored.size); assertEquals("R3", scored[0].name)
+        val r = RunnerManager.advanceOnHit(getBases(3), b, 2)
+        // R3 non-forced → pending scorer
+        assertEquals(1, r.nextRunners.size); assertEquals(2, r.nextRunners[2]?.base)
+        assertTrue(r.autoScoring.isEmpty())
+        assertEquals(1, r.pendingScorers.size); assertEquals("R3", r.pendingScorers[0].runner.name)
     }
 
     @Test
     fun testDouble_RunnersOn1stAnd2nd() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(1, 2), b, 2)
-        assertEquals(2, next.size); assertEquals(2, next[2]?.base); assertEquals(3, next[3]?.base)
-        assertEquals(1, scored.size); assertEquals("R2", scored[0].name)
+        val r = RunnerManager.advanceOnHit(getBases(1, 2), b, 2)
+        // R1 → 3B auto; 3B occupied → R2 must auto-score
+        assertEquals(2, r.nextRunners.size); assertEquals(2, r.nextRunners[2]?.base); assertEquals(3, r.nextRunners[3]?.base)
+        assertEquals(1, r.autoScoring.size); assertEquals("R2", r.autoScoring[0].name)
+        assertTrue(r.pendingScorers.isEmpty())
     }
 
     @Test
     fun testDouble_RunnersOn1stAnd3rd() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(1, 3), b, 2)
-        assertEquals(2, next.size); assertEquals(2, next[2]?.base); assertEquals(3, next[3]?.base)
-        assertEquals(1, scored.size); assertEquals("R3", scored[0].name)
+        val r = RunnerManager.advanceOnHit(getBases(1, 3), b, 2)
+        // R3 → pending scorer; R1 → 3B auto
+        assertEquals(2, r.nextRunners.size); assertEquals(2, r.nextRunners[2]?.base); assertEquals(3, r.nextRunners[3]?.base)
+        assertTrue(r.autoScoring.isEmpty())
+        assertEquals(1, r.pendingScorers.size); assertEquals("R3", r.pendingScorers[0].runner.name)
     }
 
     @Test
     fun testDouble_RunnersOn2ndAnd3rd() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(2, 3), b, 2)
-        assertEquals(1, next.size); assertEquals(2, next[2]?.base)
-        assertEquals(2, scored.size)
+        val r = RunnerManager.advanceOnHit(getBases(2, 3), b, 2)
+        // Both R2 and R3 pending (3B free when R2 is evaluated)
+        assertEquals(1, r.nextRunners.size); assertEquals(2, r.nextRunners[2]?.base)
+        assertTrue(r.autoScoring.isEmpty())
+        assertEquals(2, r.pendingScorers.size)
     }
 
     @Test
     fun testDouble_BasesLoaded() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(1, 2, 3), b, 2)
-        assertEquals(2, next.size); assertEquals(2, next[2]?.base); assertEquals(3, next[3]?.base)
-        assertEquals(2, scored.size)
+        val r = RunnerManager.advanceOnHit(getBases(1, 2, 3), b, 2)
+        // R3 → pending; R1 → 3B auto; R2: 3B occupied → auto-score
+        assertEquals(2, r.nextRunners.size); assertEquals(2, r.nextRunners[2]?.base); assertEquals(3, r.nextRunners[3]?.base)
+        assertEquals(1, r.autoScoring.size); assertEquals("R2", r.autoScoring[0].name)
+        assertEquals(1, r.pendingScorers.size); assertEquals("R3", r.pendingScorers[0].runner.name)
     }
 
     // ── TRIPLE (3B) ─────────────────────────────────────────────────────────────
-    // Automation: Everyone scores.
+    // Automation: Everyone scores automatically.
 
     @Test
     fun testTriple_BasesLoaded() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(1, 2, 3), b, 3)
-        assertEquals(1, next.size); assertEquals(3, next[3]?.base)
-        assertEquals(3, scored.size)
+        val r = RunnerManager.advanceOnHit(getBases(1, 2, 3), b, 3)
+        assertEquals(1, r.nextRunners.size); assertEquals(3, r.nextRunners[3]?.base)
+        assertEquals(3, r.autoScoring.size); assertTrue(r.pendingScorers.isEmpty())
     }
 
     // ── HOME RUN (HR) ───────────────────────────────────────────────────────────
-    // Automation: Everyone scores.
+    // Automation: Everyone scores automatically.
 
     @Test
     fun testHomeRun_BasesLoaded() {
-        val (next, scored) = RunnerManager.advanceOnHit(getBases(1, 2, 3), b, 4)
-        assertTrue(next.isEmpty())
-        assertEquals(4, scored.size)
+        val r = RunnerManager.advanceOnHit(getBases(1, 2, 3), b, 4)
+        assertTrue(r.nextRunners.isEmpty())
+        assertEquals(4, r.autoScoring.size); assertTrue(r.pendingScorers.isEmpty())
     }
 }

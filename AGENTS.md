@@ -126,6 +126,7 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ Status-Bar-Lesbarkeit: dunkle Icons in CoachAct (isAppearanceLightStatusBars)
 - ✅ At-Bat Results: 2-stufiger Result-Picker (H/K/BB in 1 Tap; OUT▸ → GO/FO/LO; ··· → KL/SAC/FC/E/DP/HBP)
 - ✅ Unit-Tests: PitcherTrendHelperTest (32 Tests), GameBatterStatsDaoTest (11 Tests), BackupManagerMigrationsTest (19 Tests)
+- ✅ **#25** Hit-Baserunner-Logik: Forced Runner automatisch, nicht-forced Runner auf Vorschlags-Base automatisch; nur wenn nicht-forced Runner scoren würde → Bestätigungs-Dialog. `nextBatter()` erst nach allen Bestätigungen.
 - ✅ Export-Verbesserung: PDF/JPG mit Headlines ("Batting stats", "Pitching stats") und Spiel-Metadaten (Zeit, Nr.)
 - ✅ Security: Backup-Sicherheits-Checks (Path Traversal Schutz, String-Längen-Validierung 50/3/20/10)
 - ✅ **#21** Datenintegrität: `PlayerMatcher` verhindert Dubletten beim Import (Levenshtein-Distanz für Namen + Trikotnummern-Abgleich).

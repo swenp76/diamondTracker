@@ -1,70 +1,87 @@
 package de.baseball.diamond9
 
+data class PendingScorer(val runner: GameRunner, val stayBase: Int)
+
+data class HitAdvanceResult(
+    val nextRunners: Map<Int, GameRunner>,
+    val autoScoring: List<GameRunner>,
+    val pendingScorers: List<PendingScorer>
+)
+
 object RunnerManager {
 
     /**
      * Calculates the next state of runners after a batter reaches a base.
-     * 
+     *
+     * Forced runners advance automatically (including scoring when forced home).
+     * Non-forced runners advance automatically to their suggested base, except when
+     * that suggested base is home — those are returned as [HitAdvanceResult.pendingScorers]
+     * so the UI can ask the coach for confirmation.
+     *
      * [current]: Current runners on base (base index to Runner)
      * [batter]: The batter who just put the ball in play
      * [bases]: How many bases the batter reached (1=1B, 2=2B, 3=3B, 4=HR)
-     * 
-     * Returns a Pair of (Updated Runners Map, List of Scoring Runners)
      */
     fun advanceOnHit(
         current: Map<Int, GameRunner>,
         batter: GameRunner,
         bases: Int
-    ): Pair<Map<Int, GameRunner>, List<GameRunner>> {
-        val next = current.toMutableMap()
-        val scoringRunners = mutableListOf<GameRunner>()
-
+    ): HitAdvanceResult {
         if (bases >= 4) {
-            // Home Run: Everyone scores
-            current.values.forEach { scoringRunners.add(it.copy(base = 4)) }
-            scoringRunners.add(batter.copy(base = 4))
-            return emptyMap<Int, GameRunner>() to scoringRunners
+            val allScoring = current.values.map { it.copy(base = 4) } + batter.copy(base = 4)
+            return HitAdvanceResult(emptyMap(), allScoring, emptyList())
         }
 
-        // 1. Identify which runners are forced or displaced by the batter.
-        // A runner is "displaced" if the batter takes their current base or any base ahead of them
-        // that they haven't reached yet.
-        // In this app, we automate the obvious moves:
-        // - Single (1B): Forced runners move 1 base. Non-forced stay.
-        // - Double (2B): All runners move at least 2 bases. 2nd and 3rd score. 1st moves to 3rd.
-        // - Triple (3B): All runners score.
+        if (bases == 3) {
+            val allScoring = current.values.map { it.copy(base = 4) }
+            return HitAdvanceResult(mapOf(3 to batter.copy(base = 3)), allScoring, emptyList())
+        }
+
+        val next = current.toMutableMap()
+        val autoScoring = mutableListOf<GameRunner>()
+        val pendingScorers = mutableListOf<PendingScorer>()
 
         when (bases) {
             1 -> {
-                // Single: Only move runners who are forced
                 val force2 = current.containsKey(1)
                 val force3 = force2 && current.containsKey(2)
                 val forceHome = force3 && current.containsKey(3)
 
-                // Move from 3rd down to 1st
-                if (forceHome) next.remove(3)?.let { scoringRunners.add(it.copy(base = 4)) }
-                if (force3) next.remove(2)?.let { next[3] = it.copy(base = 3) }
+                if (forceHome) {
+                    next.remove(3)?.let { autoScoring.add(it.copy(base = 4)) }
+                } else {
+                    // Non-forced runner on 3B: ask coach before scoring
+                    next.remove(3)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3)) }
+                }
+
+                if (force3) {
+                    next.remove(2)?.let { next[3] = it.copy(base = 3) }
+                } else {
+                    // Non-forced runner on 2B: auto-advance to 3B (not scoring, no dialog)
+                    next.remove(2)?.let {
+                        if (!next.containsKey(3)) next[3] = it.copy(base = 3)
+                        else next[2] = it  // shouldn't happen given force logic
+                    }
+                }
+
                 if (force2) next.remove(1)?.let { next[2] = it.copy(base = 2) }
                 next[1] = batter.copy(base = 1)
             }
             2 -> {
-                // Double: Move all runners at least 2 bases
-                // Runners on 2nd and 3rd always score on a double in this automation
-                next.remove(3)?.let { scoringRunners.add(it.copy(base = 4)) }
-                next.remove(2)?.let { scoringRunners.add(it.copy(base = 4)) }
-                // Runner on 1st moves to 3rd
+                // Runner on 3B: ask coach before scoring
+                next.remove(3)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3)) }
+                // Runner on 1B: auto-advance to 3B
                 next.remove(1)?.let { next[3] = it.copy(base = 3) }
+                // Runner on 2B: if 3B is now occupied (by 1B runner), must score; otherwise ask coach
+                next.remove(2)?.let { r2 ->
+                    if (next.containsKey(3)) autoScoring.add(r2.copy(base = 4))
+                    else pendingScorers.add(PendingScorer(r2, stayBase = 3))
+                }
                 next[2] = batter.copy(base = 2)
-            }
-            3 -> {
-                // Triple: All existing runners score
-                current.values.forEach { scoringRunners.add(it.copy(base = 4)) }
-                next.clear()
-                next[3] = batter.copy(base = 3)
             }
         }
 
-        return next to scoringRunners
+        return HitAdvanceResult(next.toMap(), autoScoring, pendingScorers)
     }
 
     /**

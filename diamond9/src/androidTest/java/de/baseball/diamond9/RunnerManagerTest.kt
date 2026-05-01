@@ -13,79 +13,79 @@ class RunnerManagerTest {
 
     @Test
     fun single_noRunners_movesBatterTo1B() {
-        val current = emptyMap<Int, GameRunner>()
-        val (next, scoring) = RunnerManager.advanceOnHit(current, batter, 1)
+        val result = RunnerManager.advanceOnHit(emptyMap(), batter, 1)
 
-        assertEquals(1, next.size)
-        assertEquals(1, next[1]?.base)
-        assertTrue(scoring.isEmpty())
+        assertEquals(1, result.nextRunners.size)
+        assertEquals(1, result.nextRunners[1]?.base)
+        assertTrue(result.autoScoring.isEmpty())
+        assertTrue(result.pendingScorers.isEmpty())
     }
 
     @Test
-    fun single_runnerOn3B_doesNotMoveRunnerOn3B() {
-        // Force should break at 1B
-        val current = mapOf(3 to r3)
-        val (next, scoring) = RunnerManager.advanceOnHit(current, batter, 1)
+    fun single_runnerOn3B_becomesPendingScorer() {
+        val result = RunnerManager.advanceOnHit(mapOf(3 to r3), batter, 1)
 
-        assertEquals(2, next.size)
-        assertEquals(1, next[1]?.base) // Batter on 1B
-        assertEquals(3, next[3]?.base) // Runner still on 3B
-        assertTrue(scoring.isEmpty())
+        // 3B runner is non-forced → pending scorer, not in nextRunners
+        assertEquals(1, result.nextRunners.size)
+        assertEquals(1, result.nextRunners[1]?.base)
+        assertTrue(result.autoScoring.isEmpty())
+        assertEquals(1, result.pendingScorers.size)
+        assertEquals("Runner3", result.pendingScorers[0].runner.name)
+        assertEquals(3, result.pendingScorers[0].stayBase)
     }
 
     @Test
     fun single_runnerOn1B_movesRunnerTo2B() {
-        val current = mapOf(1 to r1)
-        val (next, scoring) = RunnerManager.advanceOnHit(current, batter, 1)
+        val result = RunnerManager.advanceOnHit(mapOf(1 to r1), batter, 1)
 
-        assertEquals(2, next.size)
-        assertEquals(1, next[1]?.base) // Batter on 1B
-        assertEquals(2, next[2]?.base) // R1 forced to 2B
-        assertTrue(scoring.isEmpty())
+        assertEquals(2, result.nextRunners.size)
+        assertEquals(1, result.nextRunners[1]?.base)
+        assertEquals(2, result.nextRunners[2]?.base)
+        assertTrue(result.autoScoring.isEmpty())
+        assertTrue(result.pendingScorers.isEmpty())
     }
 
     @Test
-    fun single_basesLoaded_scoresRunnerOn3B() {
-        val current = mapOf(1 to r1, 2 to r2, 3 to r3)
-        val (next, scoring) = RunnerManager.advanceOnHit(current, batter, 1)
+    fun single_basesLoaded_scoresRunnerOn3BAutomatically() {
+        val result = RunnerManager.advanceOnHit(mapOf(1 to r1, 2 to r2, 3 to r3), batter, 1)
 
-        assertEquals(3, next.size)
-        assertEquals(1, next[1]?.base)
-        assertEquals(2, next[2]?.base)
-        assertEquals(3, next[3]?.base)
-        assertEquals(1, scoring.size)
-        assertEquals("Runner3", scoring[0].name)
+        assertEquals(3, result.nextRunners.size)
+        assertEquals(1, result.nextRunners[1]?.base)
+        assertEquals(2, result.nextRunners[2]?.base)
+        assertEquals(3, result.nextRunners[3]?.base)
+        assertEquals(1, result.autoScoring.size)
+        assertEquals("Runner3", result.autoScoring[0].name)
+        assertTrue(result.pendingScorers.isEmpty())
     }
 
     @Test
     fun double_noRunners_movesBatterTo2B() {
-        val current = emptyMap<Int, GameRunner>()
-        val (next, scoring) = RunnerManager.advanceOnHit(current, batter, 2)
+        val result = RunnerManager.advanceOnHit(emptyMap(), batter, 2)
 
-        assertEquals(1, next.size)
-        assertEquals(2, next[2]?.base)
-        assertTrue(scoring.isEmpty())
+        assertEquals(1, result.nextRunners.size)
+        assertEquals(2, result.nextRunners[2]?.base)
+        assertTrue(result.autoScoring.isEmpty())
+        assertTrue(result.pendingScorers.isEmpty())
     }
 
     @Test
-    fun double_runnerOn2B_doesNotMoveRunnerOn2B() {
-        // Force breaks at 1B
-        val current = mapOf(2 to r2)
-        val (next, scoring) = RunnerManager.advanceOnHit(current, batter, 2)
+    fun double_runnerOn2B_becomesPendingScorer() {
+        val result = RunnerManager.advanceOnHit(mapOf(2 to r2), batter, 2)
 
-        // Note: Batter reaches 2B, overwriting current runner on 2B
-        // in this simple logic (manual correction expected for non-forced runner)
-        assertEquals(1, next.size)
-        assertEquals(1, next[2]?.slot) // The batter is now on 2B
+        assertEquals(1, result.nextRunners.size)
+        assertEquals(1, result.nextRunners[2]?.slot) // batter is on 2B
+        assertTrue(result.autoScoring.isEmpty())
+        assertEquals(1, result.pendingScorers.size)
+        assertEquals("Runner2", result.pendingScorers[0].runner.name)
     }
 
     @Test
     fun homeRun_basesLoaded_scoresEveryone() {
-        val current = mapOf(1 to r1, 2 to r2, 3 to r3)
-        val (next, scoring) = RunnerManager.advanceOnHit(current, batter, 4)
+        val result = RunnerManager.advanceOnHit(mapOf(1 to r1, 2 to r2, 3 to r3), batter, 4)
 
-        assertTrue(next.isEmpty())
-        assertEquals(4, scoring.size)
+        assertTrue(result.nextRunners.isEmpty())
+        assertEquals(4, result.autoScoring.size)
+        assertTrue(result.pendingScorers.isEmpty())
     }
 
     @Test
