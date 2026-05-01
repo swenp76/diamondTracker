@@ -32,6 +32,9 @@ class AboutActivity : ComponentActivity() {
                     onOpenGithub = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.about_github_url)))
                         startActivity(intent)
+                    },
+                    onGenerateDiagnostic = {
+                        DiagnosticHelper.createAndShareReport(this)
                     }
                 )
             }

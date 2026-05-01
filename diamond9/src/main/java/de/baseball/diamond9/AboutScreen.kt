@@ -23,9 +23,32 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 @Composable
 fun AboutScreen(
     onMenuClick: () -> Unit,
-    onOpenGithub: () -> Unit
+    onOpenGithub: () -> Unit,
+    onGenerateDiagnostic: () -> Unit
 ) {
     var showLibraries by remember { mutableStateOf(false) }
+    var showDiagnosticDialog by remember { mutableStateOf(false) }
+
+    if (showDiagnosticDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiagnosticDialog = false },
+            title = { Text(stringResource(R.string.dialog_diagnostic_title)) },
+            text = { Text(stringResource(R.string.dialog_diagnostic_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDiagnosticDialog = false
+                    onGenerateDiagnostic()
+                }) {
+                    Text(stringResource(R.string.btn_generate))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiagnosticDialog = false }) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = colorResource(R.color.color_background),
@@ -104,6 +127,15 @@ fun AboutScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(stringResource(R.string.about_libraries_button))
+                }
+
+                Spacer(modifier = Modifier.size(8.dp))
+
+                TextButton(
+                    onClick = { showDiagnosticDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.about_diagnostic_button))
                 }
 
                 Spacer(modifier = Modifier.size(32.dp))

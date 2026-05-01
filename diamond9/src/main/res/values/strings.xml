@@ -486,4 +486,9 @@
     <string name="btn_runner_scored_hold">Hold at %dB</string>
     <string name="toast_fc_check_runners">Fielder\'s Choice: Please check and update runners manually.</string>
     <string name="toast_dp_check_runners">Double Play: Please check and update runners manually.</string>
+    <!-- ── Diagnostic Export ──────────────────────────────────────────────── -->
+    <string name="about_diagnostic_button">Generate Diagnostic Report</string>
+    <string name="dialog_diagnostic_title">Diagnostic Report</string>
+    <string name="dialog_diagnostic_message">This report contains device specs and app logs, but no personal passwords. Do you want to generate and share it?</string>
+    <string name="btn_generate">Generate</string>
 </resources>

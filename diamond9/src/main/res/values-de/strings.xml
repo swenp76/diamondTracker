@@ -411,4 +411,9 @@
     <string name="btn_runner_scored_hold">Bleibt auf %dB</string>
     <string name="toast_fc_check_runners">Fielder\'s Choice: Bitte Läufer manuell prüfen und anpassen.</string>
     <string name="toast_dp_check_runners">Double Play: Bitte Läufer manuell prüfen und anpassen.</string>
+    <!-- ── Diagnose-Export ──────────────────────────────────────────────── -->
+    <string name="about_diagnostic_button">Diagnose-Bericht erstellen</string>
+    <string name="dialog_diagnostic_title">Diagnose-Bericht</string>
+    <string name="dialog_diagnostic_message">Dieser Bericht enthält Gerätespezifikationen und App-Protokolle, aber keine persönlichen Passwörter. Möchten Sie ihn erstellen und teilen?</string>
+    <string name="btn_generate">Erstellen</string>
 </resources>
