@@ -1,6 +1,6 @@
 package de.baseball.diamond9
 
-data class PendingScorer(val runner: GameRunner, val stayBase: Int)
+data class PendingScorer(val runner: GameRunner, val stayBase: Int, val isForced: Boolean = false)
 
 data class HitAdvanceResult(
     val nextRunners: Map<Int, GameRunner>,
@@ -28,13 +28,19 @@ object RunnerManager {
         bases: Int
     ): HitAdvanceResult {
         if (bases >= 4) {
-            val allScoring = current.values.map { it.copy(base = 4) } + batter.copy(base = 4)
-            return HitAdvanceResult(emptyMap(), allScoring, emptyList())
+            // Everyone scores, but must be confirmed. All are forced.
+            val pendingScorers = (current.values.toList().sortedByDescending { it.base } + batter).map { 
+                PendingScorer(it, stayBase = if (it.base == 0) 3 else it.base, isForced = true) 
+            }
+            return HitAdvanceResult(emptyMap(), emptyList(), pendingScorers)
         }
 
         if (bases == 3) {
-            val allScoring = current.values.map { it.copy(base = 4) }
-            return HitAdvanceResult(mapOf(3 to batter.copy(base = 3)), allScoring, emptyList())
+            // Everyone scores, but must be confirmed. All are forced. Batter stays on 3B.
+            val pendingScorers = current.values.toList().sortedByDescending { it.base }.map { 
+                PendingScorer(it, stayBase = it.base, isForced = true) 
+            }
+            return HitAdvanceResult(mapOf(3 to batter.copy(base = 3)), emptyList(), pendingScorers)
         }
 
         val next = current.toMutableMap()
@@ -47,43 +53,41 @@ object RunnerManager {
                 val force3 = force2 && current.containsKey(2)
                 val forceHome = force3 && current.containsKey(3)
 
-                if (forceHome) {
-                    next.remove(3)?.let { autoScoring.add(it.copy(base = 4)) }
-                } else {
-                    // Non-forced runner on 3B: ask coach before scoring
-                    next.remove(3)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3)) }
+                // 3B runner
+                next.remove(3)?.let { 
+                    pendingScorers.add(PendingScorer(it, stayBase = 3, isForced = forceHome)) 
                 }
-
+                
                 if (force3) {
                     next.remove(2)?.let { next[3] = it.copy(base = 3) }
                 } else {
-                    // Non-forced runner on 2B: auto-advance to 3B (not scoring, no dialog)
-                    next.remove(2)?.let {
-                        if (!next.containsKey(3)) next[3] = it.copy(base = 3)
-                        else next[2] = it  // shouldn't happen given force logic
-                    }
+                    // Non-forced runner on 2nd: could score or stay on 3rd
+                    next.remove(2)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3, isForced = false)) }
                 }
 
                 if (force2) next.remove(1)?.let { next[2] = it.copy(base = 2) }
                 next[1] = batter.copy(base = 1)
             }
             2 -> {
-                val had2B = current.containsKey(2)
-                val had3B = current.containsKey(3)
+                // Potential scorers from 3B, 2B and maybe 1B
+                val force2 = current.containsKey(1)
+                val force3 = force2 && current.containsKey(2)
+                val forceHome = force3 && current.containsKey(3)
 
-                // Runner on 3B: forced home if 2B was occupied (chain: batter→2B, r2→3B, r3→home)
-                next.remove(3)?.let {
-                    if (had2B) autoScoring.add(it.copy(base = 4))
-                    else pendingScorers.add(PendingScorer(it, stayBase = 3))
-                }
-                // Runner on 1B: auto-advance to 3B
+                // Runner on 3rd is forced if bases were loaded (or at least 1st and 2nd occupied)
+                next.remove(3)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3, isForced = forceHome)) }
+                
+                // Runner on 2nd is forced to 3rd by the batter reaching 2nd IF 1st was occupied.
+                // If they go for home, it's a choice UNLESS they were forced home by preceding runners.
+                // Wait: If I hit a double, I occupy 2B. 
+                // If there was a runner on 2B, they MUST move to 3B or Home. They cannot stay on 2B.
+                // So they are forced to at least 3B. If we ask about Home, it's usually a choice
+                // UNLESS the runner behind them (from 1B) is also forced to 3B.
+                next.remove(2)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3, isForced = force3)) }
+                
+                // Runner on 1B is forced to at least 2B. On a double they usually reach 3rd.
                 next.remove(1)?.let { next[3] = it.copy(base = 3) }
-                // Runner on 2B: must score if 3B is currently occupied (by 1B runner) OR if 3B was
-                // originally occupied (chain already forced r3 home, so r2 follows)
-                next.remove(2)?.let { r2 ->
-                    if (next.containsKey(3) || had3B) autoScoring.add(r2.copy(base = 4))
-                    else pendingScorers.add(PendingScorer(r2, stayBase = 3))
-                }
+
                 next[2] = batter.copy(base = 2)
             }
         }

@@ -305,33 +305,73 @@ class BattingTrackActivity : ComponentActivity() {
             val scorer = pendingScorersQueue.first()
             AlertDialog(
                 onDismissRequest = {},
-                title = { Text(stringResource(R.string.dialog_runner_scored_title, scorer.runner.base)) },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            pendingConfirmedScoring = pendingConfirmedScoring + scorer.runner.copy(base = 4)
-                            pendingScorersQueue = pendingScorersQueue.drop(1)
-                            if (pendingScorersQueue.isEmpty()) flushPendingScorers()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green))
-                    ) { Text(stringResource(R.string.btn_runner_scored_yes)) }
+                title = {
+                    Text(stringResource(R.string.dialog_runner_scored_title, scorer.runner.base))
                 },
-                dismissButton = {
-                    OutlinedButton(
-                        onClick = {
-                            val stayBase = scorer.stayBase
-                            val updatedRunners = pendingNextRunners.toMutableMap()
-                            if (!updatedRunners.containsKey(stayBase)) {
-                                updatedRunners[stayBase] = scorer.runner.copy(base = stayBase)
-                            } else {
-                                // Conflict: base occupied → runner must score
+                text = {
+                    val name = if (scorer.runner.name.isNotEmpty()) scorer.runner.name else stringResource(R.string.pitcher_default_name)
+                    val num = if (!scorer.runner.jerseyNumber.isNullOrEmpty()) "#${scorer.runner.jerseyNumber}" else ""
+                    Text("$num $name".trim())
+                },
+                confirmButton = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Option 1: SCORE
+                        Button(
+                            onClick = {
                                 pendingConfirmedScoring = pendingConfirmedScoring + scorer.runner.copy(base = 4)
-                            }
-                            pendingNextRunners = updatedRunners
-                            pendingScorersQueue = pendingScorersQueue.drop(1)
-                            if (pendingScorersQueue.isEmpty()) flushPendingScorers()
+                                pendingScorersQueue = pendingScorersQueue.drop(1)
+                                if (pendingScorersQueue.isEmpty()) flushPendingScorers()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.btn_runner_scored_yes), fontWeight = FontWeight.Bold)
                         }
-                    ) { Text(stringResource(R.string.btn_runner_scored_hold, scorer.stayBase)) }
+
+                        // Option 2: OUT
+                        Button(
+                            onClick = {
+                                recordRunnerOut()
+                                pendingScorersQueue = pendingScorersQueue.drop(1)
+                                if (pendingScorersQueue.isEmpty()) flushPendingScorers()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.runner_mgmt_out), fontWeight = FontWeight.Bold)
+                        }
+
+                        // Option 3: STAY ON BASE (Only if not forced)
+                        if (!scorer.isForced) {
+                            OutlinedButton(
+                                onClick = {
+                                    val stayBase = scorer.stayBase
+                                    val updatedRunners = pendingNextRunners.toMutableMap()
+                                    if (stayBase > 0) {
+                                        if (!updatedRunners.containsKey(stayBase)) {
+                                            updatedRunners[stayBase] = scorer.runner.copy(base = stayBase)
+                                        } else {
+                                            // Base occupied -> force score or user must decide?
+                                            // Standard behavior: if base occupied, they had to advance.
+                                            pendingConfirmedScoring = pendingConfirmedScoring + scorer.runner.copy(base = 4)
+                                        }
+                                    }
+                                    pendingNextRunners = updatedRunners
+                                    pendingScorersQueue = pendingScorersQueue.drop(1)
+                                    if (pendingScorersQueue.isEmpty()) flushPendingScorers()
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                val label = if (scorer.stayBase > 0) stringResource(R.string.btn_runner_scored_hold, scorer.stayBase)
+                                else stringResource(R.string.status_in_game)
+                                Text(label)
+                            }
+                        }
+                    }
                 }
             )
         }
@@ -617,8 +657,7 @@ class BattingTrackActivity : ComponentActivity() {
                                 actionStack.push(GameAction.Pitch(abId))
                             }
                             "ROE", "FC" -> {
-                                val r = RunnerManager.advanceOnHit(runners, batterRunner, 1)
-                                updateRunnersInDb(r.nextRunners, r.autoScoring + r.pendingScorers.map { it.runner.copy(base = 4) })
+                                startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 1))
                                 if (result == "FC") {
                                     Toast.makeText(this@BattingTrackActivity, R.string.toast_fc_check_runners, Toast.LENGTH_LONG).show()
                                 }

@@ -20,8 +20,8 @@ android {
         applicationId "de.baseball.diamond9"
         minSdk 26
         targetSdk 36
-        versionCode 28
-        versionName "0.28-alpha"
+        versionCode 29
+        versionName "0.29-alpha"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 

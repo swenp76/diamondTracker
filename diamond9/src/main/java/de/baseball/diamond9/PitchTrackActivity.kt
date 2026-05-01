@@ -95,6 +95,12 @@ class PitchTrackActivity : ComponentActivity() {
         var warningMessage by remember { mutableStateOf<String?>(null) }
         var showRunSuggestion by remember { mutableStateOf(false) }
 
+        // Pending-scorer queue: non-forced runners who might score after a hit
+        var pendingScorersQueue by remember { mutableStateOf(emptyList<PendingScorer>()) }
+        var pendingNextRunners by remember { mutableStateOf(emptyMap<Int, GameRunner>()) }
+        var pendingAutoScoring by remember { mutableStateOf(emptyList<GameRunner>()) }
+        var pendingConfirmedScoring by remember { mutableStateOf(emptyList<GameRunner>()) }
+
         val actionStack = remember { GameActionStack() }
 
         // Captured before 3rd out, used by HalfInningChange undo
@@ -231,6 +237,26 @@ class PitchTrackActivity : ComponentActivity() {
             refresh()
         }
 
+        fun flushPendingScorers() {
+            val allScoring = pendingAutoScoring + pendingConfirmedScoring
+            updateRunnersInDb(pendingNextRunners, allScoring)
+            pendingScorersQueue = emptyList()
+            pendingNextRunners = emptyMap()
+            pendingAutoScoring = emptyList()
+            pendingConfirmedScoring = emptyList()
+        }
+
+        fun startHitAdvance(result: HitAdvanceResult) {
+            if (result.pendingScorers.isEmpty()) {
+                updateRunnersInDb(result.nextRunners, result.autoScoring)
+            } else {
+                pendingNextRunners = result.nextRunners.toMutableMap()
+                pendingAutoScoring = result.autoScoring
+                pendingConfirmedScoring = emptyList()
+                pendingScorersQueue = result.pendingScorers
+            }
+        }
+
         fun getBatterRunner(): GameRunner {
             val gameBF = if (gameId != -1L) db.getTotalBFForGame(gameId) else (stats?.bf ?: 0)
             val currentSlot = (gameBF % 9) + 1
@@ -284,8 +310,79 @@ class PitchTrackActivity : ComponentActivity() {
                     )
                 }
             }
-        )
-{ padding ->
+        ) { padding ->
+            if (pendingScorersQueue.isNotEmpty()) {
+                val scorer = pendingScorersQueue.first()
+                AlertDialog(
+                    onDismissRequest = {},
+                    title = {
+                        Text(stringResource(R.string.dialog_runner_scored_title, scorer.runner.base))
+                    },
+                    text = {
+                        val name = if (scorer.runner.name.isNotEmpty()) scorer.runner.name else stringResource(R.string.pitcher_default_name)
+                        val num = if (!scorer.runner.jerseyNumber.isNullOrEmpty()) "#${scorer.runner.jerseyNumber}" else ""
+                        Text("$num $name".trim())
+                    },
+                    confirmButton = {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Option 1: SCORE
+                            Button(
+                                onClick = {
+                                    pendingConfirmedScoring = pendingConfirmedScoring + scorer.runner.copy(base = 4)
+                                    pendingScorersQueue = pendingScorersQueue.drop(1)
+                                    if (pendingScorersQueue.isEmpty()) flushPendingScorers()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_green)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.btn_runner_scored_yes), fontWeight = FontWeight.Bold)
+                            }
+
+                            // Option 2: OUT
+                            Button(
+                                onClick = {
+                                    recordRunnerOut()
+                                    pendingScorersQueue = pendingScorersQueue.drop(1)
+                                    if (pendingScorersQueue.isEmpty()) flushPendingScorers()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_strike)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.runner_mgmt_out), fontWeight = FontWeight.Bold)
+                            }
+
+                            // Option 3: STAY ON BASE (Only if not forced)
+                            if (!scorer.isForced) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val stayBase = scorer.stayBase
+                                        val updatedRunners = pendingNextRunners.toMutableMap()
+                                        if (stayBase > 0) {
+                                            if (!updatedRunners.containsKey(stayBase)) {
+                                                updatedRunners[stayBase] = scorer.runner.copy(base = stayBase)
+                                            } else {
+                                                pendingConfirmedScoring = pendingConfirmedScoring + scorer.runner.copy(base = 4)
+                                            }
+                                        }
+                                        pendingNextRunners = updatedRunners
+                                        pendingScorersQueue = pendingScorersQueue.drop(1)
+                                        if (pendingScorersQueue.isEmpty()) flushPendingScorers()
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    val label = if (scorer.stayBase > 0) stringResource(R.string.btn_runner_scored_hold, scorer.stayBase)
+                                    else stringResource(R.string.status_in_game)
+                                    Text(label)
+                                }
+                            }
+                        }
+                    }
+                )
+            }
             Column(
                 modifier = Modifier
                     .padding(padding)
@@ -504,7 +601,8 @@ class PitchTrackActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .padding(bottom = 32.dp)
+                        .padding(bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(modifier = Modifier.fillMaxWidth().height(64.dp)) {
                         listOf("1B", "2B", "3B", "HR").forEachIndexed { i, type ->
@@ -513,8 +611,7 @@ class PitchTrackActivity : ComponentActivity() {
                             Button(
                                 onClick = {
                                     val result = RunnerManager.advanceOnHit(runners, getBatterRunner(), i + 1)
-                                    val allScoring = result.autoScoring + result.pendingScorers.map { it.runner.copy(base = 4) }
-                                    updateRunnersInDb(result.nextRunners, allScoring)
+                                    startHitAdvance(result)
                                     db.insertPitch(pitcherId, type, inning)
                                     db.insertPitch(pitcherId, "BF", inning)
                                     refresh()
@@ -525,6 +622,29 @@ class PitchTrackActivity : ComponentActivity() {
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text(type, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                        listOf("ROE", "FC").forEachIndexed { i, type ->
+                            if (i > 0) Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    val result = RunnerManager.advanceOnHit(runners, getBatterRunner(), 1)
+                                    startHitAdvance(result)
+                                    db.insertPitch(pitcherId, type, inning)
+                                    db.insertPitch(pitcherId, "BF", inning)
+                                    if (type == "FC") {
+                                        android.widget.Toast.makeText(this@PitchTrackActivity, R.string.toast_fc_check_runners, android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                    refresh()
+                                    showHitSheet = false
+                                },
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(stringResource(if (type == "ROE") R.string.btn_result_roe else R.string.btn_result_fc), fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -541,7 +661,8 @@ class PitchTrackActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .padding(bottom = 32.dp)
+                        .padding(bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(modifier = Modifier.fillMaxWidth().height(64.dp)) {
                         listOf("GO", "FO", "LO").forEachIndexed { i, label ->
@@ -559,6 +680,28 @@ class PitchTrackActivity : ComponentActivity() {
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                        listOf("SAC", "DP").forEachIndexed { i, type ->
+                            if (i > 0) Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    db.insertPitch(pitcherId, type, inning)
+                                    db.insertPitch(pitcherId, "BF", inning)
+                                    if (type == "DP") {
+                                        android.widget.Toast.makeText(this@PitchTrackActivity, R.string.toast_dp_check_runners, android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                    recordBatterOut()
+                                    refresh()
+                                    showOutSheet = false
+                                },
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                colors = ButtonDefaults.buttonColors(containerColor = if (type == "SAC") colorResource(R.color.color_orange) else colorResource(R.color.color_text_secondary)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(stringResource(if (type == "SAC") R.string.btn_result_sac else R.string.btn_result_dp), fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
