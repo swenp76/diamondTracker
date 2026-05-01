@@ -68,13 +68,20 @@ object RunnerManager {
                 next[1] = batter.copy(base = 1)
             }
             2 -> {
-                // Runner on 3B: ask coach before scoring
-                next.remove(3)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3)) }
+                val had2B = current.containsKey(2)
+                val had3B = current.containsKey(3)
+
+                // Runner on 3B: forced home if 2B was occupied (chain: batter→2B, r2→3B, r3→home)
+                next.remove(3)?.let {
+                    if (had2B) autoScoring.add(it.copy(base = 4))
+                    else pendingScorers.add(PendingScorer(it, stayBase = 3))
+                }
                 // Runner on 1B: auto-advance to 3B
                 next.remove(1)?.let { next[3] = it.copy(base = 3) }
-                // Runner on 2B: if 3B is now occupied (by 1B runner), must score; otherwise ask coach
+                // Runner on 2B: must score if 3B is currently occupied (by 1B runner) OR if 3B was
+                // originally occupied (chain already forced r3 home, so r2 follows)
                 next.remove(2)?.let { r2 ->
-                    if (next.containsKey(3)) autoScoring.add(r2.copy(base = 4))
+                    if (next.containsKey(3) || had3B) autoScoring.add(r2.copy(base = 4))
                     else pendingScorers.add(PendingScorer(r2, stayBase = 3))
                 }
                 next[2] = batter.copy(base = 2)

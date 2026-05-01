@@ -211,19 +211,19 @@ class ExhaustiveRunnerTest {
     @Test
     fun testDouble_RunnersOn2ndAnd3rd() {
         val r = RunnerManager.advanceOnHit(getBases(2, 3), b, 2)
-        // Both R2 and R3 pending (3B free when R2 is evaluated)
+        // Force chain: batter→2B forces R2→3B forces R3→home; both auto-score
         assertEquals(1, r.nextRunners.size); assertEquals(2, r.nextRunners[2]?.base)
-        assertTrue(r.autoScoring.isEmpty())
-        assertEquals(2, r.pendingScorers.size)
+        assertEquals(2, r.autoScoring.size)
+        assertTrue(r.pendingScorers.isEmpty())
     }
 
     @Test
     fun testDouble_BasesLoaded() {
         val r = RunnerManager.advanceOnHit(getBases(1, 2, 3), b, 2)
-        // R3 → pending; R1 → 3B auto; R2: 3B occupied → auto-score
+        // R3 forced home (had2B); R1 → 3B auto; R2 forced home (next[3] occupied by R1)
         assertEquals(2, r.nextRunners.size); assertEquals(2, r.nextRunners[2]?.base); assertEquals(3, r.nextRunners[3]?.base)
-        assertEquals(1, r.autoScoring.size); assertEquals("R2", r.autoScoring[0].name)
-        assertEquals(1, r.pendingScorers.size); assertEquals("R3", r.pendingScorers[0].runner.name)
+        assertEquals(2, r.autoScoring.size)
+        assertTrue(r.pendingScorers.isEmpty())
     }
 
     // ── TRIPLE (3B) ─────────────────────────────────────────────────────────────
