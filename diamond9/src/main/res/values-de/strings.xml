@@ -405,6 +405,7 @@
     <string name="runner_mgmt_out">Läufer Out</string>
     <string name="score_notif_single">Run erzielt!</string>
     <string name="score_notif_multiple">%d Runs erzielt!</string>
+    <string name="score_notif_rbi">%1$d RBI – %2$s</string>
     <string name="error_overtake_runner">Führenden Läufer zuerst bewegen!</string>
     <string name="dialog_runner_scored_title">Läufer von %dB: Punkt erzielt?</string>
     <string name="rbi_checkbox_label">RBI für %1$s (#%2$s)</string>

@@ -90,6 +90,8 @@ class BattingTrackActivity : ComponentActivity() {
         var runners by remember { mutableStateOf(emptyMap<Int, GameRunner>()) }
         var runnerToEdit by remember { mutableStateOf<GameRunner?>(null) }
         var currentScoringNotification by remember { mutableStateOf<List<GameRunner>>(emptyList()) }
+        var currentScoringRbi by remember { mutableStateOf(0) }
+        var currentScoringBatterName by remember { mutableStateOf("") }
         var warningMessage by remember { mutableStateOf<String?>(null) }
 
         fun refreshRunners() {
@@ -98,16 +100,18 @@ class BattingTrackActivity : ComponentActivity() {
 
         fun refreshLineup() { lineup = db.getEffectiveLineup(gameId) }
 
-        fun updateRunnersInDb(next: Map<Int, GameRunner>, scoringRunners: List<GameRunner>) {
+        fun updateRunnersInDb(next: Map<Int, GameRunner>, scoringRunners: List<GameRunner>, rbi: Int = 0, rbiPlayerName: String = "") {
             val prevList = db.getRunners(gameId)
             val teamIndex = if (halfInningState.isTopHalf) 0 else 1
             val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
-            
+
             db.clearRunners(gameId)
             next.values.forEach { db.insertRunner(it) }
             if (scoringRunners.isNotEmpty()) {
                 db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoringRunners.size)
                 currentScoringNotification = scoringRunners
+                currentScoringRbi = rbi
+                currentScoringBatterName = rbiPlayerName
             }
             
             actionStack.push(GameAction.RunnerAdvance(
@@ -280,8 +284,9 @@ class BattingTrackActivity : ComponentActivity() {
 
         fun flushPendingScorers() {
             val allScoring = pendingAutoScoring + pendingConfirmedScoring
-            updateRunnersInDb(pendingNextRunners, allScoring)
             val totalRbi = pendingAutoScoring.size + pendingRbiCount
+            val rbiName = lineup[currentSlot]?.let { "${it.name} (#${it.number})" } ?: ""
+            updateRunnersInDb(pendingNextRunners, allScoring, totalRbi, rbiName)
             db.addRbiToAtBat(currentAtBatId, totalRbi)
             pendingRbiCount = 0
             currentScorerRbiChecked = true
@@ -509,7 +514,13 @@ class BattingTrackActivity : ComponentActivity() {
                     
                     ScoringNotification(
                         scoringRunners = currentScoringNotification,
-                        onFinished = { currentScoringNotification = emptyList() }
+                        rbi = currentScoringRbi,
+                        batterName = currentScoringBatterName,
+                        onFinished = {
+                            currentScoringNotification = emptyList()
+                            currentScoringRbi = 0
+                            currentScoringBatterName = ""
+                        }
                     )
                     
                     WarningNotification(
@@ -668,12 +679,14 @@ class BattingTrackActivity : ComponentActivity() {
                             }
                             "BB" -> {
                                 val (next, scoring) = RunnerManager.advanceOnWalk(runners, batterRunner)
-                                updateRunnersInDb(next, scoring)
+                                val rbiName = currentPlayer?.let { "${it.name} (#${it.number})" } ?: ""
+                                updateRunnersInDb(next, scoring, scoring.size, rbiName)
                                 db.addRbiToAtBat(abId, scoring.size)
                             }
                             "HBP" -> {
                                 val (next, scoring) = RunnerManager.advanceOnWalk(runners, batterRunner)
-                                updateRunnersInDb(next, scoring)
+                                val rbiName = currentPlayer?.let { "${it.name} (#${it.number})" } ?: ""
+                                updateRunnersInDb(next, scoring, scoring.size, rbiName)
                                 db.addRbiToAtBat(abId, scoring.size)
                                 db.insertPitchForAtBat(abId, "HBP", inning)
                                 actionStack.push(GameAction.Pitch(abId))
@@ -739,6 +752,8 @@ class BattingTrackActivity : ComponentActivity() {
                         val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
                         db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoring.size)
                         
+                        currentScoringRbi = 0
+                        currentScoringBatterName = ""
                         currentScoringNotification = scoring
                         actionStack.push(GameAction.RunnerAdvance(prevList, currentRuns))
                         refreshRunners()

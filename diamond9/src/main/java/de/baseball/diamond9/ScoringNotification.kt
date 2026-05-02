@@ -19,6 +19,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun ScoringNotification(
     scoringRunners: List<GameRunner>,
+    rbi: Int = 0,
+    batterName: String = "",
     onFinished: () -> Unit
 ) {
     if (scoringRunners.isEmpty()) return
@@ -65,6 +67,15 @@ fun ScoringNotification(
                             text = "${runner.name} (#$label)",
                             fontSize = 13.sp,
                             color = Color.White.copy(alpha = 0.9f)
+                        )
+                    }
+                    if (rbi > 0 && batterName.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.score_notif_rbi, rbi, batterName),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White.copy(alpha = 0.85f)
                         )
                     }
                 }
