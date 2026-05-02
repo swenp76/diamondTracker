@@ -93,6 +93,7 @@ class BattingTrackActivity : ComponentActivity() {
         var currentScoringRbi by remember { mutableStateOf(0) }
         var currentScoringBatterName by remember { mutableStateOf("") }
         var warningMessage by remember { mutableStateOf<String?>(null) }
+        var showEndAtBatButton by remember { mutableStateOf(false) }
 
         // Pending-scorer queue: non-forced runners who might score after a hit
         var pendingScorersQueue by remember { mutableStateOf(emptyList<PendingScorer>()) }
@@ -234,6 +235,7 @@ class BattingTrackActivity : ComponentActivity() {
                 showRunSuggestion = true
             } else {
                 outs = newOuts
+                showEndAtBatButton = true
             }
             db.updateGameState(gameId, inning, outs)
 
@@ -243,7 +245,7 @@ class BattingTrackActivity : ComponentActivity() {
                 prevInning = savedInning,
                 prevOuts = savedOuts
             ))
-            nextBatter()
+            if (!showEndAtBatButton) nextBatter()
         }
 
         /** Called when the outs-indicator is tapped (runner out, batter stays, count resets). */
@@ -548,7 +550,16 @@ class BattingTrackActivity : ComponentActivity() {
                     .background(colorResource(R.color.color_background))
             ) {
                 StatsBar(inning, outs, pitches, onRunnerOut = { recordRunnerOut() })
-                BatterStrip(currentSlot, lineup, launcher)
+                BatterStrip(
+                    slot = currentSlot,
+                    lineup = lineup,
+                    launcher = launcher,
+                    showEndAtBat = showEndAtBatButton,
+                    onEndAtBat = {
+                        showEndAtBatButton = false
+                        nextBatter()
+                    }
+                )
                 
                 DiamondInfield(
                     modifier = Modifier
@@ -608,9 +619,11 @@ class BattingTrackActivity : ComponentActivity() {
                                 refreshAtBat(action.atBatId)
                             }
                             is GameAction.BatterOut -> {
-                                // Delete the empty at-bat created by nextBatter()
-                                if (currentAtBatId != -1L) db.deleteAtBat(currentAtBatId)
-                                // Restore previous at-bat
+                                showEndAtBatButton = false
+                                // Only delete the current at-bat if nextBatter() advanced us away
+                                if (currentAtBatId != action.completedAtBatId && currentAtBatId != -1L) {
+                                    db.deleteAtBat(currentAtBatId)
+                                }
                                 db.updateAtBatResult(action.completedAtBatId, null)
                                 currentAtBatId = action.completedAtBatId
                                 currentSlot = action.completedSlot
@@ -763,8 +776,15 @@ class BattingTrackActivity : ComponentActivity() {
                         val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
                         db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoring.size)
                         
-                        currentScoringRbi = 0
-                        currentScoringBatterName = ""
+                        if (showEndAtBatButton) {
+                            val rbiName = lineup[currentSlot]?.let { "${it.name} (#${it.number})" } ?: ""
+                            db.addRbiToAtBat(currentAtBatId, scoring.size)
+                            currentScoringRbi = scoring.size
+                            currentScoringBatterName = rbiName
+                        } else {
+                            currentScoringRbi = 0
+                            currentScoringBatterName = ""
+                        }
                         currentScoringNotification = scoring
                         actionStack.push(GameAction.RunnerAdvance(prevList, currentRuns))
                         refreshRunners()
@@ -859,7 +879,9 @@ class BattingTrackActivity : ComponentActivity() {
     fun BatterStrip(
         slot: Int,
         lineup: Map<Int, Player>,
-        launcher: androidx.activity.result.ActivityResultLauncher<Intent>
+        launcher: androidx.activity.result.ActivityResultLauncher<Intent>,
+        showEndAtBat: Boolean = false,
+        onEndAtBat: () -> Unit = {}
     ) {
         val context = LocalContext.current
         val lineupSize = if (lineup.containsKey(10)) 10 else 9
@@ -904,6 +926,22 @@ class BattingTrackActivity : ComponentActivity() {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (showEndAtBat) {
+                    Button(
+                        onClick = onEndAtBat,
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.color_orange)),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.btn_end_at_bat),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Text(
                     stringResource(R.string.hint_lineup),
                     fontSize = 12.sp,

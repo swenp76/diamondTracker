@@ -80,6 +80,7 @@
     <string name="label_batter_slot">Slot %d</string>
     <string name="label_batter_slot_with_jersey">%1$s  (Slot %2$d)</string>
     <string name="hint_lineup">Aufstellung ▶</string>
+    <string name="btn_end_at_bat">At Bat beenden</string>
     <string name="pitcher_default_name">Pitcher</string>
 
     <!-- ── Einstellungen ──────────────────────────────────────────────────── -->

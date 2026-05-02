@@ -117,6 +117,7 @@
     <string name="label_batter_slot">Slot %d</string>
     <string name="label_batter_slot_with_jersey">%1$s  (Slot %2$d)</string>
     <string name="hint_lineup">Lineup ▶</string>
+    <string name="btn_end_at_bat">End At Bat</string>
     <string name="pitcher_default_name">Pitcher</string>
 
     <!-- ── Settings ──────────────────────────────────────────────────── -->
