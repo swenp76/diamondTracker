@@ -94,6 +94,16 @@ class BattingTrackActivity : ComponentActivity() {
         var currentScoringBatterName by remember { mutableStateOf("") }
         var warningMessage by remember { mutableStateOf<String?>(null) }
 
+        // Pending-scorer queue: non-forced runners who might score after a hit
+        var pendingScorersQueue by remember { mutableStateOf(emptyList<PendingScorer>()) }
+        var pendingNextRunners by remember { mutableStateOf(emptyMap<Int, GameRunner>()) }
+        var pendingAutoScoring by remember { mutableStateOf(emptyList<GameRunner>()) }
+        var pendingConfirmedScoring by remember { mutableStateOf(emptyList<GameRunner>()) }
+        var pendingNextBatterCallback by remember { mutableStateOf(false) }
+        var pendingRbiCount by remember { mutableStateOf(0) }
+        var currentScorerRbiChecked by remember { mutableStateOf(true) }
+        var currentAtBatResult by remember { mutableStateOf<String?>(null) }
+
         fun refreshRunners() {
             runners = db.getRunners(gameId).associateBy { it.base }
         }
@@ -127,6 +137,7 @@ class BattingTrackActivity : ComponentActivity() {
             currentAtBatId = newId
             currentSlot = slot
             pitches = emptyList()
+            currentAtBatResult = null
             return newId
         }
 
@@ -273,15 +284,6 @@ class BattingTrackActivity : ComponentActivity() {
         var showKSheet by remember { mutableStateOf(false) }
         var showBBSheet by remember { mutableStateOf(false) }
 
-        // Pending-scorer queue: non-forced runners who might score after a hit
-        var pendingScorersQueue by remember { mutableStateOf(emptyList<PendingScorer>()) }
-        var pendingNextRunners by remember { mutableStateOf(emptyMap<Int, GameRunner>()) }
-        var pendingAutoScoring by remember { mutableStateOf(emptyList<GameRunner>()) }
-        var pendingConfirmedScoring by remember { mutableStateOf(emptyList<GameRunner>()) }
-        var pendingNextBatterCallback by remember { mutableStateOf(false) }
-        var pendingRbiCount by remember { mutableStateOf(0) }
-        var currentScorerRbiChecked by remember { mutableStateOf(true) }
-
         fun flushPendingScorers() {
             val allScoring = pendingAutoScoring + pendingConfirmedScoring
             val totalRbi = pendingAutoScoring.size + pendingRbiCount
@@ -302,7 +304,8 @@ class BattingTrackActivity : ComponentActivity() {
 
         fun startHitAdvance(result: HitAdvanceResult) {
             if (result.pendingScorers.isEmpty()) {
-                updateRunnersInDb(result.nextRunners, result.autoScoring)
+                val rbiName = lineup[currentSlot]?.let { "${it.name} (#${it.number})" } ?: ""
+                updateRunnersInDb(result.nextRunners, result.autoScoring, result.autoScoring.size, rbiName)
                 db.addRbiToAtBat(currentAtBatId, result.autoScoring.size)
             } else {
                 pendingNextRunners = result.nextRunners.toMutableMap()
@@ -325,7 +328,11 @@ class BattingTrackActivity : ComponentActivity() {
                     val runnerNum = if (!scorer.runner.jerseyNumber.isNullOrEmpty()) "#${scorer.runner.jerseyNumber}" else ""
                     Column {
                         Text("$runnerNum $runnerName".trim())
-                        if (!scorer.isForced) {
+                        
+                        val isWalkOrHbp = currentAtBatResult == "BB" || currentAtBatResult == "HBP"
+                        val hideRbiCheckbox = isWalkOrHbp && scorer.isForced
+                        
+                        if (!hideRbiCheckbox) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
@@ -351,7 +358,10 @@ class BattingTrackActivity : ComponentActivity() {
                         // Option 1: SCORE
                         Button(
                             onClick = {
-                                if (scorer.isForced || currentScorerRbiChecked) pendingRbiCount++
+                                val isWalkOrHbp = currentAtBatResult == "BB" || currentAtBatResult == "HBP"
+                                val autoRbi = isWalkOrHbp && scorer.isForced
+                                if (autoRbi || currentScorerRbiChecked) pendingRbiCount++
+
                                 currentScorerRbiChecked = true
                                 pendingConfirmedScoring = pendingConfirmedScoring + scorer.runner.copy(base = 4)
                                 pendingScorersQueue = pendingScorersQueue.drop(1)
@@ -646,6 +656,7 @@ class BattingTrackActivity : ComponentActivity() {
                     },
                     onResult = { result ->
                         val abId = ensureAtBat()
+                        currentAtBatResult = result
                         val currentPlayer = lineup[currentSlot]
                         val batterRunner = GameRunner(
                             gameId = gameId,
