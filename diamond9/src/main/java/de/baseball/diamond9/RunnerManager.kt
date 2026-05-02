@@ -36,43 +36,56 @@ object RunnerManager {
         }
 
         val next = current.toMutableMap()
-        val autoScoring = mutableListOf<GameRunner>()
         val pendingScorers = mutableListOf<PendingScorer>()
+
+        val r1 = current.containsKey(1)
+        val r2 = current.containsKey(2)
+        val r3 = current.containsKey(3)
 
         when (bases) {
             1 -> {
-                // 1B: same forced chain as a walk — batter takes 1st, pushes runners along
-                val force2 = current.containsKey(1)
-                val force3 = force2 && current.containsKey(2)
-                val forceHome = force3 && current.containsKey(3)
-
-                if (forceHome) next.remove(3)?.let { autoScoring.add(it.copy(base = 4)) }
-                if (force3) next.remove(2)?.let { next[3] = it.copy(base = 3) }
-                if (force2) next.remove(1)?.let { next[2] = it.copy(base = 2) }
-                next[1] = batter.copy(base = 1)
-                // Runners on 2nd/3rd (if not in chain) stay — coach moves them manually
-            }
-            2 -> {
-                // 2B: only the runner on 2nd is forced off (batter taking 2nd)
-                next.remove(2)?.let { runner ->
-                    if (!next.containsKey(3)) {
-                        next[3] = runner.copy(base = 3)  // 3rd vacant → auto-advance
+                // Single: Batter to 1B
+                if (r3) {
+                    val forced = r2 && r1
+                    next.remove(3)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3, isForced = forced)) }
+                }
+                if (r2) {
+                    if (r1) {
+                        next.remove(2)?.let { next[3] = it.copy(base = 3) }
                     } else {
-                        pendingScorers.add(PendingScorer(runner, stayBase = 3, isForced = true))
+                        next.remove(2)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3, isForced = false)) }
                     }
                 }
-                // Runners on 1st and 3rd stay; batter takes 2nd
+                if (r1) {
+                    next.remove(1)?.let { next[2] = it.copy(base = 2) }
+                }
+                next[1] = batter.copy(base = 1)
+            }
+            2 -> {
+                // Double: Batter to 2B
+                if (r3) {
+                    val forced = r2 && r1
+                    next.remove(3)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3, isForced = forced)) }
+                }
+                if (r2) {
+                    val forced = r1
+                    next.remove(2)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3, isForced = forced)) }
+                }
+                if (r1) {
+                    next.remove(1)?.let { next[3] = it.copy(base = 3) }
+                }
                 next[2] = batter.copy(base = 2)
             }
             3 -> {
-                // 3B: only the runner on 3rd is forced to score
-                next.remove(3)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3, isForced = true)) }
-                // Runners on 1st and 2nd stay; batter takes 3rd
+                // Triple: Batter to 3B, everyone else pending
+                for (b in 3 downTo 1) {
+                    next.remove(b)?.let { pendingScorers.add(PendingScorer(it, stayBase = 3, isForced = true)) }
+                }
                 next[3] = batter.copy(base = 3)
             }
         }
 
-        return HitAdvanceResult(next.toMap(), autoScoring, pendingScorers)
+        return HitAdvanceResult(next.toMap(), emptyList(), pendingScorers)
     }
 
     /**
