@@ -69,10 +69,13 @@ fun ScoringNotification(
                             color = Color.White.copy(alpha = 0.9f)
                         )
                     }
-                    if (rbi > 0 && batterName.isNotBlank()) {
+                    if (rbi > 0) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = stringResource(R.string.score_notif_rbi, rbi, batterName),
+                            text = if (batterName.isNotBlank())
+                                stringResource(R.string.score_notif_rbi, rbi, batterName)
+                            else
+                                stringResource(R.string.score_notif_rbi_count, rbi),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color.White.copy(alpha = 0.85f)

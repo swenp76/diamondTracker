@@ -39,9 +39,9 @@ class BackupManagerMigrationsTest {
     // ── DB_VERSION sanity ─────────────────────────────────────────────────────
 
     @Test
-    fun dbVersion_is21() {
+    fun dbVersion_is22() {
         // Bumping AppDatabase.version without updating DB_VERSION breaks backup compatibility.
-        assertEquals(21, BackupManager.DB_VERSION)
+        assertEquals(22, BackupManager.DB_VERSION)
     }
 
     // ── Migration 18 → 19 : pitcher_id and at_bat_id nullable ─────────────────

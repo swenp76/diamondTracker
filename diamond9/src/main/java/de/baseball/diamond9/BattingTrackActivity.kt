@@ -331,8 +331,7 @@ class BattingTrackActivity : ComponentActivity() {
                     Column {
                         Text("$runnerNum $runnerName".trim())
                         
-                        val isWalkOrHbp = currentAtBatResult == "BB" || currentAtBatResult == "HBP"
-                        val hideRbiCheckbox = isWalkOrHbp && scorer.isForced
+                        val hideRbiCheckbox = scorer.isForced
                         
                         if (!hideRbiCheckbox) {
                             Spacer(modifier = Modifier.height(8.dp))
@@ -360,9 +359,7 @@ class BattingTrackActivity : ComponentActivity() {
                         // Option 1: SCORE
                         Button(
                             onClick = {
-                                val isWalkOrHbp = currentAtBatResult == "BB" || currentAtBatResult == "HBP"
-                                val autoRbi = isWalkOrHbp && scorer.isForced
-                                if (autoRbi || currentScorerRbiChecked) pendingRbiCount++
+                                if (scorer.isForced || currentScorerRbiChecked) pendingRbiCount++
 
                                 currentScorerRbiChecked = true
                                 pendingConfirmedScoring = pendingConfirmedScoring + scorer.runner.copy(base = 4)
