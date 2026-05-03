@@ -94,6 +94,8 @@ Alle Farben über `colors.xml` referenzieren:
 <color name="color_text_primary">#333333</color>
 <color name="color_text_secondary">#888888</color>
 ```
+### 4. Tests haben Vorrang 
+Wenn Tests fehlschlagen, so werden nicht die Tests an den Code angepasst, sondern der Code an den Test.
 
 ---
 
@@ -125,7 +127,8 @@ Alle Farben über `colors.xml` referenzieren:
 - ✅ Einzelspiel-Export/Import: vollständiges JSON (Lineup, At-Bats, Pitches, Scoreboard) aus Spielliste
 - ✅ Status-Bar-Lesbarkeit: dunkle Icons in CoachAct (isAppearanceLightStatusBars)
 - ✅ At-Bat Results: 2-stufiger Result-Picker (H/K/BB in 1 Tap; OUT▸ → GO/FO/LO; ··· → KL/SAC/FC/E/DP/HBP)
-- ✅ Unit-Tests: PitcherTrendHelperTest (32 Tests), GameBatterStatsDaoTest (11 Tests), BackupManagerMigrationsTest (19 Tests)
+- ✅ Unit-Tests: PitcherTrendHelperTest (32 Tests), GameBatterStatsDaoTest (11 Tests), BackupManagerMigrationsTest (19 Tests), SeasonStatsDaoTest (28 Tests, inkl. Konsistenz-Tests für W/SO/KL als Ergebnis-Marker + 4 neue Batter-Konsistenztests: getGameBatterStats == getSeasonBatterStats für Einzelspiel; Summe zweier Spiele am selben Tag; mehrere Spieler; realistisches Hochscore-Inning)
+- ✅ Fix: Season-Pitcher-Stats SQL zählt `W`, `SO`, `KL` nicht mehr als `total_pitches`/`strikes` (waren Ergebnis-Marker, die Einzelspiel-Ansicht war korrekt)
 - ✅ **#25** Hit-Baserunner-Logik: Forced Runner automatisch, nicht-forced Runner auf Vorschlags-Base automatisch; nur wenn nicht-forced Runner scoren würde → Bestätigungs-Dialog. `nextBatter()` erst nach allen Bestätigungen.
 - ✅ Export-Verbesserung: PDF/JPG mit Headlines ("Batting stats", "Pitching stats") und Spiel-Metadaten (Zeit, Nr.)
 - ✅ Security: Backup-Sicherheits-Checks (Path Traversal Schutz, String-Längen-Validierung 50/3/20/10)
