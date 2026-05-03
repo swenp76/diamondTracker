@@ -577,7 +577,7 @@ class SeasonStatsDaoTest {
 
     @Test
     fun pitcherStats_realisticMixedSequence_seasonMatchesSingleGame() {
-        // Reproduces Niklas Porschen's pitch sequence from game 03.05.2026:
+        // Reproduces a realistic pitch sequence from game 03.05.2026:
         // 4 walks (BBBBW BF each), 1 hit (1B BF), 1 runner-out (RO)
         // Expected: BF=5, balls=16, walks=4, hits=1, totalPitches=18
         val helper = DatabaseHelper(db)
