@@ -442,6 +442,8 @@
     <string name="dispatch_confirm_restore">RESTORE ALL DATA</string>
     <string name="dispatch_unknown_title">Unknown File Format</string>
     <string name="dispatch_unknown_message">This JSON file is not a known diamond9 format (type: \"%s\").</string>
+    <string name="dispatch_security_missing">This file was created by an older version of the app and has no digital signature. Proceed only if you trust the source.</string>
+    <string name="dispatch_security_invalid">The digital signature of this file is invalid! It may have been tampered with or comes from an untrusted source.</string>
 
     <!-- ── About Screen ──────────────────────────────────────────────────── -->
     <string name="about_title">About</string>

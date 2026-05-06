@@ -182,4 +182,61 @@ class BackupManagerSecurityTest {
         assertEquals(50, player.name.length)
         assertEquals(3, player.number.length)
     }
+
+    // ── Signature Verification ────────────────────────────────────────────────
+
+    @Test
+    fun verifySignature_returnsMissing_whenNoSignature() {
+        val json = JSONObject().apply {
+            put("type", "backup")
+            put("dbVersion", BackupManager.DB_VERSION)
+        }
+        val result = BackupManager.verifySignature(json)
+        assertEquals(BackupManager.SignatureResult.MISSING, result)
+    }
+
+    @Test
+    fun verifySignature_returnsValid_whenCorrectSignature() {
+        val json = JSONObject().apply {
+            put("type", "backup")
+            put("dbVersion", BackupManager.DB_VERSION)
+            put("exportDate", 123456789L)
+            put("teams", JSONArray())
+        }
+        val sig = BackupManager.generateSignature(json)
+        json.put("signature", sig)
+        
+        val result = BackupManager.verifySignature(json)
+        assertEquals(BackupManager.SignatureResult.VALID, result)
+    }
+
+    @Test
+    fun verifySignature_returnsInvalid_whenTampered() {
+        val json = JSONObject().apply {
+            put("type", "backup")
+            put("dbVersion", BackupManager.DB_VERSION)
+            put("exportDate", 123456789L)
+            put("teams", JSONArray())
+        }
+        val sig = BackupManager.generateSignature(json)
+        json.put("signature", sig)
+        
+        // Tamper with data
+        json.put("dbVersion", BackupManager.DB_VERSION + 1)
+        
+        val result = BackupManager.verifySignature(json)
+        assertEquals(BackupManager.SignatureResult.INVALID, result)
+    }
+
+    @Test
+    fun generateSignature_isConsistentAcrossCalls() {
+        val json = JSONObject().apply {
+            put("type", "team")
+            put("name", "Test Team")
+            put("players", JSONArray())
+        }
+        val sig1 = BackupManager.generateSignature(json)
+        val sig2 = BackupManager.generateSignature(json)
+        assertEquals(sig1, sig2)
+    }
 }

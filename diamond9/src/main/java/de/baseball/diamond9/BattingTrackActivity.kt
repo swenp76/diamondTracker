@@ -59,6 +59,7 @@ class BattingTrackActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun BattingTrackScreen() {
+        var isLocked by remember { mutableStateOf(false) }
         var inning by remember { mutableStateOf(1) }
         var outs by remember { mutableStateOf(0) }
         var currentSlot by remember { mutableStateOf(1) }
@@ -166,6 +167,7 @@ class BattingTrackActivity : ComponentActivity() {
 
         LaunchedEffect(gameId) {
             if (gameId != -1L) {
+                isLocked = db.isGameLocked(gameId)
                 refreshLineup()
                 refreshRunners()
                 val (i, o) = db.getGameState(gameId)
@@ -565,7 +567,7 @@ class BattingTrackActivity : ComponentActivity() {
                         .padding(vertical = 8.dp),
                     runners = runners,
                     onBaseClick = { base ->
-                        if (base != 0) {
+                        if (!isLocked && base != 0) {
                             runners[base]?.let { runnerToEdit = it }
                         }
                     }
@@ -574,167 +576,183 @@ class BattingTrackActivity : ComponentActivity() {
                 Box(modifier = Modifier.weight(1f)) {
                     PitchLog(pitches)
                 }
-                ActionButtons(
-                    showKSheet = showKSheet,
-                    onShowKSheet = { showKSheet = true },
-                    onKSheetDismiss = { showKSheet = false },
-                    showBBSheet = showBBSheet,
-                    onShowBBSheet = { showBBSheet = true },
-                    onBBSheetDismiss = { showBBSheet = false },
-                    onBall = {
-                        val abId = ensureAtBat()
-                        db.insertPitchForAtBat(abId, "B", inning)
-                        actionStack.push(GameAction.Pitch(abId))
-                        val updatedPitches = db.getPitchesForAtBat(abId)
-                        val (balls, _) = currentAtBatCount(updatedPitches)
-                        if (balls >= 4) showBBSheet = true
-                        else refreshAtBat(abId)
-                    },
-                    onStrike = {
-                        val abId = ensureAtBat()
-                        val currentPitches = db.getPitchesForAtBat(abId)
-                        val (_, currentStrikes) = currentAtBatCount(currentPitches)
-                        if (currentStrikes >= 2) {
-                            showKSheet = true
-                        } else {
-                            db.insertPitchForAtBat(abId, "S", inning)
-                            actionStack.push(GameAction.Pitch(abId))
-                            refreshAtBat(abId)
-                        }
-                    },
-                    onFoul = {
-                        val abId = ensureAtBat()
-                        db.insertPitchForAtBat(abId, "F", inning)
-                        actionStack.push(GameAction.Pitch(abId))
-                        refreshAtBat(abId)
-                    },
-                    onUndo = {
-                        when (val action = actionStack.pop()) {
-                            is GameAction.Pitch -> {
-                                db.undoLastPitchForAtBat(action.atBatId)
-                                currentAtBatId = action.atBatId
-                                refreshAtBat(action.atBatId)
-                            }
-                            is GameAction.BatterOut -> {
-                                showEndAtBatButton = false
-                                // Only delete the current at-bat if nextBatter() advanced us away
-                                if (currentAtBatId != action.completedAtBatId && currentAtBatId != -1L) {
-                                    db.deleteAtBat(currentAtBatId)
-                                }
-                                db.updateAtBatResult(action.completedAtBatId, null)
-                                currentAtBatId = action.completedAtBatId
-                                currentSlot = action.completedSlot
-                                inning = action.prevInning
-                                outs = action.prevOuts
-                                db.updateGameState(gameId, inning, outs)
-                                refreshAtBat(currentAtBatId)
-                            }
-                            is GameAction.RunnerOut -> {
-                                // Delete the reset at-bat, restore previous
-                                if (action.newAtBatId != -1L) db.deleteAtBat(action.newAtBatId)
-                                currentAtBatId = action.prevAtBatId
-                                currentSlot = action.prevSlot
-                                inning = action.prevInning
-                                outs = action.prevOuts
-                                db.updateGameState(gameId, inning, outs)
-                                refreshAtBat(action.prevAtBatId)
-                            }
-                            is GameAction.HalfInningChange -> {
-                                db.updateHalfInning(gameId, action.prevState.inning, action.prevState.isTopHalf)
-                                db.updateLeadoffSlot(gameId, action.prevLeadoffSlot)
-                                inning = action.prevInning
-                                outs = 2  // 3rd out was what triggered the change
-                                db.updateGameState(gameId, inning, outs)
-                                halfInningState = action.prevState
-                                
-                                // Restore runners
-                                db.clearRunners(gameId)
-                                action.prevRunners.forEach { db.insertRunner(it) }
-                                refreshRunners()
-                            }
-                            is GameAction.RunnerAdvance -> {
-                                db.clearRunners(gameId)
-                                action.prevRunners.forEach { db.insertRunner(it) }
-                                if (action.prevScoreboardValue != null) {
-                                    val teamIndex = if (halfInningState.isTopHalf) 0 else 1
-                                    db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, action.prevScoreboardValue)
-                                }
-                                refreshRunners()
-                            }
-                            null -> { /* nothing to undo */ }
-                        }
-                    },
-                    onResult = { result ->
-                        val abId = ensureAtBat()
-                        currentAtBatResult = result
-                        val currentPlayer = lineup[currentSlot]
-                        val batterRunner = GameRunner(
-                            gameId = gameId,
-                            base = 0,
-                            playerId = currentPlayer?.id ?: 0L,
-                            slot = currentSlot,
-                            jerseyNumber = currentPlayer?.number,
-                            name = currentPlayer?.name ?: ""
+                
+                if (isLocked) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color.Black.copy(alpha = 0.05f)
+                    ) {
+                        Text(
+                            text = "Game is LOCKED (Stats only)",
+                            modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally),
+                            color = colorResource(R.color.color_text_secondary),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
                         )
-
-                        when (result) {
-                            "H", "1B" -> {
-                                startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 1))
-                                db.insertPitchForAtBat(abId, "H", inning)
-                                actionStack.push(GameAction.Pitch(abId))
-                            }
-                            "2B" -> {
-                                startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 2))
-                                db.insertPitchForAtBat(abId, "H", inning)
-                                actionStack.push(GameAction.Pitch(abId))
-                            }
-                            "3B" -> {
-                                startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 3))
-                                db.insertPitchForAtBat(abId, "H", inning)
-                                actionStack.push(GameAction.Pitch(abId))
-                            }
-                            "HR" -> {
-                                startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 4))
-                                db.insertPitchForAtBat(abId, "H", inning)
-                                actionStack.push(GameAction.Pitch(abId))
-                            }
-                            "BB" -> {
-                                val (next, scoring) = RunnerManager.advanceOnWalk(runners, batterRunner)
-                                val rbiName = currentPlayer?.let { "${it.name} (#${it.number})" } ?: ""
-                                updateRunnersInDb(next, scoring, scoring.size, rbiName)
-                                db.addRbiToAtBat(abId, scoring.size)
-                            }
-                            "HBP" -> {
-                                val (next, scoring) = RunnerManager.advanceOnWalk(runners, batterRunner)
-                                val rbiName = currentPlayer?.let { "${it.name} (#${it.number})" } ?: ""
-                                updateRunnersInDb(next, scoring, scoring.size, rbiName)
-                                db.addRbiToAtBat(abId, scoring.size)
-                                db.insertPitchForAtBat(abId, "HBP", inning)
-                                actionStack.push(GameAction.Pitch(abId))
-                            }
-                            "K"  -> {
-                                db.insertPitchForAtBat(abId, "SO", inning)
-                                actionStack.push(GameAction.Pitch(abId))
-                            }
-                            "KL" -> {
+                    }
+                } else {
+                    ActionButtons(
+                        showKSheet = showKSheet,
+                        onShowKSheet = { showKSheet = true },
+                        onKSheetDismiss = { showKSheet = false },
+                        showBBSheet = showBBSheet,
+                        onShowBBSheet = { showBBSheet = true },
+                        onBBSheetDismiss = { showBBSheet = false },
+                        onBall = {
+                            val abId = ensureAtBat()
+                            db.insertPitchForAtBat(abId, "B", inning)
+                            actionStack.push(GameAction.Pitch(abId))
+                            val updatedPitches = db.getPitchesForAtBat(abId)
+                            val (balls, _) = currentAtBatCount(updatedPitches)
+                            if (balls >= 4) showBBSheet = true
+                            else refreshAtBat(abId)
+                        },
+                        onStrike = {
+                            val abId = ensureAtBat()
+                            val currentPitches = db.getPitchesForAtBat(abId)
+                            val (_, currentStrikes) = currentAtBatCount(currentPitches)
+                            if (currentStrikes >= 2) {
+                                showKSheet = true
+                            } else {
                                 db.insertPitchForAtBat(abId, "S", inning)
                                 actionStack.push(GameAction.Pitch(abId))
+                                refreshAtBat(abId)
                             }
-                            "ROE", "FC" -> {
-                                startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 1))
-                                if (result == "FC") {
-                                    Toast.makeText(this@BattingTrackActivity, R.string.toast_fc_check_runners, Toast.LENGTH_LONG).show()
+                        },
+                        onFoul = {
+                            val abId = ensureAtBat()
+                            db.insertPitchForAtBat(abId, "F", inning)
+                            actionStack.push(GameAction.Pitch(abId))
+                            refreshAtBat(abId)
+                        },
+                        onUndo = {
+                            when (val action = actionStack.pop()) {
+                                is GameAction.Pitch -> {
+                                    db.undoLastPitchForAtBat(action.atBatId)
+                                    currentAtBatId = action.atBatId
+                                    refreshAtBat(action.atBatId)
+                                }
+                                is GameAction.BatterOut -> {
+                                    showEndAtBatButton = false
+                                    // Only delete the current at-bat if nextBatter() advanced us away
+                                    if (currentAtBatId != action.completedAtBatId && currentAtBatId != -1L) {
+                                        db.deleteAtBat(currentAtBatId)
+                                    }
+                                    db.updateAtBatResult(action.completedAtBatId, null)
+                                    currentAtBatId = action.completedAtBatId
+                                    currentSlot = action.completedSlot
+                                    inning = action.prevInning
+                                    outs = action.prevOuts
+                                    db.updateGameState(gameId, inning, outs)
+                                    refreshAtBat(currentAtBatId)
+                                }
+                                is GameAction.RunnerOut -> {
+                                    // Delete the reset at-bat, restore previous
+                                    if (action.newAtBatId != -1L) db.deleteAtBat(action.newAtBatId)
+                                    currentAtBatId = action.prevAtBatId
+                                    currentSlot = action.prevSlot
+                                    inning = action.prevInning
+                                    outs = action.prevOuts
+                                    db.updateGameState(gameId, inning, outs)
+                                    refreshAtBat(action.prevAtBatId)
+                                }
+                                is GameAction.HalfInningChange -> {
+                                    db.updateHalfInning(gameId, action.prevState.inning, action.prevState.isTopHalf)
+                                    db.updateLeadoffSlot(gameId, action.prevLeadoffSlot)
+                                    inning = action.prevInning
+                                    outs = 2  // 3rd out was what triggered the change
+                                    db.updateGameState(gameId, inning, outs)
+                                    halfInningState = action.prevState
+                                    
+                                    // Restore runners
+                                    db.clearRunners(gameId)
+                                    action.prevRunners.forEach { db.insertRunner(it) }
+                                    refreshRunners()
+                                }
+                                is GameAction.RunnerAdvance -> {
+                                    db.clearRunners(gameId)
+                                    action.prevRunners.forEach { db.insertRunner(it) }
+                                    if (action.prevScoreboardValue != null) {
+                                        val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+                                        db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, action.prevScoreboardValue)
+                                    }
+                                    refreshRunners()
+                                }
+                                null -> { /* nothing to undo */ }
+                            }
+                        },
+                        onResult = { result ->
+                            val abId = ensureAtBat()
+                            currentAtBatResult = result
+                            val currentPlayer = lineup[currentSlot]
+                            val batterRunner = GameRunner(
+                                gameId = gameId,
+                                base = 0,
+                                playerId = currentPlayer?.id ?: 0L,
+                                slot = currentSlot,
+                                jerseyNumber = currentPlayer?.number,
+                                name = currentPlayer?.name ?: ""
+                            )
+
+                            when (result) {
+                                "H", "1B" -> {
+                                    startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 1))
+                                    db.insertPitchForAtBat(abId, "H", inning)
+                                    actionStack.push(GameAction.Pitch(abId))
+                                }
+                                "2B" -> {
+                                    startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 2))
+                                    db.insertPitchForAtBat(abId, "H", inning)
+                                    actionStack.push(GameAction.Pitch(abId))
+                                }
+                                "3B" -> {
+                                    startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 3))
+                                    db.insertPitchForAtBat(abId, "H", inning)
+                                    actionStack.push(GameAction.Pitch(abId))
+                                }
+                                "HR" -> {
+                                    startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 4))
+                                    db.insertPitchForAtBat(abId, "H", inning)
+                                    actionStack.push(GameAction.Pitch(abId))
+                                }
+                                "BB" -> {
+                                    val (next, scoring) = RunnerManager.advanceOnWalk(runners, batterRunner)
+                                    val rbiName = currentPlayer?.let { "${it.name} (#${it.number})" } ?: ""
+                                    updateRunnersInDb(next, scoring, scoring.size, rbiName)
+                                    db.addRbiToAtBat(abId, scoring.size)
+                                }
+                                "HBP" -> {
+                                    val (next, scoring) = RunnerManager.advanceOnWalk(runners, batterRunner)
+                                    val rbiName = currentPlayer?.let { "${it.name} (#${it.number})" } ?: ""
+                                    updateRunnersInDb(next, scoring, scoring.size, rbiName)
+                                    db.addRbiToAtBat(abId, scoring.size)
+                                    db.insertPitchForAtBat(abId, "HBP", inning)
+                                    actionStack.push(GameAction.Pitch(abId))
+                                }
+                                "K"  -> {
+                                    db.insertPitchForAtBat(abId, "SO", inning)
+                                    actionStack.push(GameAction.Pitch(abId))
+                                }
+                                "KL" -> {
+                                    db.insertPitchForAtBat(abId, "S", inning)
+                                    actionStack.push(GameAction.Pitch(abId))
+                                }
+                                "ROE", "FC" -> {
+                                    startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 1))
+                                    if (result == "FC") {
+                                        Toast.makeText(this@BattingTrackActivity, R.string.toast_fc_check_runners, Toast.LENGTH_LONG).show()
+                                    }
                                 }
                             }
+                            db.updateAtBatResult(abId, result)
+                            if (result == "DP") {
+                                Toast.makeText(this@BattingTrackActivity, R.string.toast_dp_check_runners, Toast.LENGTH_LONG).show()
+                            }
+                            if (isOutResult(result)) recordBatterOut(result)
+                            else if (pendingScorersQueue.isEmpty()) nextBatter()
                         }
-                        db.updateAtBatResult(abId, result)
-                        if (result == "DP") {
-                            Toast.makeText(this@BattingTrackActivity, R.string.toast_dp_check_runners, Toast.LENGTH_LONG).show()
-                        }
-                        if (isOutResult(result)) recordBatterOut(result)
-                        else if (pendingScorersQueue.isEmpty()) nextBatter()
-                    }
-                )
+                    )
+                }
             }
         }
 

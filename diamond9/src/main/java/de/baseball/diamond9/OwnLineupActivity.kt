@@ -130,11 +130,13 @@ private fun OwnLineupScreen(
     var lineup by remember { mutableStateOf(emptyMap<Int, Player>()) }
     var halfInningState by remember { mutableStateOf(db.getHalfInningState(gameId)) }
     var totalBF by remember { mutableStateOf(0) }
+    var isLocked by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                isLocked = db.isGameLocked(gameId)
                 halfInningState = db.getHalfInningState(gameId)
                 if (isOffenseMode) {
                     totalBF = db.getAtBatsForGame(gameId).count { it.result != null }
@@ -281,21 +283,23 @@ private fun OwnLineupScreen(
                         state = state,
                         hasSubs = hasSubs,
                         isCurrentBatter = isCurrentBatter,
-                        onRowClick = { if (!hasSubs) activeDialogSlot = state.slot },
+                        onRowClick = { if (!isLocked && !hasSubs) activeDialogSlot = state.slot },
                         onLongClick = {
                             if (isOffenseMode && state.currentPlayer != null) {
                                 jumpToSlotDialogState = state.slot
                             }
                         },
                         onSwapClick = {
-                            when (state.swapType) {
-                                SwapType.SUB_IN -> swapDialogState = state
-                                SwapType.RETURN_STARTER -> returnStarterDialogState = state
-                                SwapType.INJURY_ONLY -> subSelectionState = state to true
-                                SwapType.NONE -> {}
+                            if (!isLocked) {
+                                when (state.swapType) {
+                                    SwapType.SUB_IN -> swapDialogState = state
+                                    SwapType.RETURN_STARTER -> returnStarterDialogState = state
+                                    SwapType.INJURY_ONLY -> subSelectionState = state to true
+                                    SwapType.NONE -> {}
+                                }
                             }
                         },
-                        onClearClick = { db.clearOwnLineupSlot(gameId, state.slot); refresh() }
+                        onClearClick = { if (!isLocked) { db.clearOwnLineupSlot(gameId, state.slot); refresh() } }
                     )
                 }
 
@@ -310,8 +314,8 @@ private fun OwnLineupScreen(
                         player = player,
                         status = status,
                         isInvolved = isInvolved,
-                        onRowClick = { if (!isInvolved) activeDialogSlot = slot },
-                        onClearClick = { db.clearOwnLineupSlot(gameId, slot); refresh() }
+                        onRowClick = { if (!isLocked && !isInvolved) activeDialogSlot = slot },
+                        onClearClick = { if (!isLocked) { db.clearOwnLineupSlot(gameId, slot); refresh() } }
                     )
                 }
 

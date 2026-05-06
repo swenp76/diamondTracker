@@ -77,6 +77,7 @@ class PitchTrackActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun PitchTrackScreen(pitcherName: String) {
+        var isLocked by remember { mutableStateOf(false) }
         var stats by remember { mutableStateOf(db.getStatsForPitcher(pitcherId)) }
         val listState = rememberLazyListState()
         var inning by remember { mutableStateOf(1) }
@@ -202,6 +203,7 @@ class PitchTrackActivity : ComponentActivity() {
 
         LaunchedEffect(Unit) {
             if (gameId != -1L) {
+                isLocked = db.isGameLocked(gameId)
                 val (i, o) = db.getGameState(gameId)
                 inning = i
                 outs = o
@@ -400,7 +402,7 @@ class PitchTrackActivity : ComponentActivity() {
                             .padding(vertical = 4.dp),
                         runners = runners,
                         onBaseClick = { base ->
-                            if (base != 0) {
+                            if (!isLocked && base != 0) {
                                 runners[base]?.let { runnerToEdit = it }
                             }
                         }
@@ -410,103 +412,119 @@ class PitchTrackActivity : ComponentActivity() {
                         PitchLog(s, listState)
                     }
                 }
-                ActionButtons(
-                    onBall = {
-                        val (ballsBefore, _) = currentAtBatCount(stats?.pitches ?: emptyList())
-                        db.insertPitch(pitcherId, "B", inning)
-                        actionStack.push(GameAction.Pitch(-1L))
-                        if (ballsBefore >= 3) {
+                
+                if (isLocked) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color.Black.copy(alpha = 0.05f)
+                    ) {
+                        Text(
+                            text = "Game is LOCKED (Stats only)",
+                            modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally),
+                            color = colorResource(R.color.color_text_secondary),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
+                    ActionButtons(
+                        onBall = {
+                            val (ballsBefore, _) = currentAtBatCount(stats?.pitches ?: emptyList())
+                            db.insertPitch(pitcherId, "B", inning)
+                            actionStack.push(GameAction.Pitch(-1L))
+                            if (ballsBefore >= 3) {
+                                val (next, scoring) = RunnerManager.advanceOnWalk(runners, getBatterRunner())
+                                updateRunnersInDb(next, scoring)
+                                db.insertPitch(pitcherId, "W", inning)
+                                db.insertPitch(pitcherId, "BF", inning)
+                            }
+                            refresh()
+                        },
+                        onStrike = {
+                            val (_, strikesBefore) = currentAtBatCount(stats?.pitches ?: emptyList())
+                            db.insertPitch(pitcherId, "S", inning)
+                            actionStack.push(GameAction.Pitch(-1L))
+                            if (strikesBefore >= 2) {
+                                db.insertPitch(pitcherId, "SO", inning)
+                                db.insertPitch(pitcherId, "BF", inning)
+                                recordBatterOut()
+                            }
+                            refresh()
+                        },
+                        onShowHitSheet = { showHitSheet = true },
+                        onFoul = {
+                            db.insertPitch(pitcherId, "F", inning)
+                            actionStack.push(GameAction.Pitch(-1L))
+                            refresh()
+                        },
+                        onHbp = {
                             val (next, scoring) = RunnerManager.advanceOnWalk(runners, getBatterRunner())
                             updateRunnersInDb(next, scoring)
-                            db.insertPitch(pitcherId, "W", inning)
+                            db.insertPitch(pitcherId, "HBP", inning)
                             db.insertPitch(pitcherId, "BF", inning)
-                        }
-                        refresh()
-                    },
-                    onStrike = {
-                        val (_, strikesBefore) = currentAtBatCount(stats?.pitches ?: emptyList())
-                        db.insertPitch(pitcherId, "S", inning)
-                        actionStack.push(GameAction.Pitch(-1L))
-                        if (strikesBefore >= 2) {
-                            db.insertPitch(pitcherId, "SO", inning)
+                            actionStack.push(GameAction.Pitch(-1L))
+                            refresh()
+                        },
+                        onBf = {
                             db.insertPitch(pitcherId, "BF", inning)
-                            recordBatterOut()
-                        }
-                        refresh()
-                    },
-                    onShowHitSheet = { showHitSheet = true },
-                    onFoul = {
-                        db.insertPitch(pitcherId, "F", inning)
-                        actionStack.push(GameAction.Pitch(-1L))
-                        refresh()
-                    },
-                    onHbp = {
-                        val (next, scoring) = RunnerManager.advanceOnWalk(runners, getBatterRunner())
-                        updateRunnersInDb(next, scoring)
-                        db.insertPitch(pitcherId, "HBP", inning)
-                        db.insertPitch(pitcherId, "BF", inning)
-                        actionStack.push(GameAction.Pitch(-1L))
-                        refresh()
-                    },
-                    onBf = {
-                        db.insertPitch(pitcherId, "BF", inning)
-                        actionStack.push(GameAction.Pitch(-1L))
-                        refresh()
-                    },
-                    onUndo = {
-                        when (val action = actionStack.pop()) {
-                            is GameAction.Pitch -> {
-                                db.undoLastPitch(pitcherId)
-                                refresh()
-                            }
-                            is GameAction.BatterOut -> {
-                                // undo the BF + out-type pitch, restore out counter
-                                db.undoLastPitch(pitcherId) // BF
-                                db.undoLastPitch(pitcherId) // GO/FO/SO
-                                inning = action.prevInning
-                                outs = action.prevOuts
-                                if (gameId != -1L) db.updateGameState(gameId, inning, outs)
-                                refresh()
-                            }
-                            is GameAction.RunnerOut -> {
-                                // undo the RO marker, restore out counter
-                                db.undoLastPitch(pitcherId) // RO
-                                inning = action.prevInning
-                                outs = action.prevOuts
-                                if (gameId != -1L) db.updateGameState(gameId, inning, outs)
-                                refresh()
-                            }
-                            is GameAction.HalfInningChange -> {
-                                db.updateHalfInning(gameId, action.prevState.inning, action.prevState.isTopHalf)
-                                inning = action.prevInning
-                                outs = 2
-                                if (gameId != -1L) db.updateGameState(gameId, inning, outs)
-                                halfInningState = action.prevState
-
-                                // Restore runners
-                                db.clearRunners(gameId)
-                                action.prevRunners.forEach { db.insertRunner(it) }
-                                refresh()
-                            }
-                            is GameAction.RunnerAdvance -> {
-                                db.clearRunners(gameId)
-                                action.prevRunners.forEach { db.insertRunner(it) }
-                                if (action.prevScoreboardValue != null) {
-                                    val teamIndex = if (halfInningState.isTopHalf) 1 else 0
-                                    db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, action.prevScoreboardValue)
+                            actionStack.push(GameAction.Pitch(-1L))
+                            refresh()
+                        },
+                        onUndo = {
+                            when (val action = actionStack.pop()) {
+                                is GameAction.Pitch -> {
+                                    db.undoLastPitch(pitcherId)
+                                    refresh()
                                 }
-                                refresh()
+                                is GameAction.BatterOut -> {
+                                    // undo the BF + out-type pitch, restore out counter
+                                    db.undoLastPitch(pitcherId) // BF
+                                    db.undoLastPitch(pitcherId) // GO/FO/SO
+                                    inning = action.prevInning
+                                    outs = action.prevOuts
+                                    if (gameId != -1L) db.updateGameState(gameId, inning, outs)
+                                    refresh()
+                                }
+                                is GameAction.RunnerOut -> {
+                                    // undo the RO marker, restore out counter
+                                    db.undoLastPitch(pitcherId) // RO
+                                    inning = action.prevInning
+                                    outs = action.prevOuts
+                                    if (gameId != -1L) db.updateGameState(gameId, inning, outs)
+                                    refresh()
+                                }
+                                is GameAction.HalfInningChange -> {
+                                    db.updateHalfInning(gameId, action.prevState.inning, action.prevState.isTopHalf)
+                                    inning = action.prevInning
+                                    outs = 2
+                                    if (gameId != -1L) db.updateGameState(gameId, inning, outs)
+                                    halfInningState = action.prevState
+
+                                    // Restore runners
+                                    db.clearRunners(gameId)
+                                    action.prevRunners.forEach { db.insertRunner(it) }
+                                    refresh()
+                                }
+                                is GameAction.RunnerAdvance -> {
+                                    db.clearRunners(gameId)
+                                    action.prevRunners.forEach { db.insertRunner(it) }
+                                    if (action.prevScoreboardValue != null) {
+                                        val teamIndex = if (halfInningState.isTopHalf) 1 else 0
+                                        db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, action.prevScoreboardValue)
+                                    }
+                                    refresh()
+                                }
+                                null -> {
+                                    // fallback: plain pitch undo
+                                    db.undoLastPitch(pitcherId)
+                                    refresh()
+                                }
                             }
-                            null -> {
-                                // fallback: plain pitch undo
-                                db.undoLastPitch(pitcherId)
-                                refresh()
-                            }
-                        }
-                    },
-                    onShowOutSheet = { showOutSheet = true },
-                    onShowTrend = { showTrendSheet = true }
-                )
+                        },
+                        onShowOutSheet = { showOutSheet = true },
+                        onShowTrend = { showTrendSheet = true }
+                    )
+                }
             }
         }
 

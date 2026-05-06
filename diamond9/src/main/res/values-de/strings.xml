@@ -375,6 +375,8 @@
     <string name="dispatch_confirm_restore">ALLE DATEN WIEDERHERSTELLEN</string>
     <string name="dispatch_unknown_title">Unbekanntes Dateiformat</string>
     <string name="dispatch_unknown_message">Diese JSON-Datei ist kein bekanntes diamond9-Format (type: \"%s\").</string>
+    <string name="dispatch_security_missing">Diese Datei wurde mit einer älteren App-Version erstellt und hat keine digitale Signatur. Fahre nur fort, wenn du der Quelle vertraust.</string>
+    <string name="dispatch_security_invalid">Die digitale Signatur dieser Datei ist ungültig! Sie wurde möglicherweise manipuliert oder stammt aus einer nicht vertrauenswürdigen Quelle.</string>
 
     <!-- Backup / Restore -->
     <string name="settings_backup_title">Backup</string>

@@ -40,6 +40,8 @@ class BackupManager constructor(
 ) {
     constructor(context: Context) : this(context, DatabaseHelper(context))
 
+    enum class SignatureResult { VALID, MISSING, INVALID }
+
     companion object {
         const val DB_VERSION = 22
 
@@ -95,12 +97,59 @@ class BackupManager constructor(
             "1B", "2B", "3B", "HR",
             "ROE"
         )
+
+        private fun getSecret(): String {
+            val parts = listOf("Diamond", "Nine", "Baseball", "2024", "Secret")
+            return parts.joinToString("-") { it.reversed() }
+        }
+
+        private fun sha256(input: String): String {
+            val bytes = java.security.MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
+            return bytes.joinToString("") { "%02x".format(it) }
+        }
+
+        fun generateSignature(json: JSONObject): String {
+            val type = json.optString("type", "backup")
+            val dataToSign = StringBuilder()
+            dataToSign.append(type)
+            dataToSign.append(json.optInt("dbVersion", 0))
+
+            when (type) {
+                "backup" -> {
+                    dataToSign.append(json.optLong("exportDate", 0L))
+                    dataToSign.append(json.optJSONArray("teams")?.length() ?: 0)
+                }
+                "single_game" -> {
+                    val game = json.optJSONObject("game")
+                    dataToSign.append(game?.optString("date", "") ?: "")
+                    dataToSign.append(game?.optString("opponent", "") ?: "")
+                }
+                "team" -> {
+                    dataToSign.append(json.optString("name", ""))
+                    dataToSign.append(json.optJSONArray("players")?.length() ?: 0)
+                }
+                "league_settings" -> {
+                    dataToSign.append(json.optInt("innings", 0))
+                }
+            }
+
+            dataToSign.append(getSecret())
+            return sha256(dataToSign.toString())
+        }
+
+        fun verifySignature(json: JSONObject): SignatureResult {
+            if (!json.has("signature")) return SignatureResult.MISSING
+            val expected = generateSignature(json)
+            return if (json.optString("signature") == expected) SignatureResult.VALID else SignatureResult.INVALID
+        }
     }
 
     // ── Export ──────────────────────────────────────────────────────────────────
 
     fun exportToJson(): JSONObject {
         val root = JSONObject()
+        root.put("type", "backup")
+        root.put("app_origin", "de.baseball.diamond9")
         root.put("dbVersion", DB_VERSION)
         root.put("exportDate", System.currentTimeMillis())
 
@@ -350,6 +399,7 @@ class BackupManager constructor(
         }
         root.put("game_runners", allRunners)
 
+        root.put("signature", generateSignature(root))
         return root
     }
 
@@ -841,6 +891,7 @@ class BackupManager constructor(
         val game = db.getGame(gameId) ?: return JSONObject()
         val root = JSONObject()
         root.put("type", "single_game")
+        root.put("app_origin", "de.baseball.diamond9")
         root.put("dbVersion", DB_VERSION)
 
         // League settings
@@ -965,6 +1016,7 @@ class BackupManager constructor(
             }
         }))
 
+        root.put("signature", generateSignature(root))
         return root
     }
 
@@ -1129,6 +1181,7 @@ class BackupManager constructor(
         val team = db.getAllTeams().first { it.id == teamId }
         val root = JSONObject().apply {
             put("type", "team")
+            put("app_origin", "de.baseball.diamond9")
             put("version", 1)
             put("dbVersion", DB_VERSION)
             put("includeGames", includeGames)
@@ -1320,6 +1373,7 @@ class BackupManager constructor(
                 put("opponent_teams", oppTeamsArray)
             }
         }
+        root.put("signature", generateSignature(root))
         return root.toString(2)
     }
 

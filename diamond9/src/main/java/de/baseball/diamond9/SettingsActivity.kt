@@ -91,8 +91,34 @@ class SettingsActivity : ComponentActivity() {
                 }
                 val text = contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
                     ?: return@registerForActivityResult
-                backupManager.restoreFromJson(JSONObject(text))
-                Toast.makeText(this, getString(R.string.settings_restore_success), Toast.LENGTH_SHORT).show()
+                
+                val json = JSONObject(text)
+                val signatureResult = BackupManager.verifySignature(json)
+                
+                if (signatureResult != BackupManager.SignatureResult.VALID) {
+                    val message = if (signatureResult == BackupManager.SignatureResult.MISSING) {
+                        getString(R.string.dispatch_security_missing)
+                    } else {
+                        getString(R.string.dispatch_security_invalid)
+                    }
+                    AlertDialog.Builder(this)
+                        .setTitle(if (signatureResult == BackupManager.SignatureResult.MISSING) 
+                            getString(R.string.dispatch_backup_title) else "Security Alert")
+                        .setMessage(message)
+                        .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
+                            try {
+                                backupManager.restoreFromJson(json)
+                                Toast.makeText(this, getString(R.string.settings_restore_success), Toast.LENGTH_SHORT).show()
+                            } catch (e: Exception) {
+                                Toast.makeText(this, getString(R.string.settings_restore_failed, e.message), Toast.LENGTH_LONG).show()
+                            }
+                        }
+                        .setNegativeButton(getString(R.string.btn_cancel), null)
+                        .show()
+                } else {
+                    backupManager.restoreFromJson(json)
+                    Toast.makeText(this, getString(R.string.settings_restore_success), Toast.LENGTH_SHORT).show()
+                }
             } catch (e: Exception) {
                 Toast.makeText(this, getString(R.string.settings_restore_failed, e.message), Toast.LENGTH_LONG).show()
             }

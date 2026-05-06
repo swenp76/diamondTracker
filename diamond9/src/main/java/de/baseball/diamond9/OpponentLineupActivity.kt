@@ -120,11 +120,13 @@ fun OpponentLineupScreen(
     var benchPlayers by remember { mutableStateOf(emptyList<BenchPlayer>()) }
     var lineupSize by remember { mutableStateOf(9) }
     var totalAtBats by remember { mutableStateOf(0) }
+    var isLocked by remember { mutableStateOf(false) }
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                isLocked = db.isGameLocked(gameId)
                 totalAtBats = db.getTotalBFForGame(gameId)
                 val (slots, _) = computeState(db, gameId)
                 lineupSize = slots.count { it.currentJersey.isNotEmpty() || it.slot <= 9 }
@@ -229,7 +231,7 @@ fun OpponentLineupScreen(
                         hasSubs = hasSubs,
                         isCurrentBatter = isCurrentBatter,
                         onRowClick = {
-                            if (!hasSubs) {
+                            if (!isLocked && !hasSubs) {
                                 jerseyInputDialogState = Triple("Slot ${state.slot}", state.currentJersey) { jersey ->
                                     if (jersey.isEmpty()) db.deleteLineupEntry(gameId, state.slot)
                                     else db.upsertLineupEntry(gameId, state.slot, jersey)
@@ -241,16 +243,20 @@ fun OpponentLineupScreen(
                             jumpToSlotDialogState = state
                         },
                         onSwapClick = {
-                            when (state.swapType) {
-                                SwapType.SUB_IN -> swapTypeDialogState = state
-                                SwapType.RETURN_STARTER -> returnStarterDialogState = state
-                                SwapType.INJURY_ONLY -> subSelectionDialogState = state to true
-                                SwapType.NONE -> {}
+                            if (!isLocked) {
+                                when (state.swapType) {
+                                    SwapType.SUB_IN -> swapTypeDialogState = state
+                                    SwapType.RETURN_STARTER -> returnStarterDialogState = state
+                                    SwapType.INJURY_ONLY -> subSelectionDialogState = state to true
+                                    SwapType.NONE -> {}
+                                }
                             }
                         },
                         onClearClick = {
-                            db.deleteLineupEntry(gameId, state.slot)
-                            refresh()
+                            if (!isLocked) {
+                                db.deleteLineupEntry(gameId, state.slot)
+                                refresh()
+                            }
                         }
                     )
                 }
@@ -269,7 +275,7 @@ fun OpponentLineupScreen(
                         status = status,
                         isInvolved = isInvolved,
                         onRowClick = {
-                            if (!isInvolved) {
+                            if (!isLocked && !isInvolved) {
                                 jerseyInputDialogState = Triple("Bank – Slot ${bankSlot + 10}", bp?.jerseyNumber ?: "") { jersey ->
                                     if (jersey.isEmpty()) {
                                         bp?.let { db.deleteBenchPlayer(it.id) }
@@ -282,8 +288,10 @@ fun OpponentLineupScreen(
                             }
                         },
                         onClearClick = {
-                            bp?.let { db.deleteBenchPlayer(it.id) }
-                            refresh()
+                            if (!isLocked) {
+                                bp?.let { db.deleteBenchPlayer(it.id) }
+                                refresh()
+                            }
                         }
                     )
                 }

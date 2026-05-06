@@ -54,16 +54,62 @@ class JsonDispatchActivity : ComponentActivity() {
         }
 
         val fileType = json.optString("type", "").ifEmpty { inferType(json) }
+        val signatureResult = BackupManager.verifySignature(json)
 
         setContent {
             MaterialTheme {
-                DispatchDialog(
-                    fileType = fileType,
-                    json = json,
-                    onDismiss = { finish() }
-                )
+                var showSecurityWarning by remember { mutableStateOf(signatureResult != BackupManager.SignatureResult.VALID) }
+                
+                if (showSecurityWarning) {
+                    SecurityWarningDialog(
+                        result = signatureResult,
+                        onProceed = { showSecurityWarning = false },
+                        onDismiss = { finish() }
+                    )
+                } else {
+                    DispatchDialog(
+                        fileType = fileType,
+                        json = json,
+                        onDismiss = { finish() }
+                    )
+                }
             }
         }
+    }
+
+    @Composable
+    private fun SecurityWarningDialog(
+        result: BackupManager.SignatureResult,
+        onProceed: () -> Unit,
+        onDismiss: () -> Unit
+    ) {
+        val message = if (result == BackupManager.SignatureResult.MISSING) {
+            stringResource(R.string.dispatch_security_missing)
+        } else {
+            stringResource(R.string.dispatch_security_invalid)
+        }
+        
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { 
+                Text(
+                    if (result == BackupManager.SignatureResult.MISSING) 
+                        stringResource(R.string.dispatch_backup_title) 
+                    else "Security Alert" 
+                ) 
+            },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = onProceed) {
+                    Text(stringResource(R.string.btn_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
+            }
+        )
     }
 
     @Composable
