@@ -152,7 +152,7 @@ class TeamListActivity : ComponentActivity() {
 
     private fun importTeam(root: JSONObject) {
         try {
-            val teamId = db.insertTeam(root.getString("name"))
+            val teamId = db.insertTeam(root.getString("name").take(50))
 
             db.getEnabledPositions(teamId).forEach { db.setPositionEnabled(teamId, it, false) }
             val posArray = root.optJSONArray("positions")
@@ -168,8 +168,8 @@ class TeamListActivity : ComponentActivity() {
                     val pl = playersArray.getJSONObject(p)
                     db.insertPlayer(
                         teamId,
-                        pl.getString("name"),
-                        pl.optString("number", ""),
+                        pl.getString("name").take(50),
+                        pl.optString("number", "").take(3),
                         pl.optInt("primary_position", 0),
                         pl.optInt("secondary_position", 0),
                         pl.optBoolean("is_pitcher", false),
@@ -178,7 +178,7 @@ class TeamListActivity : ComponentActivity() {
                 }
             }
 
-            Toast.makeText(this, getString(R.string.toast_team_imported, root.getString("name")), Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_team_imported, root.getString("name").take(50)), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, getString(R.string.toast_import_failed, e.message), Toast.LENGTH_LONG).show()
         }

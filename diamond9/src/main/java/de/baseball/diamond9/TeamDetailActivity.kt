@@ -224,7 +224,7 @@ fun TeamDetailScreen(
                         var tempName by remember(teamName) { mutableStateOf(teamName) }
                         OutlinedTextField(
                             value = tempName,
-                            onValueChange = { if (it.length <= 50) tempName = it },
+                            onValueChange = { tempName = it.take(50) },
                             modifier = Modifier.weight(1f).padding(end = 12.dp),
                             textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontSize = 18.sp),
                             singleLine = true,
@@ -501,7 +501,7 @@ fun PlayerEditDialog(
         text = {
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
                 DialogTextField(label = stringResource(R.string.label_name), value = name, onValueChange = { name = it }, hint = stringResource(R.string.hint_full_name), maxLength = 50)
-                DialogTextField(label = stringResource(R.string.label_jersey_number), value = number, onValueChange = { number = it }, hint = stringResource(R.string.hint_jersey_number), keyboardType = KeyboardType.NumberPassword, maxLength = 3)
+                DialogTextField(label = stringResource(R.string.label_jersey_number), value = number, onValueChange = { number = it }, hint = stringResource(R.string.hint_jersey_number), keyboardType = KeyboardType.Number, maxLength = 3)
 
                 Text(stringResource(R.string.label_primary_position), fontSize = 12.sp, color = Color.Gray)
                 PositionSpinner(

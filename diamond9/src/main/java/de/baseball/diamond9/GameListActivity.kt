@@ -396,7 +396,10 @@ private fun GameListScreen(
             text = {
                 OutlinedTextField(
                     value = newOpponent,
-                    onValueChange = { if (it.length <= 50) { newOpponent = it; error = false } },
+                    onValueChange = { 
+                        newOpponent = it.take(50)
+                        if (newOpponent.isNotEmpty()) error = false 
+                    },
                     label = { Text(stringResource(R.string.label_opponent)) },
                     isError = error,
                     supportingText = if (error) { { Text(stringResource(R.string.error_required_field)) } } else null,
@@ -625,7 +628,7 @@ private fun GameDialog(
 
                 OutlinedTextField(
                     value = number,
-                    onValueChange = { if (it.length <= 20) number = it },
+                    onValueChange = { number = it.take(20) },
                     label = { Text(stringResource(R.string.label_game_number)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -695,11 +698,9 @@ private fun GameDialog(
                 OutlinedTextField(
                     value = opponentText,
                     onValueChange = {
-                        if (it.length <= 50) {
-                            opponentText = it
-                            if (it.isNotEmpty()) selectedOpponent = null
-                            opponentError = false
-                        }
+                        opponentText = it.take(50)
+                        if (opponentText.isNotEmpty()) selectedOpponent = null
+                        opponentError = false
                     },
                     label = { Text(stringResource(R.string.hint_opponent)) },
                     isError = opponentError,

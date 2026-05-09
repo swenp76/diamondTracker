@@ -152,7 +152,10 @@ private fun ManageOpponentsScreen(
             text = {
                 OutlinedTextField(
                     value = newName,
-                    onValueChange = { if (it.length <= 50) { newName = it; error = false } },
+                    onValueChange = { 
+                        newName = it.take(50)
+                        if (newName.isNotEmpty()) error = false 
+                    },
                     label = { Text(stringResource(R.string.hint_opponent_team_name)) },
                     isError = error,
                     supportingText = if (error) { { Text(stringResource(R.string.error_required_field)) } } else null,

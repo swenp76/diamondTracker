@@ -570,7 +570,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     /** Returns the id of the first team in the list, or null if no teams exist. */
     fun getActiveTeamId(): Long? = getAllTeams().firstOrNull()?.id
 
-    fun updateTeamName(teamId: Long, name: String) = teamDao.updateTeamName(teamId, name)
+    fun updateTeamName(teamId: Long, name: String) = teamDao.updateTeamName(teamId, name.take(50))
 
     fun deleteTeam(teamId: Long) = teamDao.deleteTeam(teamId)
 
@@ -591,7 +591,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
         isPitcher: Boolean = false, birthYear: Int = 0
     ): Long = playerDao.insertPlayer(
         Player(
-            teamId = teamId, name = name, number = number,
+            teamId = teamId, name = name.take(50), number = number.take(3),
             primaryPosition = primaryPosition, secondaryPosition = secondaryPosition,
             isPitcher = isPitcher, birthYear = birthYear
         )
@@ -599,7 +599,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
 
     fun getPlayersForTeam(teamId: Long): List<Player> = playerDao.getPlayersForTeam(teamId)
 
-    fun updatePlayer(player: Player) = playerDao.updatePlayer(player)
+    fun updatePlayer(player: Player) = playerDao.updatePlayer(player.copy(name = player.name.take(50), number = player.number.take(3)))
 
     fun deletePlayer(playerId: Long) = playerDao.deletePlayerWithCascade(playerId)
 
@@ -621,7 +621,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     // ── Opponent Lineup ────────────────────────────────────────────────────────
 
     fun upsertLineupEntry(gameId: Long, battingOrder: Int, jerseyNumber: String) =
-        lineupDao.upsertLineupEntry(LineupEntry(gameId = gameId, battingOrder = battingOrder, jerseyNumber = jerseyNumber))
+        lineupDao.upsertLineupEntry(LineupEntry(gameId = gameId, battingOrder = battingOrder, jerseyNumber = jerseyNumber.take(3)))
 
     fun getLineup(gameId: Long): List<LineupEntry> = lineupDao.getLineup(gameId)
 
@@ -634,7 +634,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     // ── Opponent Bench ─────────────────────────────────────────────────────────
 
     fun insertBenchPlayer(gameId: Long, jerseyNumber: String): Long =
-        lineupDao.insertBenchPlayer(BenchPlayer(gameId = gameId, jerseyNumber = jerseyNumber))
+        lineupDao.insertBenchPlayer(BenchPlayer(gameId = gameId, jerseyNumber = jerseyNumber.take(3)))
 
     fun getBenchPlayers(gameId: Long): List<BenchPlayer> = lineupDao.getBenchPlayers(gameId)
 
@@ -647,7 +647,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
 
     fun addOpponentSubstitution(gameId: Long, slot: Int, jerseyOut: String, jerseyIn: String): Long =
         lineupDao.insertOppSubstitution(
-            OppSubstitution(gameId = gameId, slot = slot, jerseyOut = jerseyOut, jerseyIn = jerseyIn)
+            OppSubstitution(gameId = gameId, slot = slot, jerseyOut = jerseyOut.take(3), jerseyIn = jerseyIn.take(3))
         )
 
     fun getOpponentSubstitutionsForGame(gameId: Long): List<OppSubstitution> =
@@ -714,7 +714,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
         opponentTeamDao.insert(OpponentTeam(name = name))
 
     fun insertOpponentTeamForTeam(name: String, teamId: Long): Long =
-        opponentTeamDao.insert(OpponentTeam(name = name, teamId = teamId))
+        opponentTeamDao.insert(OpponentTeam(name = name.take(50), teamId = teamId))
 
     fun deleteOpponentTeam(id: Long) = opponentTeamDao.delete(id)
 
