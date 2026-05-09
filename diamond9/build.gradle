@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.compose)
     alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.mikepenz.aboutlibraries.plugin)
+    id 'jacoco'
 }
 
 // On Linux (likely eCryptfs home), D8's long synthetic lambda .globals filenames
@@ -47,6 +48,46 @@ android {
     lintOptions {
         disable 'IllegalFormatConversionException'
     }
+
+    testOptions {
+        unitTests.all {
+            jacoco {
+                includeNoLocationClasses = true
+                excludes = ['jdk.internal.*']
+            }
+        }
+    }
+}
+
+tasks.register('jacocoTestReport', JacocoReport) {
+    dependsOn 'testDebugUnitTest'
+    group = "Reporting"
+    description = "Generate Jacoco coverage reports for the debug build."
+
+    reports {
+        xml.required = true
+        html.required = true
+    }
+
+    def fileFilter = [
+        '**/R.class', '**/R$*.class', '**/BuildConfig.*', '**/Manifest*.*',
+        '**/*Test*.*', 'android/**/*.*',
+        '**/*_MembersInjector.class', '**/Dagger*.*', '**/*_Factory.class',
+        '**/*_Provide*Factory.class', '**/*_ViewBinding*.*',
+        '**/AutoValue_*.*', '**/R2.class', '**/R2$*.class',
+        '**/*_Impl*.*', // Room generated
+        '**/*$Lambda$*.*', '**/*Companion*.*', '**/*Extensions*.*',
+        '**/db/AppDatabase_Impl*'
+    ]
+    def debugTree = fileTree(dir: "${layout.buildDirectory.get()}/tmp/kotlin-classes/debug", excludes: fileFilter)
+    def mainSrc = "${project.projectDir}/src/main/java"
+
+    sourceDirectories.setFrom(files([mainSrc]))
+    classDirectories.setFrom(files([debugTree]))
+    executionData.setFrom(fileTree(dir: layout.buildDirectory.get(), includes: [
+            "jacoco/testDebugUnitTest.exec",
+            "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"
+    ]))
 }
 
 dependencies {
