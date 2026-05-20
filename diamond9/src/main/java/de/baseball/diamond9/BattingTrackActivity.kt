@@ -90,6 +90,7 @@ class BattingTrackActivity : ComponentActivity() {
         var lineup by remember { mutableStateOf(emptyMap<Int, Player>()) }
         var runners by remember { mutableStateOf(emptyMap<Int, GameRunner>()) }
         var runnerToEdit by remember { mutableStateOf<GameRunner?>(null) }
+        var pendingAdvance by remember { mutableStateOf<Pair<GameRunner, Int>?>(null) }
         var currentScoringNotification by remember { mutableStateOf<List<GameRunner>>(emptyList()) }
         var currentScoringRbi by remember { mutableStateOf(0) }
         var currentScoringBatterName by remember { mutableStateOf("") }
@@ -756,6 +757,51 @@ class BattingTrackActivity : ComponentActivity() {
             }
         }
 
+        pendingAdvance?.let { (runner, newBase) ->
+            AdvanceReasonDialog(
+                onDismiss = { pendingAdvance = null },
+                onReason = { reason ->
+                    val prevList = db.getRunners(gameId)
+                    val currentMap = prevList.associateBy { it.base }
+                    if (newBase == 0) {
+                        // Score: move this runner and all ahead to score
+                        val scoring = mutableListOf<GameRunner>()
+                        val next = currentMap.toMutableMap()
+                        for (b in runner.base..3) {
+                            next.remove(b)?.let { scoring.add(it.copy(base = 4)) }
+                        }
+                        db.clearRunners(gameId)
+                        next.values.forEach { db.insertRunner(it) }
+                        val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+                        val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
+                        db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoring.size)
+                        if (showEndAtBatButton) {
+                            val rbiName = lineup[currentSlot]?.let { "${it.name} (#${it.number})" } ?: ""
+                            db.addRbiToAtBat(currentAtBatId, scoring.size)
+                            currentScoringRbi = scoring.size
+                            currentScoringBatterName = rbiName
+                        } else {
+                            currentScoringRbi = 0
+                            currentScoringBatterName = ""
+                        }
+                        currentScoringNotification = scoring
+                        actionStack.push(GameAction.RunnerAdvance(prevList, currentRuns))
+                        db.logRunnerAdvance(gameId, runner.playerId, runner.slot,
+                            runner.base, 4, halfInningState.inning, reason)
+                    } else {
+                        // Normal move to another base
+                        db.deleteRunner(gameId, runner.base)
+                        db.insertRunner(runner.copy(base = newBase))
+                        actionStack.push(GameAction.RunnerAdvance(prevList))
+                        db.logRunnerAdvance(gameId, runner.playerId, runner.slot,
+                            runner.base, newBase, halfInningState.inning, reason)
+                    }
+                    refreshRunners()
+                    pendingAdvance = null
+                }
+            )
+        }
+
         runnerToEdit?.let { runner ->
             RunnerManagementSheet(
                 runner = runner,
@@ -769,47 +815,12 @@ class BattingTrackActivity : ComponentActivity() {
                     runnerToEdit = null
                 },
                 onMove = { newBase ->
-                    val prevList = db.getRunners(gameId)
-                    val currentMap = prevList.associateBy { it.base }
-
+                    val currentMap = db.getRunners(gameId).associateBy { it.base }
                     if (RunnerManager.isOvertaking(currentMap, runner.base, newBase)) {
                         warningMessage = getString(R.string.error_overtake_runner)
                         runnerToEdit = null
-                    } else if (newBase == 0) {
-                        // User clicked "Score": move this runner and all ahead of them to score
-                        val scoring = mutableListOf<GameRunner>()
-                        val next = currentMap.toMutableMap()
-                        
-                        for (b in runner.base..3) {
-                            next.remove(b)?.let { scoring.add(it.copy(base = 4)) }
-                        }
-                        
-                        db.clearRunners(gameId)
-                        next.values.forEach { db.insertRunner(it) }
-                        
-                        val teamIndex = if (halfInningState.isTopHalf) 0 else 1
-                        val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
-                        db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, currentRuns + scoring.size)
-                        
-                        if (showEndAtBatButton) {
-                            val rbiName = lineup[currentSlot]?.let { "${it.name} (#${it.number})" } ?: ""
-                            db.addRbiToAtBat(currentAtBatId, scoring.size)
-                            currentScoringRbi = scoring.size
-                            currentScoringBatterName = rbiName
-                        } else {
-                            currentScoringRbi = 0
-                            currentScoringBatterName = ""
-                        }
-                        currentScoringNotification = scoring
-                        actionStack.push(GameAction.RunnerAdvance(prevList, currentRuns))
-                        refreshRunners()
-                        runnerToEdit = null
                     } else {
-                        // Normal move to another base
-                        db.deleteRunner(gameId, runner.base)
-                        db.insertRunner(runner.copy(base = newBase))
-                        actionStack.push(GameAction.RunnerAdvance(prevList))
-                        refreshRunners()
+                        pendingAdvance = runner to newBase
                         runnerToEdit = null
                     }
                 }

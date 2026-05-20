@@ -182,7 +182,7 @@ private fun GameBatterTab(gameId: Long, db: DatabaseHelper) {
         if (teamId > 0) db.getPlayersForTeam(teamId).associateBy { it.id } else emptyMap()
     }
 
-    var sortCol by remember { mutableStateOf(8) }  // default: AVG desc
+    var sortCol by remember { mutableStateOf(10) }  // default: AVG desc
     var sortAsc by remember { mutableStateOf(false) }
 
     fun avg(r: GameBatterStatsRow) = if (r.ab > 0) r.hits.toFloat() / r.ab else -1f
@@ -214,13 +214,15 @@ private fun GameBatterTab(gameId: Long, db: DatabaseHelper) {
             4  -> rawRows.sortedBy { it.doubles }
             5  -> rawRows.sortedBy { it.triples }
             6  -> rawRows.sortedBy { it.homers }
-            7  -> rawRows.sortedBy { it.rbi }
-            8  -> rawRows.sortedBy { avg(it) }
-            9  -> rawRows.sortedBy { obp(it) }
-            10 -> rawRows.sortedBy { slg(it) }
-            11 -> rawRows.sortedBy { ops(it) }
-            12 -> rawRows.sortedBy { it.walks }
-            13 -> rawRows.sortedBy { it.strikeouts }
+            7  -> rawRows.sortedBy { it.runs }
+            8  -> rawRows.sortedBy { it.rbi }
+            9  -> rawRows.sortedBy { it.stolenBases }
+            10 -> rawRows.sortedBy { avg(it) }
+            11 -> rawRows.sortedBy { obp(it) }
+            12 -> rawRows.sortedBy { slg(it) }
+            13 -> rawRows.sortedBy { ops(it) }
+            14 -> rawRows.sortedBy { it.walks }
+            15 -> rawRows.sortedBy { it.strikeouts }
             else -> rawRows.sortedBy { avg(it) }
         }
         if (sortAsc) sorted else sorted.reversed()
@@ -246,7 +248,9 @@ private fun GameBatterTab(gameId: Long, db: DatabaseHelper) {
         stringResource(R.string.season_stats_col_2b)   to colStat,
         stringResource(R.string.season_stats_col_3b)   to colStat,
         stringResource(R.string.season_stats_col_hr)   to colStat,
+        stringResource(R.string.season_stats_col_r)    to colStat,
         stringResource(R.string.season_stats_col_rbi)  to colStat,
+        stringResource(R.string.season_stats_col_sb)   to colStat,
         stringResource(R.string.season_stats_col_avg)  to colDec,
         stringResource(R.string.season_stats_col_obp)  to colDec,
         stringResource(R.string.season_stats_col_slg)  to colDec,
@@ -321,20 +325,22 @@ private fun GameBatterTab(gameId: Long, db: DatabaseHelper) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     listOf(
-                        name                      to colName,
-                        row.pa.toString()         to colStat,
-                        row.ab.toString()         to colStat,
-                        row.hits.toString()       to colStat,
-                        row.doubles.toString()    to colStat,
-                        row.triples.toString()    to colStat,
-                        row.homers.toString()     to colStat,
-                        row.rbi.toString()        to colStat,
-                        avgStr                    to colDec,
-                        obpStr                    to colDec,
-                        slgStr                    to colDec,
-                        opsStr                    to colDec,
-                        row.walks.toString()      to colStat,
-                        row.strikeouts.toString() to colStat
+                        name                         to colName,
+                        row.pa.toString()            to colStat,
+                        row.ab.toString()            to colStat,
+                        row.hits.toString()          to colStat,
+                        row.doubles.toString()       to colStat,
+                        row.triples.toString()       to colStat,
+                        row.homers.toString()        to colStat,
+                        row.runs.toString()          to colStat,
+                        row.rbi.toString()           to colStat,
+                        row.stolenBases.toString()   to colStat,
+                        avgStr                       to colDec,
+                        obpStr                       to colDec,
+                        slgStr                       to colDec,
+                        opsStr                       to colDec,
+                        row.walks.toString()         to colStat,
+                        row.strikeouts.toString()    to colStat
                     ).forEachIndexed { i, (text, width) ->
                         Text(
                             text = text,

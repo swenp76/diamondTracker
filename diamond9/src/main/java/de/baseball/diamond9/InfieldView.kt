@@ -220,3 +220,32 @@ fun RunnerManagementSheet(
         }
     }
 }
+
+@Composable
+fun AdvanceReasonDialog(
+    onReason: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dialog_advance_reason_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    "ERROR" to R.string.advance_reason_error,
+                    "STEAL" to R.string.advance_reason_steal,
+                    "OTHER" to R.string.advance_reason_other
+                ).forEach { (key, labelRes) ->
+                    Button(
+                        onClick = { onReason(key) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(labelRes))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {}
+    )
+}

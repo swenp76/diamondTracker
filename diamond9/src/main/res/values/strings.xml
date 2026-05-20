@@ -322,7 +322,9 @@
     <string name="season_stats_col_2b">2B</string>
     <string name="season_stats_col_3b">3B</string>
     <string name="season_stats_col_hr">HR</string>
+    <string name="season_stats_col_r">R</string>
     <string name="season_stats_col_rbi">RBI</string>
+    <string name="season_stats_col_sb">SB</string>
     <string name="season_stats_col_avg">AVG</string>
     <string name="season_stats_col_obp">OBP</string>
     <string name="season_stats_col_slg">SLG</string>
@@ -493,6 +495,10 @@
     <string name="btn_runner_scored_hold">Hold at %dB</string>
     <string name="toast_fc_check_runners">Fielder\'s Choice: Please check and update runners manually.</string>
     <string name="toast_dp_check_runners">Double Play: Please check and update runners manually.</string>
+    <string name="dialog_advance_reason_title">Why did the runner advance?</string>
+    <string name="advance_reason_error">On Error</string>
+    <string name="advance_reason_steal">Steal</string>
+    <string name="advance_reason_other">Sonstiges</string>
     <!-- ── Diagnostic Export ──────────────────────────────────────────────── -->
     <string name="about_diagnostic_button">Generate Diagnostic Report</string>
     <string name="dialog_diagnostic_title">Diagnostic Report</string>

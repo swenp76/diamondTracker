@@ -231,16 +231,18 @@ data class GameBatterStatsRow(
     @ColumnInfo(name = "player_id") val playerId: Long,
     @ColumnInfo(name = "player_name") val playerName: String?,
     @ColumnInfo(name = "player_number") val playerNumber: String?,
-    @ColumnInfo(name = "pa")         val pa: Int,
-    @ColumnInfo(name = "ab")         val ab: Int,
-    @ColumnInfo(name = "hits")       val hits: Int,
-    @ColumnInfo(name = "doubles")    val doubles: Int,
-    @ColumnInfo(name = "triples")    val triples: Int,
-    @ColumnInfo(name = "homers")     val homers: Int,
-    @ColumnInfo(name = "rbi")        val rbi: Int,
-    @ColumnInfo(name = "walks")      val walks: Int,
-    @ColumnInfo(name = "strikeouts") val strikeouts: Int,
-    @ColumnInfo(name = "hbp")        val hbp: Int
+    @ColumnInfo(name = "pa")           val pa: Int,
+    @ColumnInfo(name = "ab")           val ab: Int,
+    @ColumnInfo(name = "hits")         val hits: Int,
+    @ColumnInfo(name = "doubles")      val doubles: Int,
+    @ColumnInfo(name = "triples")      val triples: Int,
+    @ColumnInfo(name = "homers")       val homers: Int,
+    @ColumnInfo(name = "runs")         val runs: Int,
+    @ColumnInfo(name = "rbi")          val rbi: Int,
+    @ColumnInfo(name = "stolen_bases") val stolenBases: Int,
+    @ColumnInfo(name = "walks")        val walks: Int,
+    @ColumnInfo(name = "strikeouts")   val strikeouts: Int,
+    @ColumnInfo(name = "hbp")          val hbp: Int
 )
 
 @Entity(
@@ -265,6 +267,29 @@ data class GameRunner(
     @ColumnInfo(name = "name") val name: String = ""
 )
 
+@Entity(
+    tableName = "runner_advances",
+    foreignKeys = [
+        ForeignKey(
+            entity = Game::class,
+            parentColumns = ["id"],
+            childColumns = ["game_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["game_id"])]
+)
+data class RunnerAdvanceLog(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "game_id") val gameId: Long,
+    @ColumnInfo(name = "player_id") val playerId: Long = 0,
+    val slot: Int = 0,
+    @ColumnInfo(name = "from_base") val fromBase: Int,
+    @ColumnInfo(name = "to_base") val toBase: Int,  // 4 = scored
+    val inning: Int,
+    val reason: String  // "ERROR", "STEAL", "OTHER"
+)
+
 @Dao
 interface RunnerDao {
     @Query("SELECT * FROM game_runners WHERE game_id = :gameId ORDER BY base ASC")
@@ -279,24 +304,39 @@ interface RunnerDao {
     @Query("DELETE FROM game_runners WHERE game_id = :gameId")
     fun clearRunners(gameId: Long)
 
+
     @Update
     fun updateRunner(runner: GameRunner)
+}
+
+@Dao
+interface RunnerAdvanceLogDao {
+    @Insert
+    fun insert(log: RunnerAdvanceLog): Long
+
+    @Query("SELECT * FROM runner_advances WHERE game_id = :gameId ORDER BY id ASC")
+    fun getForGame(gameId: Long): List<RunnerAdvanceLog>
+
+    @Query("DELETE FROM runner_advances WHERE id = :id")
+    fun deleteById(id: Long)
 }
 
 data class SeasonBatterRow(
     @ColumnInfo(name = "player_id") val playerId: Long,
     @ColumnInfo(name = "player_name") val playerName: String?,
     @ColumnInfo(name = "player_number") val playerNumber: String?,
-    @ColumnInfo(name = "pa") val pa: Int,
-    @ColumnInfo(name = "ab") val ab: Int,
-    @ColumnInfo(name = "hits") val hits: Int,
-    @ColumnInfo(name = "doubles") val doubles: Int,
-    @ColumnInfo(name = "triples") val triples: Int,
-    @ColumnInfo(name = "homers") val homers: Int,
-    @ColumnInfo(name = "rbi") val rbi: Int,
-    @ColumnInfo(name = "walks") val walks: Int,
-    @ColumnInfo(name = "strikeouts") val strikeouts: Int,
-    @ColumnInfo(name = "hbp") val hbp: Int
+    @ColumnInfo(name = "pa")           val pa: Int,
+    @ColumnInfo(name = "ab")           val ab: Int,
+    @ColumnInfo(name = "hits")         val hits: Int,
+    @ColumnInfo(name = "doubles")      val doubles: Int,
+    @ColumnInfo(name = "triples")      val triples: Int,
+    @ColumnInfo(name = "homers")       val homers: Int,
+    @ColumnInfo(name = "runs")         val runs: Int,
+    @ColumnInfo(name = "rbi")          val rbi: Int,
+    @ColumnInfo(name = "stolen_bases") val stolenBases: Int,
+    @ColumnInfo(name = "walks")        val walks: Int,
+    @ColumnInfo(name = "strikeouts")   val strikeouts: Int,
+    @ColumnInfo(name = "hbp")          val hbp: Int
 )
 
 data class SeasonPitcherRow(
@@ -346,6 +386,7 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     private val scoreboardDao = db.scoreboardDao()
     private val leagueSettingsDao = db.leagueSettingsDao()
     private val runnerDao = db.runnerDao()
+    private val runnerAdvanceLogDao = db.runnerAdvanceLogDao()
 
     fun purgeAllData() {
         db.clearAllTables()
@@ -848,4 +889,19 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     fun clearRunners(gameId: Long) = runnerDao.clearRunners(gameId)
 
     fun insertRunner(runner: GameRunner) = runnerDao.insertRunner(runner)
+
+    // ── Runner Advance Log ────────────────────────────────────────────────────
+
+    fun logRunnerAdvance(
+        gameId: Long, playerId: Long, slot: Int,
+        fromBase: Int, toBase: Int, inning: Int, reason: String
+    ) = runnerAdvanceLogDao.insert(
+        RunnerAdvanceLog(gameId = gameId, playerId = playerId, slot = slot,
+            fromBase = fromBase, toBase = toBase, inning = inning, reason = reason)
+    )
+
+    fun getRunnerAdvancesForGame(gameId: Long): List<RunnerAdvanceLog> =
+        runnerAdvanceLogDao.getForGame(gameId)
+
+    fun deleteRunnerAdvanceLog(id: Long) = runnerAdvanceLogDao.deleteById(id)
 }

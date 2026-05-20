@@ -43,7 +43,7 @@ class BackupManager constructor(
     enum class SignatureResult { VALID, MISSING, INVALID }
 
     companion object {
-        const val DB_VERSION = 22
+        const val DB_VERSION = 23
 
         /** Maximum file size accepted for any import (5 MB). */
         const val MAX_IMPORT_BYTES = 5L * 1024 * 1024
@@ -399,6 +399,24 @@ class BackupManager constructor(
         }
         root.put("game_runners", allRunners)
 
+        // runner_advances (added in DB version 23)
+        val allAdvances = JSONArray()
+        db.getAllGames().forEach { game ->
+            db.getRunnerAdvancesForGame(game.id).forEach { adv ->
+                allAdvances.put(JSONObject().apply {
+                    put("id", adv.id)
+                    put("game_id", adv.gameId)
+                    put("player_id", adv.playerId)
+                    put("slot", adv.slot)
+                    put("from_base", adv.fromBase)
+                    put("to_base", adv.toBase)
+                    put("inning", adv.inning)
+                    put("reason", adv.reason)
+                })
+            }
+        }
+        root.put("runner_advances", allAdvances)
+
         root.put("signature", generateSignature(root))
         return root
     }
@@ -445,6 +463,7 @@ class BackupManager constructor(
             restoreOpponentTeams(migrated)
             restoreLeagueSettings(migrated)
             restoreGameRunners(migrated)
+            restoreRunnerAdvances(migrated)
         }
     }
 
@@ -825,6 +844,14 @@ class BackupManager constructor(
             v = 22
         }
 
+        // Migration 22 → 23: runner_advances table introduced.
+        if (v < 23 && toVersion >= 23) {
+            if (!current.has("runner_advances")) {
+                current.put("runner_advances", JSONArray())
+            }
+            v = 23
+        }
+
         return current
     }
 
@@ -881,6 +908,22 @@ class BackupManager constructor(
                     jerseyNumber = if (obj.isNull("jersey_number")) null else obj.getString("jersey_number"),
                     name = obj.optString("name", "")
                 )
+            )
+        }
+    }
+
+    private fun restoreRunnerAdvances(json: JSONObject) {
+        val arr = json.optJSONArray("runner_advances") ?: return
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            db.logRunnerAdvance(
+                gameId = obj.getLong("game_id"),
+                playerId = obj.optLong("player_id", 0L),
+                slot = obj.optInt("slot", 0),
+                fromBase = obj.getInt("from_base"),
+                toBase = obj.getInt("to_base"),
+                inning = obj.getInt("inning"),
+                reason = obj.optString("reason", "OTHER")
             )
         }
     }
@@ -1226,6 +1269,7 @@ class BackupManager constructor(
                 val oppSubsArray = JSONArray()
                 val appearancesArray = JSONArray()
                 val runnersArray = JSONArray()
+                val advancesArray = JSONArray()
 
                 games.forEach { g ->
                     gamesArray.put(JSONObject().apply {
@@ -1297,6 +1341,18 @@ class BackupManager constructor(
                         })
                     }
 
+                    db.getRunnerAdvancesForGame(g.id).forEach { adv ->
+                        advancesArray.put(JSONObject().apply {
+                            put("game_id", g.id)
+                            put("player_id", adv.playerId)
+                            put("slot", adv.slot)
+                            put("from_base", adv.fromBase)
+                            put("to_base", adv.toBase)
+                            put("inning", adv.inning)
+                            put("reason", adv.reason)
+                        })
+                    }
+
                     db.getOwnLineup(g.id).forEach { (slot, player) ->
                         ownLineupArray.put(JSONObject().apply {
                             put("game_id", g.id)
@@ -1362,6 +1418,7 @@ class BackupManager constructor(
                 put("opponent_substitutions", oppSubsArray)
                 put("pitcher_appearances", appearancesArray)
                 put("game_runners", runnersArray)
+                put("runner_advances", advancesArray)
 
                 val oppTeamsArray = JSONArray()
                 db.getOpponentTeamsForTeam(teamId).forEach { opp ->
@@ -1568,6 +1625,24 @@ class BackupManager constructor(
                             jerseyNumber = if (obj.isNull("jersey_number")) null else obj.getString("jersey_number"),
                             name = obj.optString("name", "")
                         )
+                    )
+                }
+            }
+
+            val advancesArr = json.optJSONArray("runner_advances")
+            if (advancesArr != null) {
+                for (i in 0 until advancesArr.length()) {
+                    val obj = advancesArr.getJSONObject(i)
+                    val gid = gameMapping[obj.getLong("game_id")] ?: continue
+                    val pid = playerMapping[obj.getLong("player_id")] ?: 0L
+                    db.logRunnerAdvance(
+                        gameId = gid,
+                        playerId = pid,
+                        slot = obj.optInt("slot", 0),
+                        fromBase = obj.getInt("from_base"),
+                        toBase = obj.getInt("to_base"),
+                        inning = obj.getInt("inning"),
+                        reason = obj.optString("reason", "OTHER")
                     )
                 }
             }

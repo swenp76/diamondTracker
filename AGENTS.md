@@ -10,7 +10,7 @@ Sie hilft beim Verwalten von Teams, Erstellen von Aufstellungen und Tracken von 
 - **Datenbank:** Room (SQLite) über DAOs + DatabaseHelper-Wrapper
 - **UI:** Jetpack Compose (Material 3)
 - **Package:** de.baseball.diamond9
-- **DB-Datei:** `pitcher.db` (Version 22)
+- **DB-Datei:** `pitcher.db` (Version 23)
 - **Lokalisierung:** Deutsch (Fallback, `values/`), Englisch (`values-en/`)
 
 ## Projektstruktur
@@ -136,6 +136,7 @@ Wenn Tests fehlschlagen, so werden nicht die Tests an den Code angepasst, sonder
 - ✅ **#22** Game Merging: `GameMatcher` erkennt Dubletten (gleiches Datum/Gegner) und erlaubt Zusammenführen inkl. Undo.
 - ✅ **#23** Foreign Key CASCADE: Migration 18 aktiviert CASCADE-Löschung für At-Bats/Pitches/Pitcher bei Spiel-Löschung.
 - ✅ **#24** Pitcher Name Resolution: Fix für "Unknown"-Namen in Statistiken durch SQL JOIN auf Roster-Tabelle.
+- ✅ Advance Reason Dialog: Bei manuellem Weiterschieben eines Runners (1B/2B/3B/Score) erscheint ein Dialog mit Auswahl "On Error", "Steal", "Sonstiges". Grund wird in `runner_advances`-Tabelle persistiert (DB v23).
 
 ---
 
@@ -261,6 +262,7 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | `opponent_teams` | id, name, **team_id** |
 | **`scoreboard_runs`** | **id, game_id, inning, is_home, runs** |
 | **`league_settings`** | **id, team_id (UNIQUE), innings (default 9), time_limit_minutes** |
+| **`runner_advances`** | **id, game_id, player_id, slot, from_base, to_base, inning, reason** |
 
 **Pitch-Typen:** `B` = Ball, `S` = Strike, `F` = Foul, `BF` = Batter Faced,
 `SO` = Strikeout-Pitch, `H` = Hit, `HBP` = Hit by Pitch, `W` = Walk
@@ -294,5 +296,6 @@ Restore-Reihenfolge (Foreign-Key-sicher):
 | 19 → 20 | `game_runners` Tabelle hinzugefügt | ✅ |
 | 20 → 21 | `is_locked` Feld in `games` Tabelle | ✅ |
 | 21 → 22 | `rbi` Feld in `at_bats` Tabelle | ✅ |
+| 22 → 23 | `runner_advances` Tabelle hinzugefügt | ✅ |
 
 **Hinweis:** Jede Migration hier eintragen und gleichzeitig `BackupManager` aktualisieren.

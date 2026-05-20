@@ -51,14 +51,14 @@ object StatsExporter {
         format: ExportFormat,
         headline: String = ""
     ): File {
-        val headers = listOf("Name", "PA", "AB", "H", "2B", "3B", "HR", "RBI", "AVG", "OBP", "SLG", "OPS", "BB", "K")
-        val colWidths = listOf(110f, 36f, 36f, 36f, 36f, 36f, 36f, 36f, 44f, 44f, 44f, 44f, 36f, 36f)
+        val headers = listOf("Name", "PA", "AB", "H", "2B", "3B", "HR", "R", "RBI", "SB", "AVG", "OBP", "SLG", "OPS", "BB", "K")
+        val colWidths = listOf(110f, 36f, 36f, 36f, 36f, 36f, 36f, 36f, 36f, 36f, 44f, 44f, 44f, 44f, 36f, 36f)
         val tableRows = rows.map { row ->
             val name = players[row.playerId]?.let { "#${it.number} ${it.name}" } ?: "-"
             listOf(
                 name, row.pa.toString(), row.ab.toString(), row.hits.toString(),
                 row.doubles.toString(), row.triples.toString(), row.homers.toString(),
-                row.rbi.toString(),
+                row.runs.toString(), row.rbi.toString(), row.stolenBases.toString(),
                 formatAvg(row.hits, row.ab),
                 formatObp(row.hits, row.walks, row.hbp, row.ab),
                 formatSlg(row.hits, row.doubles, row.triples, row.homers, row.ab),
@@ -101,14 +101,14 @@ object StatsExporter {
         format: ExportFormat,
         headline: String = ""
     ): File {
-        val headers = listOf("Name", "PA", "AB", "H", "2B", "3B", "HR", "RBI", "AVG", "OBP", "SLG", "OPS", "BB", "K")
-        val colWidths = listOf(110f, 36f, 36f, 36f, 36f, 36f, 36f, 36f, 44f, 44f, 44f, 44f, 36f, 36f)
+        val headers = listOf("Name", "PA", "AB", "H", "2B", "3B", "HR", "R", "RBI", "SB", "AVG", "OBP", "SLG", "OPS", "BB", "K")
+        val colWidths = listOf(110f, 36f, 36f, 36f, 36f, 36f, 36f, 36f, 36f, 36f, 44f, 44f, 44f, 44f, 36f, 36f)
         val tableRows = rows.map { row ->
             val name = players[row.playerId]?.let { "#${it.number} ${it.name}" } ?: "-"
             listOf(
                 name, row.pa.toString(), row.ab.toString(), row.hits.toString(),
                 row.doubles.toString(), row.triples.toString(), row.homers.toString(),
-                row.rbi.toString(),
+                row.runs.toString(), row.rbi.toString(), row.stolenBases.toString(),
                 formatAvg(row.hits, row.ab),
                 formatObp(row.hits, row.walks, row.hbp, row.ab),
                 formatSlg(row.hits, row.doubles, row.triples, row.homers, row.ab),

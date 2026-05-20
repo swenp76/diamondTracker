@@ -73,7 +73,11 @@ abstract class AtBatDao {
             SUM(CASE WHEN ab.result = '2B'             THEN 1 ELSE 0 END)                          AS doubles,
             SUM(CASE WHEN ab.result = '3B'             THEN 1 ELSE 0 END)                          AS triples,
             SUM(CASE WHEN ab.result = 'HR'             THEN 1 ELSE 0 END)                          AS homers,
+            (SELECT COALESCE(SUM(CASE WHEN to_base = 4 THEN 1 ELSE 0 END), 0)
+             FROM runner_advances WHERE game_id = :gameId AND player_id = ab.player_id)             AS runs,
             SUM(ab.rbi)                                                                             AS rbi,
+            (SELECT COALESCE(SUM(CASE WHEN reason = 'STEAL' THEN 1 ELSE 0 END), 0)
+             FROM runner_advances WHERE game_id = :gameId AND player_id = ab.player_id)             AS stolen_bases,
             SUM(CASE WHEN ab.result = 'BB'             THEN 1 ELSE 0 END)                          AS walks,
             SUM(CASE WHEN ab.result IN ('K','KL')      THEN 1 ELSE 0 END)                          AS strikeouts,
             SUM(CASE WHEN ab.result = 'HBP'            THEN 1 ELSE 0 END)                          AS hbp
@@ -94,7 +98,19 @@ abstract class AtBatDao {
             SUM(CASE WHEN ab.result = '2B'              THEN 1 ELSE 0 END)                             AS doubles,
             SUM(CASE WHEN ab.result = '3B'              THEN 1 ELSE 0 END)                             AS triples,
             SUM(CASE WHEN ab.result = 'HR'              THEN 1 ELSE 0 END)                             AS homers,
+            (SELECT COALESCE(SUM(CASE WHEN ra.to_base = 4 THEN 1 ELSE 0 END), 0)
+             FROM runner_advances ra
+             JOIN games g2 ON g2.id = ra.game_id
+             WHERE ra.player_id = ab.player_id AND g2.team_id = :teamId
+               AND (:startDate IS NULL OR :startDate = '' OR (substr(g2.date,7,4)||substr(g2.date,4,2)||substr(g2.date,1,2)) >= :startDate)
+               AND (:endDate IS NULL OR :endDate = '' OR (substr(g2.date,7,4)||substr(g2.date,4,2)||substr(g2.date,1,2)) <= :endDate))   AS runs,
             SUM(ab.rbi)                                                                                AS rbi,
+            (SELECT COALESCE(SUM(CASE WHEN ra.reason = 'STEAL' THEN 1 ELSE 0 END), 0)
+             FROM runner_advances ra
+             JOIN games g2 ON g2.id = ra.game_id
+             WHERE ra.player_id = ab.player_id AND g2.team_id = :teamId
+               AND (:startDate IS NULL OR :startDate = '' OR (substr(g2.date,7,4)||substr(g2.date,4,2)||substr(g2.date,1,2)) >= :startDate)
+               AND (:endDate IS NULL OR :endDate = '' OR (substr(g2.date,7,4)||substr(g2.date,4,2)||substr(g2.date,1,2)) <= :endDate))   AS stolen_bases,
             SUM(CASE WHEN ab.result = 'BB'              THEN 1 ELSE 0 END)                             AS walks,
             SUM(CASE WHEN ab.result IN ('K','KL')       THEN 1 ELSE 0 END)                             AS strikeouts,
             SUM(CASE WHEN ab.result = 'HBP'             THEN 1 ELSE 0 END)                             AS hbp
