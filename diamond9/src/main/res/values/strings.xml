@@ -404,6 +404,8 @@
     <string name="teamsettings_league_section">League Settings</string>
     <string name="teamsettings_innings_label">Innings</string>
     <string name="teamsettings_innings_value">%d Innings</string>
+    <string name="teamsettings_rollover_label">Roll-Over Rule</string>
+    <string name="teamsettings_rollover_desc">Remaining outs count as runs when run limit is reached</string>
     <string name="teamsettings_time_limit_label">Time Limit</string>
     <string name="teamsettings_time_limit_value">Max. %d min (no new inning after)</string>
     <string name="teamsettings_no_time_limit">No time limit</string>

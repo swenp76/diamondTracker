@@ -17,15 +17,16 @@ fun RunSuggestionDialog(
     reachedBaseCount: Int,
     runnerOuts: Int,
     recordedOuts: Int,
+    rollOverEnabled: Boolean = false,
     initialLob: Int = 0,
     initialRollOver: Boolean = false,
     onConfirm: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     var lob by remember { mutableIntStateOf(initialLob) }
-    var rollOver by remember { mutableStateOf(initialRollOver) }
+    var rollOver by remember { mutableStateOf(initialRollOver && rollOverEnabled) }
 
-    val rollOverRuns = if (rollOver) (3 - recordedOuts).coerceAtLeast(0) else 0
+    val rollOverRuns = if (rollOver && rollOverEnabled) (3 - recordedOuts).coerceAtLeast(0) else 0
     val suggestedRuns = (reachedBaseCount - runnerOuts - lob).coerceAtLeast(0) + rollOverRuns
 
     AlertDialog(
@@ -63,30 +64,32 @@ fun RunSuggestionDialog(
                     }
                 }
 
-                // Roll-Over toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.dialog_run_suggestion_rollover),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        if (rollOver && rollOverRuns > 0) {
+                // Roll-Over toggle – only visible when the league setting is enabled
+                if (rollOverEnabled) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = stringResource(R.string.dialog_run_suggestion_rollover_extra, rollOverRuns),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
+                                text = stringResource(R.string.dialog_run_suggestion_rollover),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
                             )
+                            if (rollOver && rollOverRuns > 0) {
+                                Text(
+                                    text = stringResource(R.string.dialog_run_suggestion_rollover_extra, rollOverRuns),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
+                        Switch(
+                            checked = rollOver,
+                            onCheckedChange = { rollOver = it }
+                        )
                     }
-                    Switch(
-                        checked = rollOver,
-                        onCheckedChange = { rollOver = it }
-                    )
                 }
 
                 HorizontalDivider()

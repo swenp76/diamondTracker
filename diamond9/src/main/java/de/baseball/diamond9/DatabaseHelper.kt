@@ -170,7 +170,8 @@ data class LeagueSettings(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "team_id") val teamId: Long,
     @ColumnInfo(name = "innings", defaultValue = "9") val innings: Int = 9,
-    @ColumnInfo(name = "time_limit_minutes") val timeLimitMinutes: Int? = null
+    @ColumnInfo(name = "time_limit_minutes") val timeLimitMinutes: Int? = null,
+    @ColumnInfo(name = "roll_over_enabled", defaultValue = "0") val rollOverEnabled: Boolean = false
 )
 
 @Entity(tableName = "opponent_substitutions")

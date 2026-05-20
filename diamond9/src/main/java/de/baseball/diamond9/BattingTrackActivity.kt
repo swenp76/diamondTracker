@@ -59,6 +59,10 @@ class BattingTrackActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun BattingTrackScreen() {
+        val rollOverEnabled = remember {
+            val teamId = db.getGame(gameId)?.teamId ?: -1L
+            if (teamId > 0) db.getLeagueSettings(teamId).rollOverEnabled else false
+        }
         var isLocked by remember { mutableStateOf(false) }
         var inning by remember { mutableStateOf(1) }
         var outs by remember { mutableStateOf(0) }
@@ -447,6 +451,7 @@ class BattingTrackActivity : ComponentActivity() {
                 reachedBaseCount = reachedBase,
                 runnerOuts = runnerOuts,
                 recordedOuts = prevOutsForHalfInning,
+                rollOverEnabled = rollOverEnabled,
                 initialLob = runners.size,
                 initialRollOver = prevRollOverActive,
                 onConfirm = { runs ->
@@ -570,7 +575,7 @@ class BattingTrackActivity : ComponentActivity() {
                     .fillMaxSize()
                     .background(colorResource(R.color.color_background))
             ) {
-                StatsBar(inning, outs, pitches, onRunnerOut = { recordRunnerOut() }, onRollOver = { triggerRollOver() })
+                StatsBar(inning, outs, pitches, onRunnerOut = { recordRunnerOut() }, onRollOver = { triggerRollOver() }, showRollOver = rollOverEnabled)
                 BatterStrip(
                     slot = currentSlot,
                     lineup = lineup,
@@ -850,7 +855,7 @@ class BattingTrackActivity : ComponentActivity() {
     }
 
     @Composable
-    fun StatsBar(inning: Int, outs: Int, pitches: List<Pitch>, onRunnerOut: () -> Unit, onRollOver: () -> Unit) {
+    fun StatsBar(inning: Int, outs: Int, pitches: List<Pitch>, onRunnerOut: () -> Unit, onRollOver: () -> Unit, showRollOver: Boolean = false) {
         val (balls, strikes) = currentAtBatCount(pitches)
         val outsDesc = stringResource(R.string.content_desc_outs_indicator)
 
@@ -910,16 +915,18 @@ class BattingTrackActivity : ComponentActivity() {
                         )
                     }
                 }
-                // Roll-Over button
-                TextButton(
-                    onClick = onRollOver,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.btn_rollover),
-                        fontSize = 12.sp,
-                        color = colorResource(R.color.color_primary)
-                    )
+                // Roll-Over button – only when league setting is enabled
+                if (showRollOver) {
+                    TextButton(
+                        onClick = onRollOver,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.btn_rollover),
+                            fontSize = 12.sp,
+                            color = colorResource(R.color.color_primary)
+                        )
+                    }
                 }
             }
         }

@@ -45,6 +45,7 @@ class TeamSettingsActivity : ComponentActivity() {
                 put("innings", settings.innings)
                 if (settings.timeLimitMinutes != null) put("time_limit_minutes", settings.timeLimitMinutes)
                 else put("time_limit_minutes", JSONObject.NULL)
+                put("roll_over_enabled", settings.rollOverEnabled)
             }
             contentResolver.openOutputStream(uri)?.use { it.write(json.toString(2).toByteArray()) }
             Toast.makeText(this, getString(R.string.teamsettings_league_exported), Toast.LENGTH_SHORT).show()
@@ -100,6 +101,7 @@ class TeamSettingsActivity : ComponentActivity() {
                         put("innings", settings.innings)
                         if (settings.timeLimitMinutes != null) put("time_limit_minutes", settings.timeLimitMinutes)
                         else put("time_limit_minutes", JSONObject.NULL)
+                        put("roll_over_enabled", settings.rollOverEnabled)
                     }
                     BackupManager.shareJson(this, "league_settings.json", json.toString(2))
                 },
@@ -117,7 +119,8 @@ class TeamSettingsActivity : ComponentActivity() {
             val innings = json.optInt("innings", 9)
             val timeLimit = if (json.has("time_limit_minutes") && !json.isNull("time_limit_minutes"))
                 json.getInt("time_limit_minutes") else null
-            db.saveLeagueSettings(LeagueSettings(teamId = teamId, innings = innings, timeLimitMinutes = timeLimit))
+            val rollOver = json.optBoolean("roll_over_enabled", false)
+            db.saveLeagueSettings(LeagueSettings(teamId = teamId, innings = innings, timeLimitMinutes = timeLimit, rollOverEnabled = rollOver))
             Toast.makeText(this, getString(R.string.teamsettings_league_imported), Toast.LENGTH_SHORT).show()
             recreate()
         } catch (e: Exception) {
@@ -139,6 +142,7 @@ fun TeamSettingsScreen(
 ) {
     var innings by remember { mutableStateOf(leagueSettings.innings) }
     var timeLimitMins by remember { mutableStateOf(leagueSettings.timeLimitMinutes) }
+    var rollOverEnabled by remember { mutableStateOf(leagueSettings.rollOverEnabled) }
     var showTimePicker by remember { mutableStateOf(false) }
 
     val timeLimitDisplay = timeLimitMins?.let { mins ->
@@ -271,9 +275,34 @@ fun TeamSettingsScreen(
                         }
                     }
 
+                    // Roll-Over rule toggle
+                    HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.teamsettings_rollover_label),
+                                fontSize = 14.sp,
+                                color = colorResource(R.color.color_text_subtle)
+                            )
+                            Text(
+                                text = stringResource(R.string.teamsettings_rollover_desc),
+                                fontSize = 11.sp,
+                                color = colorResource(R.color.color_text_secondary)
+                            )
+                        }
+                        Switch(
+                            checked = rollOverEnabled,
+                            onCheckedChange = { rollOverEnabled = it }
+                        )
+                    }
+
                     Button(
                         onClick = {
-                            onSaveLeague(leagueSettings.copy(innings = innings, timeLimitMinutes = timeLimitMins))
+                            onSaveLeague(leagueSettings.copy(innings = innings, timeLimitMinutes = timeLimitMins, rollOverEnabled = rollOverEnabled))
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(

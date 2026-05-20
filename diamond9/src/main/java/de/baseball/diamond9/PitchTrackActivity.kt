@@ -85,6 +85,10 @@ class PitchTrackActivity : ComponentActivity() {
         var showInningSnackbar by remember { mutableStateOf(false) }
         var showTrendSheet by remember { mutableStateOf(false) }
         var showHitSheet by remember { mutableStateOf(false) }
+        val rollOverEnabled = remember {
+            val teamId = db.getGame(gameId)?.teamId ?: -1L
+            if (teamId > 0) db.getLeagueSettings(teamId).rollOverEnabled else false
+        }
         var showOutSheet by remember { mutableStateOf(false) }
         var showHalfInningSheet by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
@@ -410,7 +414,7 @@ class PitchTrackActivity : ComponentActivity() {
                     .background(colorResource(R.color.color_background))
             ) {
                 stats?.let { s ->
-                    StatsBar(s, inning, outs, onRunnerOut = { recordRunnerOut() }, onRollOver = { triggerRollOver() })
+                    StatsBar(s, inning, outs, onRunnerOut = { recordRunnerOut() }, onRollOver = { triggerRollOver() }, showRollOver = rollOverEnabled)
                     BatterStrip(s, opponentLineupLauncher)
                     
                     DiamondInfield(
@@ -553,6 +557,7 @@ class PitchTrackActivity : ComponentActivity() {
                 reachedBaseCount = reachedBase,
                 runnerOuts = runnerOuts,
                 recordedOuts = prevOutsForHalfInning,
+                rollOverEnabled = rollOverEnabled,
                 initialLob = runners.size,
                 initialRollOver = prevRollOverActive,
                 onConfirm = { runs ->
@@ -800,7 +805,7 @@ class PitchTrackActivity : ComponentActivity() {
     }
 
     @Composable
-    fun StatsBar(stats: PitcherStats, inning: Int, outs: Int, onRunnerOut: () -> Unit, onRollOver: () -> Unit) {
+    fun StatsBar(stats: PitcherStats, inning: Int, outs: Int, onRunnerOut: () -> Unit, onRollOver: () -> Unit, showRollOver: Boolean = false) {
         val outsDesc = stringResource(R.string.content_desc_outs_indicator)
         val date = if (gameId != -1L) db.getGame(gameId)?.date ?: "" else ""
         val totalBF = if (stats.pitcher.playerId > 0 && date.isNotEmpty())
@@ -869,16 +874,18 @@ class PitchTrackActivity : ComponentActivity() {
                         )
                     }
                 }
-                // Roll-Over button
-                TextButton(
-                    onClick = onRollOver,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.btn_rollover),
-                        fontSize = 12.sp,
-                        color = colorResource(R.color.color_primary)
-                    )
+                // Roll-Over button – only when league setting is enabled
+                if (showRollOver) {
+                    TextButton(
+                        onClick = onRollOver,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.btn_rollover),
+                            fontSize = 12.sp,
+                            color = colorResource(R.color.color_primary)
+                        )
+                    }
                 }
             }
         }

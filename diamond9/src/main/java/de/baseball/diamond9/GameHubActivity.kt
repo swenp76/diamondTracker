@@ -601,6 +601,7 @@ private fun HalfInningBar(
                 reachedBaseCount = reachedBase,
                 runnerOuts = runnerOuts,
                 recordedOuts = 3,
+                rollOverEnabled = leagueSettings.rollOverEnabled,
                 initialLob = lastLobCount,
                 onConfirm = { runs ->
                     val teamIndex = if (last.isTopHalf) 0 else 1

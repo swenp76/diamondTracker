@@ -219,6 +219,7 @@ class BackupManager constructor(
                 put("innings", ls.innings)
                 if (ls.timeLimitMinutes != null) put("time_limit_minutes", ls.timeLimitMinutes)
                 else put("time_limit_minutes", JSONObject.NULL)
+                put("roll_over_enabled", ls.rollOverEnabled)
             })
         }
         root.put("league_settings", allLeagueSettings)
@@ -888,7 +889,8 @@ class BackupManager constructor(
                     teamId = obj.getLong("team_id"),
                     innings = obj.optInt("innings", 9),
                     timeLimitMinutes = if (obj.isNull("time_limit_minutes")) null
-                                       else obj.optInt("time_limit_minutes")
+                                       else obj.optInt("time_limit_minutes"),
+                    rollOverEnabled = obj.optBoolean("roll_over_enabled", false)
                 )
             )
         }
