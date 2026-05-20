@@ -220,6 +220,7 @@ private fun GameHubScreen(
                 db = db,
                 isHome = isHome,
                 timeLimitMinutes = leagueSettings.timeLimitMinutes,
+                rollOverEnabled = leagueSettings.rollOverEnabled,
                 isLocked = isLocked,
                 onOffense = onOffense,
                 onDefense = onDefense,
@@ -549,6 +550,7 @@ private fun HalfInningBar(
     db: DatabaseHelper,
     isHome: Int,
     timeLimitMinutes: Int?,
+    rollOverEnabled: Boolean = false,
     isLocked: Boolean = false,
     onOffense: () -> Unit,
     onDefense: () -> Unit,
@@ -601,7 +603,7 @@ private fun HalfInningBar(
                 reachedBaseCount = reachedBase,
                 runnerOuts = runnerOuts,
                 recordedOuts = 3,
-                rollOverEnabled = leagueSettings.rollOverEnabled,
+                rollOverEnabled = rollOverEnabled,
                 initialLob = lastLobCount,
                 onConfirm = { runs ->
                     val teamIndex = if (last.isTopHalf) 0 else 1
