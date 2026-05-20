@@ -72,6 +72,8 @@ class BattingTrackActivity : ComponentActivity() {
         // Saved before the 3rd out is recorded; used by HalfInningChange undo
         var prevLeadoffForHalfInning by remember { mutableStateOf(1) }
         var prevInningForHalfInning by remember { mutableStateOf(1) }
+        var prevOutsForHalfInning by remember { mutableStateOf(3) }
+        var prevRollOverActive by remember { mutableStateOf(false) }
 
         val actionStack = remember { GameActionStack() }
         val snackbarHostState = remember { SnackbarHostState() }
@@ -228,6 +230,8 @@ class BattingTrackActivity : ComponentActivity() {
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
                 prevInningForHalfInning = halfInningState.inning
+                prevOutsForHalfInning = 3
+                prevRollOverActive = false
                 val maxSlot = if (lineup.containsKey(10)) 10 else 9
                 val nextLeadoff = (slot % maxSlot) + 1
                 db.updateLeadoffSlot(gameId, nextLeadoff)
@@ -251,6 +255,19 @@ class BattingTrackActivity : ComponentActivity() {
             if (!showEndAtBatButton) nextBatter()
         }
 
+        /** Called when Roll-Over button is tapped: ends the half-inning early (run limit reached). */
+        fun triggerRollOver() {
+            prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
+            prevInningForHalfInning = halfInningState.inning
+            prevOutsForHalfInning = outs
+            prevRollOverActive = true
+            db.updateLeadoffSlot(gameId, currentSlot)
+            if (!halfInningState.isTopHalf) inning++
+            outs = 0
+            db.updateGameState(gameId, inning, outs)
+            showRunSuggestion = true
+        }
+
         /** Called when the outs-indicator is tapped (runner out, batter stays, count resets). */
         fun recordRunnerOut() {
             val savedAtBatId = currentAtBatId
@@ -265,6 +282,8 @@ class BattingTrackActivity : ComponentActivity() {
             if (newOuts >= 3) {
                 prevLeadoffForHalfInning = db.getLeadoffSlot(gameId)
                 prevInningForHalfInning = halfInningState.inning
+                prevOutsForHalfInning = 3
+                prevRollOverActive = false
                 // leadoff = current batter (runner was out, not this batter)
                 db.updateLeadoffSlot(gameId, savedSlot)
                 if (!halfInningState.isTopHalf) {
@@ -427,7 +446,9 @@ class BattingTrackActivity : ComponentActivity() {
             RunSuggestionDialog(
                 reachedBaseCount = reachedBase,
                 runnerOuts = runnerOuts,
+                recordedOuts = prevOutsForHalfInning,
                 initialLob = runners.size,
+                initialRollOver = prevRollOverActive,
                 onConfirm = { runs ->
                     val isOwnHome = if (halfInningState.isTopHalf) 0 else 1
                     db.upsertScoreboardRun(gameId, prevInningForHalfInning, isOwnHome, runs)
@@ -549,7 +570,7 @@ class BattingTrackActivity : ComponentActivity() {
                     .fillMaxSize()
                     .background(colorResource(R.color.color_background))
             ) {
-                StatsBar(inning, outs, pitches, onRunnerOut = { recordRunnerOut() })
+                StatsBar(inning, outs, pitches, onRunnerOut = { recordRunnerOut() }, onRollOver = { triggerRollOver() })
                 BatterStrip(
                     slot = currentSlot,
                     lineup = lineup,
@@ -829,7 +850,7 @@ class BattingTrackActivity : ComponentActivity() {
     }
 
     @Composable
-    fun StatsBar(inning: Int, outs: Int, pitches: List<Pitch>, onRunnerOut: () -> Unit) {
+    fun StatsBar(inning: Int, outs: Int, pitches: List<Pitch>, onRunnerOut: () -> Unit, onRollOver: () -> Unit) {
         val (balls, strikes) = currentAtBatCount(pitches)
         val outsDesc = stringResource(R.string.content_desc_outs_indicator)
 
@@ -888,6 +909,17 @@ class BattingTrackActivity : ComponentActivity() {
                                 )
                         )
                     }
+                }
+                // Roll-Over button
+                TextButton(
+                    onClick = onRollOver,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.btn_rollover),
+                        fontSize = 12.sp,
+                        color = colorResource(R.color.color_primary)
+                    )
                 }
             }
         }

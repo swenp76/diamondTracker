@@ -5,6 +5,9 @@ build/
 tmp/
 **/tmp/
 gradle/gradle-daemon-jvm.properties
+gradle/wrapper/gradle-wrapper.jar
+gradlew
+gradlew.bat
 
 # Local configuration file (sdk path, etc)
 local.properties

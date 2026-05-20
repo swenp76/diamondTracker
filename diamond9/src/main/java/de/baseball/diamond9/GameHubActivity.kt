@@ -600,6 +600,7 @@ private fun HalfInningBar(
             RunSuggestionDialog(
                 reachedBaseCount = reachedBase,
                 runnerOuts = runnerOuts,
+                recordedOuts = 3,
                 initialLob = lastLobCount,
                 onConfirm = { runs ->
                     val teamIndex = if (last.isTopHalf) 0 else 1
