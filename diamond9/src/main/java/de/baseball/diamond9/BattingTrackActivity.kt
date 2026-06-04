@@ -37,6 +37,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 
+private data class RunnerUndoState(val prevRunners: List<GameRunner>, val prevScore: Int)
+
 class BattingTrackActivity : ComponentActivity() {
 
     private lateinit var db: DatabaseHelper
@@ -113,13 +115,34 @@ class BattingTrackActivity : ComponentActivity() {
         var currentScorerRbiChecked by remember { mutableStateOf(true) }
         var currentAtBatResult by remember { mutableStateOf<String?>(null) }
 
+        // Undo state captured before each non-out at-bat completion
+        var pendingUndoAtBatId by remember { mutableStateOf(-1L) }
+        var pendingUndoSlot by remember { mutableStateOf(-1) }
+        var pendingUndoState by remember { mutableStateOf<RunnerUndoState?>(null) }
+        var pendingUndoRbi by remember { mutableStateOf(0) }
+        var pendingUndoHadResultPitch by remember { mutableStateOf(false) }
+
         fun refreshRunners() {
             runners = db.getRunners(gameId).associateBy { it.base }
         }
 
         fun refreshLineup() { lineup = db.getEffectiveLineup(gameId) }
 
-        fun updateRunnersInDb(next: Map<Int, GameRunner>, scoringRunners: List<GameRunner>, rbi: Int = 0, rbiPlayerName: String = "") {
+        fun captureRunnerUndoState(): RunnerUndoState {
+            val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+            return RunnerUndoState(
+                prevRunners = db.getRunners(gameId),
+                prevScore = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
+            )
+        }
+
+        fun updateRunnersInDb(
+            next: Map<Int, GameRunner>,
+            scoringRunners: List<GameRunner>,
+            rbi: Int = 0,
+            rbiPlayerName: String = "",
+            suppressStackPush: Boolean = false
+        ) {
             val prevList = db.getRunners(gameId)
             val teamIndex = if (halfInningState.isTopHalf) 0 else 1
             val currentRuns = db.getScoreboardRuns(gameId, halfInningState.inning, teamIndex)
@@ -132,11 +155,13 @@ class BattingTrackActivity : ComponentActivity() {
                 currentScoringRbi = rbi
                 currentScoringBatterName = rbiPlayerName
             }
-            
-            actionStack.push(GameAction.RunnerAdvance(
-                prevRunners = prevList,
-                prevScoreboardValue = currentRuns
-            ))
+
+            if (!suppressStackPush) {
+                actionStack.push(GameAction.RunnerAdvance(
+                    prevRunners = prevList,
+                    prevScoreboardValue = currentRuns
+                ))
+            }
             refreshRunners()
         }
 
@@ -316,25 +341,45 @@ class BattingTrackActivity : ComponentActivity() {
             val allScoring = pendingAutoScoring + pendingConfirmedScoring
             val totalRbi = pendingAutoScoring.size + pendingRbiCount
             val rbiName = lineup[currentSlot]?.let { "${it.name} (#${it.number})" } ?: ""
-            updateRunnersInDb(pendingNextRunners, allScoring, totalRbi, rbiName)
+            updateRunnersInDb(pendingNextRunners, allScoring, totalRbi, rbiName, suppressStackPush = true)
             db.addRbiToAtBat(currentAtBatId, totalRbi)
+
+            val savedUndoState = pendingUndoState
+            val savedUndoAtBatId = pendingUndoAtBatId
+            val savedUndoSlot = pendingUndoSlot
+            val hadPitch = pendingUndoHadResultPitch
+
             pendingRbiCount = 0
             currentScorerRbiChecked = true
             pendingScorersQueue = emptyList()
             pendingNextRunners = emptyMap()
             pendingAutoScoring = emptyList()
             pendingConfirmedScoring = emptyList()
+            pendingUndoState = null
+
             if (pendingNextBatterCallback) {
                 pendingNextBatterCallback = false
                 nextBatter()
+            }
+
+            if (savedUndoState != null) {
+                actionStack.push(GameAction.AtBatComplete(
+                    completedAtBatId = savedUndoAtBatId,
+                    completedSlot = savedUndoSlot,
+                    prevRunners = savedUndoState.prevRunners,
+                    prevScoreboardValue = savedUndoState.prevScore,
+                    completedRbi = totalRbi,
+                    hadResultPitch = hadPitch
+                ))
             }
         }
 
         fun startHitAdvance(result: HitAdvanceResult) {
             if (result.pendingScorers.isEmpty()) {
                 val rbiName = lineup[currentSlot]?.let { "${it.name} (#${it.number})" } ?: ""
-                updateRunnersInDb(result.nextRunners, result.autoScoring, result.autoScoring.size, rbiName)
+                updateRunnersInDb(result.nextRunners, result.autoScoring, result.autoScoring.size, rbiName, suppressStackPush = true)
                 db.addRbiToAtBat(currentAtBatId, result.autoScoring.size)
+                pendingUndoRbi = result.autoScoring.size
             } else {
                 pendingNextRunners = result.nextRunners.toMutableMap()
                 pendingAutoScoring = result.autoScoring
@@ -705,6 +750,28 @@ class BattingTrackActivity : ComponentActivity() {
                                     }
                                     refreshRunners()
                                 }
+                                is GameAction.AtBatComplete -> {
+                                    // Delete the new at-bat created by nextBatter()
+                                    if (currentAtBatId != action.completedAtBatId && currentAtBatId != -1L) {
+                                        db.deleteAtBat(currentAtBatId)
+                                    }
+                                    // Restore the completed at-bat
+                                    currentAtBatId = action.completedAtBatId
+                                    currentSlot = action.completedSlot
+                                    db.updateAtBatResult(action.completedAtBatId, null)
+                                    db.clearAtBatRbi(action.completedAtBatId)
+                                    // Remove the result pitch (H or HBP) if one was inserted
+                                    if (action.hadResultPitch) {
+                                        db.undoLastPitchForAtBat(action.completedAtBatId)
+                                    }
+                                    refreshAtBat(action.completedAtBatId)
+                                    // Restore runners and scoreboard
+                                    db.clearRunners(gameId)
+                                    action.prevRunners.forEach { db.insertRunner(it) }
+                                    val teamIndex = if (halfInningState.isTopHalf) 0 else 1
+                                    db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, action.prevScoreboardValue)
+                                    refreshRunners()
+                                }
                                 null -> { /* nothing to undo */ }
                             }
                         },
@@ -721,40 +788,52 @@ class BattingTrackActivity : ComponentActivity() {
                                 name = currentPlayer?.name ?: ""
                             )
 
+                            // For non-out results, capture undo state before any changes
+                            if (!isOutResult(result)) {
+                                val undoState = captureRunnerUndoState()
+                                pendingUndoAtBatId = abId
+                                pendingUndoSlot = currentSlot
+                                pendingUndoState = undoState
+                                pendingUndoRbi = 0
+                                pendingUndoHadResultPitch = false
+                            }
+
                             when (result) {
                                 "H", "1B" -> {
                                     startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 1))
                                     db.insertPitchForAtBat(abId, "H", inning)
-                                    actionStack.push(GameAction.Pitch(abId))
+                                    pendingUndoHadResultPitch = true
                                 }
                                 "2B" -> {
                                     startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 2))
                                     db.insertPitchForAtBat(abId, "H", inning)
-                                    actionStack.push(GameAction.Pitch(abId))
+                                    pendingUndoHadResultPitch = true
                                 }
                                 "3B" -> {
                                     startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 3))
                                     db.insertPitchForAtBat(abId, "H", inning)
-                                    actionStack.push(GameAction.Pitch(abId))
+                                    pendingUndoHadResultPitch = true
                                 }
                                 "HR" -> {
                                     startHitAdvance(RunnerManager.advanceOnHit(runners, batterRunner, 4))
                                     db.insertPitchForAtBat(abId, "H", inning)
-                                    actionStack.push(GameAction.Pitch(abId))
+                                    pendingUndoHadResultPitch = true
                                 }
                                 "BB" -> {
                                     val (next, scoring) = RunnerManager.advanceOnWalk(runners, batterRunner)
                                     val rbiName = currentPlayer?.let { "${it.name} (#${it.number})" } ?: ""
-                                    updateRunnersInDb(next, scoring, scoring.size, rbiName)
+                                    updateRunnersInDb(next, scoring, scoring.size, rbiName, suppressStackPush = true)
                                     db.addRbiToAtBat(abId, scoring.size)
+                                    pendingUndoRbi = scoring.size
                                 }
                                 "HBP" -> {
                                     val (next, scoring) = RunnerManager.advanceOnWalk(runners, batterRunner)
                                     val rbiName = currentPlayer?.let { "${it.name} (#${it.number})" } ?: ""
-                                    updateRunnersInDb(next, scoring, scoring.size, rbiName)
+                                    updateRunnersInDb(next, scoring, scoring.size, rbiName, suppressStackPush = true)
                                     db.addRbiToAtBat(abId, scoring.size)
                                     db.insertPitchForAtBat(abId, "HBP", inning)
-                                    actionStack.push(GameAction.Pitch(abId))
+                                    pendingUndoRbi = scoring.size
+                                    pendingUndoHadResultPitch = true
                                 }
                                 "K"  -> {
                                     db.insertPitchForAtBat(abId, "SO", inning)
@@ -776,7 +855,22 @@ class BattingTrackActivity : ComponentActivity() {
                                 Toast.makeText(this@BattingTrackActivity, R.string.toast_dp_check_runners, Toast.LENGTH_LONG).show()
                             }
                             if (isOutResult(result)) recordBatterOut(result)
-                            else if (pendingScorersQueue.isEmpty()) nextBatter()
+                            else if (pendingScorersQueue.isEmpty()) {
+                                nextBatter()
+                                // Push compound undo action for immediately-resolved non-out results
+                                val savedState = pendingUndoState
+                                if (savedState != null) {
+                                    actionStack.push(GameAction.AtBatComplete(
+                                        completedAtBatId = pendingUndoAtBatId,
+                                        completedSlot = pendingUndoSlot,
+                                        prevRunners = savedState.prevRunners,
+                                        prevScoreboardValue = savedState.prevScore,
+                                        completedRbi = pendingUndoRbi,
+                                        hadResultPitch = pendingUndoHadResultPitch
+                                    ))
+                                    pendingUndoState = null
+                                }
+                            }
                         }
                     )
                 }

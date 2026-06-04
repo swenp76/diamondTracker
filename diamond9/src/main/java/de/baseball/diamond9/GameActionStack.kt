@@ -59,6 +59,27 @@ sealed class GameAction {
         val prevRunners: List<GameRunner>,
         val prevScoreboardValue: Int? = null
     ) : GameAction()
+
+    /**
+     * A non-out at-bat was completed (hit, walk, HBP, ROE, FC).
+     * Captures all state changes atomically so a single undo press reverses everything:
+     * the batter switch (nextBatter), runner positions, scoreboard, at-bat result, and RBI.
+     *
+     * completedAtBatId:     the at-bat that received the result.
+     * completedSlot:        the batting-order slot of that batter.
+     * prevRunners:          runner state before the event.
+     * prevScoreboardValue:  runs for the current half-inning before the event.
+     * completedRbi:         RBI that were added (will be cleared on undo).
+     * hadResultPitch:       true when an "H" or "HBP" pitch was inserted as part of the event.
+     */
+    data class AtBatComplete(
+        val completedAtBatId: Long,
+        val completedSlot: Int,
+        val prevRunners: List<GameRunner>,
+        val prevScoreboardValue: Int,
+        val completedRbi: Int,
+        val hadResultPitch: Boolean
+    ) : GameAction()
 }
 
 class GameActionStack {

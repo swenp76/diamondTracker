@@ -789,6 +789,11 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
         atBatDao.addRbi(atBatId, delta)
     }
 
+    fun clearAtBatRbi(atBatId: Long) {
+        if (atBatId <= 0L) return
+        atBatDao.setRbi(atBatId, 0)
+    }
+
     fun deleteAtBat(atBatId: Long) {
         atBatDao.deletePitchesForAtBat(atBatId)
         atBatDao.deleteAtBat(atBatId)

@@ -46,6 +46,9 @@ abstract class AtBatDao {
     @Query("UPDATE at_bats SET rbi = rbi + :delta WHERE id = :id")
     abstract fun addRbi(id: Long, delta: Int)
 
+    @Query("UPDATE at_bats SET rbi = :rbi WHERE id = :id")
+    abstract fun setRbi(id: Long, rbi: Int)
+
     @Query("""
         SELECT COUNT(*) FROM at_bats 
         WHERE game_id = :gameId AND inning = :inning 

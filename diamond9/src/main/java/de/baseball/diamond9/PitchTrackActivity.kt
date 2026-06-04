@@ -536,6 +536,7 @@ class PitchTrackActivity : ComponentActivity() {
                                     }
                                     refresh()
                                 }
+                                is GameAction.AtBatComplete -> { /* not used in defense mode */ }
                                 null -> {
                                     // fallback: plain pitch undo
                                     db.undoLastPitch(pitcherId)
