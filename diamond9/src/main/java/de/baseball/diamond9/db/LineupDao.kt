@@ -109,4 +109,10 @@ interface LineupDao {
 
     @Query("SELECT * FROM substitutions WHERE game_id = :gameId ORDER BY id ASC")
     fun getSubstitutionsForGame(gameId: Long): List<Substitution>
+
+    @Query("SELECT * FROM substitutions WHERE id = :id")
+    fun getSubstitutionById(id: Long): Substitution?
+
+    @Query("DELETE FROM substitutions WHERE id = :id")
+    fun deleteSubstitutionById(id: Long)
 }

@@ -770,6 +770,12 @@ class DatabaseHelper constructor(private val db: AppDatabase) {
     fun getSubstitutionsForGame(gameId: Long): List<Substitution> =
         lineupDao.getSubstitutionsForGame(gameId)
 
+    fun getSubstitutionById(id: Long): Substitution? =
+        lineupDao.getSubstitutionById(id)
+
+    fun deleteSubstitution(id: Long) =
+        lineupDao.deleteSubstitutionById(id)
+
     // ── At-Bats (Offense) ──────────────────────────────────────────────────────
 
     fun insertAtBat(gameId: Long, playerId: Long, slot: Int, inning: Int): Long =

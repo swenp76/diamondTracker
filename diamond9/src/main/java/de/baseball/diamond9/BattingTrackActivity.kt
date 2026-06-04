@@ -190,6 +190,19 @@ class BattingTrackActivity : ComponentActivity() {
                     }
                     startNewAtBat(jumpToSlot)
                 }
+                // Push undo actions for each substitution made in OwnLineupActivity
+                val subIds = result.data?.getLongArrayExtra("subIds") ?: longArrayOf()
+                subIds.forEach { subId ->
+                    val sub = db.getSubstitutionById(subId)
+                    if (sub != null) {
+                        actionStack.push(GameAction.Substitution(
+                            substitutionId = sub.id,
+                            slot = sub.slot,
+                            playerOutId = sub.playerOutId,
+                            playerInId = sub.playerInId
+                        ))
+                    }
+                }
             }
         }
 
@@ -749,6 +762,10 @@ class BattingTrackActivity : ComponentActivity() {
                                         db.upsertScoreboardRun(gameId, halfInningState.inning, teamIndex, action.prevScoreboardValue)
                                     }
                                     refreshRunners()
+                                }
+                                is GameAction.Substitution -> {
+                                    db.deleteSubstitution(action.substitutionId)
+                                    refreshLineup()
                                 }
                                 is GameAction.AtBatComplete -> {
                                     // Delete the new at-bat created by nextBatter()

@@ -45,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -156,6 +157,22 @@ private fun OwnLineupScreen(
     var returnStarterDialogState by remember { mutableStateOf<SlotState?>(null) }
     var jumpToSlotDialogState by remember { mutableStateOf<Int?>(null) }
 
+    // IDs of substitutions performed in this session, so BattingTrackActivity can push undo actions
+    var sessionSubIds by remember { mutableStateOf<List<Long>>(emptyList()) }
+
+    fun finishWithSubs(extraSlot: Int? = null) {
+        if (sessionSubIds.isNotEmpty() || extraSlot != null) {
+            val intent = Intent().apply {
+                if (extraSlot != null) putExtra("jumpToSlot", extraSlot)
+                if (sessionSubIds.isNotEmpty()) putExtra("subIds", sessionSubIds.toLongArray())
+            }
+            onResult(RESULT_OK, intent)
+        }
+        onFinish()
+    }
+
+    BackHandler { finishWithSubs() }
+
     val refresh = {
         val lineupData = db.getOwnLineup(gameId)
         lineup = lineupData
@@ -248,7 +265,7 @@ private fun OwnLineupScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = { finishWithSubs() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back))
                     }
                 },
@@ -439,7 +456,8 @@ private fun OwnLineupScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        db.addSubstitution(gameId, state.slot, state.currentPlayer!!.id, player.id)
+                                        val subId = db.addSubstitution(gameId, state.slot, state.currentPlayer!!.id, player.id)
+                                        sessionSubIds = sessionSubIds + subId
                                         refresh()
                                         subSelectionState = null
                                     }
@@ -464,7 +482,8 @@ private fun OwnLineupScreen(
             text = { Text(stringResource(R.string.dialog_return_message, "#${original.number} ${original.name}")) },
             confirmButton = {
                 Button(onClick = {
-                    db.addSubstitution(gameId, state.slot, state.currentPlayer!!.id, original.id)
+                    val subId = db.addSubstitution(gameId, state.slot, state.currentPlayer!!.id, original.id)
+                    sessionSubIds = sessionSubIds + subId
                     refresh()
                     returnStarterDialogState = null
                 }) { Text(stringResource(R.string.btn_back_to_game)) }
@@ -481,10 +500,7 @@ private fun OwnLineupScreen(
             text = { Text(stringResource(R.string.dialog_jump_to_slot_message, slot)) },
             confirmButton = {
                 Button(onClick = {
-                    val resultIntent = Intent()
-                    resultIntent.putExtra("jumpToSlot", slot)
-                    onResult(RESULT_OK, resultIntent)
-                    onFinish()
+                    finishWithSubs(extraSlot = slot)
                 }) { Text(stringResource(R.string.btn_confirm)) }
             },
             dismissButton = {

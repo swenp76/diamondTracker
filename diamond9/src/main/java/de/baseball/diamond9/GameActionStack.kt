@@ -61,6 +61,17 @@ sealed class GameAction {
     ) : GameAction()
 
     /**
+     * A player substitution was recorded in OwnLineupActivity.
+     * Undo deletes the substitution row — getEffectiveLineup() then reverts to the previous player.
+     */
+    data class Substitution(
+        val substitutionId: Long,
+        val slot: Int,
+        val playerOutId: Long,
+        val playerInId: Long
+    ) : GameAction()
+
+    /**
      * A non-out at-bat was completed (hit, walk, HBP, ROE, FC).
      * Captures all state changes atomically so a single undo press reverses everything:
      * the batter switch (nextBatter), runner positions, scoreboard, at-bat result, and RBI.
